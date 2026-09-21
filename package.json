@@ -1,0 +1,23 @@
+{
+	"name": "openrct2-plugins",
+	"version": "1.0.0",
+	"type": "module",
+	"license": "MIT",
+	"scripts": {
+		"start": "node ./node_modules/nodemon/bin/nodemon.js --watch ./src --ext js,ts --exec \"node ./node_modules/rollup/dist/bin/rollup --config rollup.config.js\"",
+		"build": "node ./node_modules/rollup/dist/bin/rollup --config rollup.config.js --environment BUILD:production",
+		"build:dev": "node ./node_modules/rollup/dist/bin/rollup --config rollup.config.js",
+		"test": "node tests/run.mjs",
+		"typecheck": "node ./node_modules/typescript/bin/tsc --noEmit -p tsconfig.json"
+	},
+	"devDependencies": {
+		"@openrct2/types": "^0.5.0",
+		"@rollup/plugin-node-resolve": "^16.0.3",
+		"@rollup/plugin-terser": "^1.0.0",
+		"@rollup/plugin-typescript": "^12.3.0",
+		"nodemon": "^3.1.14",
+		"rollup": "^4.60.2",
+		"tslib": "^2.5.0",
+		"typescript": "~5.7.0"
+	}
+}

@@ -1,0 +1,23 @@
+{
+	"compilerOptions": {
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true,
+		"module": "es2020",
+		"moduleResolution": "bundler",
+		"noFallthroughCasesInSwitch": true,
+		"noImplicitAny": true,
+		"noImplicitOverride": true,
+		"noImplicitReturns": true,
+		"noImplicitThis": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"strict": true,
+		"lib": ["es2015"],
+		"target": "es2015",
+		"types": ["@openrct2/types"]
+	},
+	"include": [
+		"./src/**/*.ts"
+	],
+	"noEmit": true
+}

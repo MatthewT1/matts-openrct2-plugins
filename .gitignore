@@ -1,0 +1,18 @@
+# Dependencies and build output (release builds go to GitHub Releases / CI artifacts)
+node_modules/
+dist/
+tests/build/
+
+# Local reference clone of the OpenRCT2 source (~400 MB, has its own .git)
+gamesrc/
+
+# Debug channel logs (can be tens of MB)
+tools/rct-debug.log*
+
+# Editor / OS / agent cruft
+.vscode/
+.idea/
+.claude/
+Thumbs.db
+.DS_Store
+*.log
