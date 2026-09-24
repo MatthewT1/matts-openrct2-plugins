@@ -346,8 +346,42 @@ event that says who fixed it (from their `ridesFixed` counter), how far away the
 the time to the broken flag, to arrival and to the fix animation, and how many inspections
 the fleet did in the meantime.
 
-**Next:** read the traces from the Session 2 run, then decide on a fix. Don't change
-mechanic behaviour before that.
+**First trace (Session 2):** dispatch was instant, the walk took ~1.9 of ~3.2 days, and the
+fixer started 10 tiles away (Manhattan) with a detour. Full table on
+[#22](https://github.com/MatthewT1/matts-openrct2-plugins/issues/22).
+
+**What the source says about the walk** (Session 3):
+
+- The game sends the nearest free mechanic by **Manhattan distance to the exit**
+  (`FindClosestMechanic`, `Ride.cpp:1521`), not by walking distance. The "closest"
+  mechanic can have a long route.
+- Staff walk at energy 96 (`Cheats.h:138`), 2 world units a step (`Peep.cpp:432`), so
+  **~43 ticks per flat tile, ~85 on slopes** (`Peep.cpp:938`), which is about 12 flat
+  tiles an in-game day. The first trace's 1,024-tick walk is ~24 flat tiles for a
+  10-tile start.
+- A mechanic gives up after 2,500 steps and the ride calls again (`Staff.cpp:1364`).
+- `staffAnswerCall` is the "take the call" animation at the start of `updateAnswering`
+  (sub-states 0-1), not a sign of the repair.
+
+**Trace extension (Session 3):** each trace now also reports `fixerWalkTiles` (tiles the
+fixer actually walked from the broken flag to the ride), `fixerWalkTicks` and
+`fixerTicksPerTile`. Walked vs `fixerStartDistance` separates a long route from slow
+walking; ticks per tile near 43 means flat, near 85 means slopes, much higher means waiting
+or stuck.
+
+**Exit criterion, decided before collecting the data.** With 5 or more `fixed` traces:
+
+| Result | Reading | Do |
+|---|---|---|
+| Median `fixerWalkTicks` under ~540 (1 day) | Repairs are fast enough | Close #22, no fix |
+| Median over 1 day and walked / start distance >= 1.5 | The route is the problem | Try ride-group patrol zones (reopens M2 on *response time*, not inspections) |
+| Median over 1 day, ratio under 1.5, ticks per tile >= 70 | Slopes or blocking | Zones won't help. Leave it to M3 |
+| Median over 1 day, ratio under 1.5, ticks per tile near 43 | Plain distance | More mechanics (option A) is the lever |
+
+**Option A (keep the formula count while reliability is low) was checked against the log
+before building it.** The lowest ride reliability on Thunder Rock was 65-75% on **all 91**
+logged days, so a reliability gate would be on permanently. It would really be "never
+release mechanics below the formula", which is a different decision.
 
 ---
 
