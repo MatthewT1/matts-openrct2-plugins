@@ -21,7 +21,7 @@ it's working.
 
 ## Install
 
-1. Download the `.js` files from the latest release (or the CI `plugins` artifact).
+1. Download the `.js` files from the [latest release](../../releases/latest).
 2. Copy them into your OpenRCT2 `plugin` folder:
    - Windows: `Documents\OpenRCT2\plugin\`
    - macOS: `~/Library/Application Support/OpenRCT2/plugin/`
