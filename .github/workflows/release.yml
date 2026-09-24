@@ -11,6 +11,8 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    # The "release" environment requires MatthewT1 to approve the run before it publishes.
+    environment: release
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
