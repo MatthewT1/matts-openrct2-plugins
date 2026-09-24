@@ -65,7 +65,11 @@ export interface BreakdownTrace {
     rideId: number;
     ride: string;
     reason: string;
-    /** "fixed", "unfinished" (gave up at MAX_TRACE_TICKS), or "gone" (ride closed/removed). */
+    /**
+     * "fixed"; "fixedWhilePending" (a mechanic already inspecting the ride fixed it before
+     * it was ever marked broken); "unfinished" (gave up at MAX_TRACE_TICKS); or "gone"
+     * (ride closed/removed).
+     */
     outcome: string;
     /** Ticks from the breakdown event to the brokenDown flag, or -1 if never seen. */
     ticksToBroken: number;
@@ -127,6 +131,16 @@ function tilesTo(m: MechanicSnapshot, exit: { x: number; y: number }): number {
     return Math.round((Math.abs(m.x - exit.x) + Math.abs(m.y - exit.y)) / TILE);
 }
 
+/** A mechanic at the ride whose ridesFixed rose since the trace started, or -1. */
+function pendingFixer(a: Active, exit: { x: number; y: number }, mechanics: MechanicSnapshot[]): number {
+    for (let i = 0; i < mechanics.length; i++) {
+        const m = mechanics[i];
+        const before = a.startFixed[m.id];
+        if (before !== undefined && m.ridesFixed > before && tilesTo(m, exit) <= 2) return m.id;
+    }
+    return -1;
+}
+
 function isFixAnim(a: string): boolean {
     return a === "staffFix" || a === "staffFix2" || a === "staffFix3" || a === "staffFixGround";
 }
@@ -151,8 +165,8 @@ export function createBreakdownTracer(): BreakdownTracer {
     const traces: Record<number, Active> = {};
     let count = 0;
 
-    function finish(a: Active, outcome: string, mechanics: MechanicSnapshot[]): BreakdownTrace {
-        let fixedBy = -1;
+    function finish(a: Active, outcome: string, mechanics: MechanicSnapshot[], fixer = -1): BreakdownTrace {
+        let fixedBy = fixer;
         let inspected = 0;
         for (let i = 0; i < mechanics.length; i++) {
             const m = mechanics[i];
@@ -235,6 +249,15 @@ export function createBreakdownTracer(): BreakdownTracer {
                 // The event fires while the breakdown is still pending, before the
                 // brokenDown flag is set; don't call it fixed until it has been seen broken.
                 if (!broken && a.brokenAt !== -1) { done.push(finish(a, "fixed", mechanics)); continue; }
+                // A mechanic who is already inspecting the ride fixes a pending breakdown
+                // on the spot (Staff.cpp:2016-2020), so the brokenDown flag, the only one
+                // `ride.breakdown` reports (ScRide.cpp:809), is never set. Without this
+                // the trace would wait out MAX_TRACE_TICKS and blame whichever mechanic's
+                // counter rose elsewhere in the meantime.
+                if (!broken && !first) {
+                    const fixer = pendingFixer(a, r.exit, mechanics);
+                    if (fixer !== -1) { done.push(finish(a, "fixedWhilePending", mechanics, fixer)); continue; }
+                }
                 if (t > MAX_TRACE_TICKS) { done.push(finish(a, "unfinished", mechanics)); continue; }
                 a.lastSeenBroken = t;
 

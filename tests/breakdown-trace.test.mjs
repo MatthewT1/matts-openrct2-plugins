@@ -70,6 +70,22 @@ const mech = (id, tx, ty, animation = "walking", ridesFixed = 0, ridesInspected 
     ok(r.fixerWalkTiles === -1 && r.fixerWalkTicks === -1 && r.fixerTicksPerTile === -1, "walk fields -1 without a fixer");
 }
 
+// Fixed while still pending: an inspecting mechanic fixes it before it is ever marked
+// broken. Must finish at once and name the mechanic at the ride, not one whose counter
+// rose elsewhere.
+{
+    const tr = createBreakdownTracer();
+    tr.start(4, "safety_cut_out", 0);
+    let out = tr.sample(64, [ride("none")], [mech(1, 11, 10, "walking", 3), mech(2, 40, 40, "walking", 7)]);
+    ok(out.length === 0, "pending on the first sample is not finished");
+    out = tr.sample(128, [ride("none")], [mech(1, 11, 10, "walking", 3), mech(2, 40, 40, "walking", 8)]);
+    ok(out.length === 0, "a counter rising away from the ride does not finish a pending trace");
+    out = tr.sample(192, [ride("none")], [mech(1, 10, 10, "walking", 4), mech(2, 40, 40, "walking", 8)]);
+    ok(out.length === 1 && out[0].outcome === "fixedWhilePending", "fixed while pending: " + (out[0] && out[0].outcome));
+    ok(out[0].fixedBy === 1 && out[0].ticksToBroken === -1, "fixer is the mechanic at the ride");
+    ok(!tr.active(), "trace cleared");
+}
+
 // Ride removed or without an exit mid-trace.
 {
     const tr = createBreakdownTracer();
