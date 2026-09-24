@@ -85,8 +85,30 @@ export function diagnosticsCheckbox(x: number, y: number, width: number): Checkb
         text: "Diagnostics: stream timings to log sink",
         tooltip: "Stream timing and counter data to a local log sink on 127.0.0.1:7777 for performance analysis. Off by default; costs nothing when off.",
         isChecked: isDebugEnabled(),
-        onChange: function (checked: boolean): void { setDebugEnabled(checked); },
+        onChange: function (checked: boolean): void {
+            setDebugEnabled(checked);
+            syncDiagnosticsCheckboxes(checked);
+        },
     };
+}
+
+/** Classifications of every plugin window that carries the Diagnostics checkbox. */
+const DIAGNOSTICS_WINDOWS = [
+    "trash-manager", "mechanic-manager", "wait-time-optimizer", "staff-extras", "marketing-manager",
+];
+
+/**
+ * Ticks or unticks the Diagnostics checkbox in every other open plugin window, so they
+ * all agree with the flag (#10). The game finds custom windows by classification
+ * across plugins (CustomWindow.cpp:1349), so one plugin can update another's window.
+ */
+function syncDiagnosticsCheckboxes(checked: boolean): void {
+    for (let i = 0; i < DIAGNOSTICS_WINDOWS.length; i++) {
+        const w = ui.getWindow(DIAGNOSTICS_WINDOWS[i]);
+        if (w === null) continue;
+        const chk = w.findWidget<CheckboxWidget>("chkDebug");
+        if (chk !== null && chk.isChecked !== checked) chk.isChecked = checked;
+    }
 }
 
 /** Creates a debug channel tagged with the given plugin name. */

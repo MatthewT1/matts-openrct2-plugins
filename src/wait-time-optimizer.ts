@@ -749,7 +749,7 @@ registerPlugin({
                 classification: "wait-time-optimizer",
                 title: "Wait Time Optimizer v" + PLUGIN_VERSION,
                 width: 400,
-                height: 332,
+                height: 346,
                 widgets: [
                     // Summary line
                     {
@@ -820,21 +820,26 @@ registerPlugin({
                         isChecked: getAutoManage(),
                         onChange: (checked: boolean) => { settings.autoManage.set(checked); }
                     },
-                    // Legend
+                    // Legend, on two lines: on one it ran past the window edge (#24)
                     {
                         type: "label",
                         x: 8, y: 264, width: 384, height: 14,
-                        text: "[C]=needs capacity  [!!]=near 15min walk-out  [!]=queue  [~]=intense  click=center"
+                        text: "[C]=needs capacity  [!!]=near 15min walk-out  [!]=queue  [~]=intense"
+                    },
+                    {
+                        type: "label",
+                        x: 8, y: 278, width: 384, height: 14,
+                        text: "Click a row to centre the view on that ride"
                     },
                     {
                         type: "checkbox", name: "chkOps",
-                        x: 8, y: 282, width: 384, height: 14,
+                        x: 8, y: 296, width: 384, height: 14,
                         text: "Tune ride operation settings (laps / rotations / speed)",
                         tooltip: "Shorten the cycle on rides with long queues and lengthen it on empty ones. Changing this discards the ride's excitement/intensity/nausea ratings until it runs again, so it moves one step at a time and only after several consistent readings. Off by default.",
                         isChecked: isAutoOps(),
                         onChange: (checked: boolean) => { settings.autoOps.set(checked); }
                     },
-                    diagnosticsCheckbox(8, 302, 384)
+                    diagnosticsCheckbox(8, 316, 384)
                 ],
                 onClose: () => {
                     pluginWindow = null;

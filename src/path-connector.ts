@@ -45,7 +45,8 @@ interface PathStyle {
 /** Output of analyzeRoute(). */
 interface RouteAnalysis {
     summary: string;
-    warnings: string[];
+    /** Short text fits the 254px label (#24); detail goes in its tooltip. */
+    warnings: { text: string; detail: string }[];
     canPlace: boolean;
 }
 
@@ -433,24 +434,29 @@ function pathConnectorMain(): void {
         const placeable    = newTiles.filter(t =>
             tileIsOwned(t.x, t.y) && !hasBlockingElement(t.x, t.y)
         );
-        const warnings: string[] = [];
+        const warnings: { text: string; detail: string }[] = [];
 
         if (blockedTiles.length > 0) {
-            warnings.push(blockedTiles.length + " tile(s) blocked by rides or entrances — placement will fail there");
+            warnings.push({ text: blockedTiles.length + " tile(s) blocked by rides",
+                detail: "Blocked by rides or entrances. Placement will fail on these tiles." });
         }
         if (!routeConnectsToNetwork(route)) {
-            warnings.push("Route doesn't connect to the existing path network — guests won't be able to use it");
+            warnings.push({ text: "Not joined to the path network",
+                detail: "The route doesn't connect to the existing path network, so guests won't be able to use it." });
         }
         const widthViolations = findWidthViolations(newTiles);
         if (widthViolations.length > 0) {
-            warnings.push(widthViolations.length + " tile(s) would create 3-wide paths — may confuse guest pathfinding");
+            warnings.push({ text: widthViolations.length + " tile(s) make a 3-wide path",
+                detail: "Paths 3 or more tiles wide can confuse guest pathfinding." });
         }
         const deadEnds = findInteriorDeadEnds(newTiles);
         if (deadEnds.length > 0) {
-            warnings.push(deadEnds.length + " interior tile(s) have only one connection — unexpected dead-ends");
+            warnings.push({ text: deadEnds.length + " unexpected dead-end(s)",
+                detail: "Interior tiles with only one connection." });
         }
         if (unownedCount > 0) {
-            warnings.push(unownedCount + " tile(s) are outside park ownership and will be skipped");
+            warnings.push({ text: unownedCount + " tile(s) outside park (skipped)",
+                detail: "These tiles are outside park ownership and will be skipped." });
         }
 
         return {
@@ -820,9 +826,11 @@ function pathConnectorMain(): void {
         win.findWidget<ButtonWidget>("btnConnect").isDisabled = !ready;
 
         // Clear warning lines before repopulating
-        win.findWidget<LabelWidget>("lblWarn1").text = "";
-        win.findWidget<LabelWidget>("lblWarn2").text = "";
-        win.findWidget<LabelWidget>("lblWarn3").text = "";
+        for (let i = 1; i <= 3; i++) {
+            const w = win.findWidget<LabelWidget>("lblWarn" + i);
+            w.text = "";
+            w.tooltip = "";
+        }
 
         if (!ready) {
             win.findWidget<LabelWidget>("lblPreview").text = "Select both tiles to preview route.";
@@ -833,7 +841,9 @@ function pathConnectorMain(): void {
         win.findWidget<LabelWidget>("lblPreview").text = analysis.summary;
 
         for (let i = 0; i < Math.min(3, analysis.warnings.length); i++) {
-            win.findWidget<LabelWidget>("lblWarn" + (i + 1)).text = "[!]  " + analysis.warnings[i];
+            const w = win.findWidget<LabelWidget>("lblWarn" + (i + 1));
+            w.text = "[!]  " + analysis.warnings[i].text;
+            w.tooltip = analysis.warnings[i].detail;
         }
     }
 }
