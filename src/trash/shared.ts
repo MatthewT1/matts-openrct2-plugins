@@ -4,6 +4,7 @@
  * Split out of trash-manager.ts (#6) with no behaviour change.
  */
 
+import { boolSetting, SettingsStore } from "../settings";
 import { Hotspot } from "../hotspots";
 
 export interface TileCoord {
@@ -89,4 +90,18 @@ export function computeNeededHandymen(pathTileCount: number, guestCount: number)
     const fromGuests = Math.ceil(guestCount / GUESTS_PER_HANDYMAN);
     const fromTiles  = Math.ceil(pathTileCount / PATH_TILES_PER_HANDYMAN);
     return Math.max(fromGuests, fromTiles) + FREE_ROAMING_BUFFER;
+}
+
+/** Trash Manager's on/off settings, one per window checkbox. See settings.ts. */
+export type TrashSettings = ReturnType<typeof createTrashSettings>;
+
+export function createTrashSettings(storage: SettingsStore) {
+    return {
+        adaptiveStaffing: boolSetting(storage, "adaptiveStaffing", true),
+        autoSweep:        boolSetting(storage, "autoSweepEnabled", false),
+        autoHire:         boolSetting(storage, "autoHireEnabled", true),
+        autoAmenities:    boolSetting(storage, "autoAmenities", false),
+        amenityRemoval:   boolSetting(storage, "autoAmenityRemoval", false),
+        autoFacilities:   boolSetting(storage, "autoFacilities", false),
+    };
 }

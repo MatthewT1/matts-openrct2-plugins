@@ -30,9 +30,10 @@
 
 import { createDebugChannel } from "./debug";
 import { createStaffingController, StaffingDecision } from "./staffing";
+import { createDeferredActions } from "./deferred";
 import {
     LITTER_PENALTY_CAP, FREE_ROAMING_BUFFER, getHandymen, litterAge, isOldLitter,
-    computeRatingPenalty, computeNeededHandymen,
+    computeRatingPenalty, computeNeededHandymen, createTrashSettings,
 } from "./trash/shared";
 import { createMapScan } from "./trash/map-scan";
 import { createHandymen } from "./trash/handymen";
@@ -58,6 +59,7 @@ function trashManagerMain(): void {
 
     // The work is split by job into src/trash/ (#6). Each factory keeps its own state;
     // this function wires them together and owns the staffing decision and the hooks.
+    const settings = createTrashSettings(storage);
     const scan = createMapScan(dbg);
     const {
         cache, hotspots, updateTileCache, updateEntityCache, updateCache, reportHotspots, getCoverageTiles,
@@ -67,8 +69,8 @@ function trashManagerMain(): void {
         syncZones, checkActivity,
     } = createHandymen(dbg, cache);
     const { isAutoAmenities, isAmenityRemoval, reportVomit, manageAmenities } =
-        createAmenityManager(storage, dbg, scan);
-    const facilities = createFacilityManager(storage, dbg);
+        createAmenityManager(storage, settings, dbg, scan);
+    const facilities = createFacilityManager(settings, dbg);
     const { isAutoFacilities, sampleGuestNeeds, manageFacilities, facilityTracker } = facilities;
 
     /** Returns the user-configured max handymen cap (stored per save file, default 20). */
@@ -77,11 +79,12 @@ function trashManagerMain(): void {
         return v !== undefined ? v : 20;
     }
 
-    // Deferred sweep flags: entity.remove() must run from interval.tick, not
-    // from a UI button onClick handler (game state is not mutable in that context).
-    let pendingSweepAll  = false;
-    let pendingSweepOld  = false;
-    let pendingFixOrders = false; // h.orders write must be deferred from onClick to interval.tick
+    // Button actions that change game state run on the next tick; see deferred.ts.
+    // entity.remove() and h.orders writes must not run from a UI onClick handler
+    // (game state is not mutable in that context).
+    const deferred = createDeferredActions(function(onTick: () => void): void {
+        context.subscribe("interval.tick", onTick);
+    });
 
     // Closed-loop staffing. The guest-driven formula is coverage-blind and hires
     // forever as a park grows; this probes downward while the park stays clean and
@@ -116,7 +119,7 @@ function trashManagerMain(): void {
     const GUESTS_PER_HANDYMAN_FLOOR = 100;
 
     function isAdaptiveStaffing(): boolean {
-        return storage.get<boolean>("adaptiveStaffing") !== false;
+        return settings.adaptiveStaffing.get();
     }
 
     function staffingFloor(): number {
@@ -132,8 +135,8 @@ function trashManagerMain(): void {
             parkRating:  park.rating,
             // Without these the litter counts are uninterpretable: a clean park under
             // auto-sweep says nothing about whether the handymen are keeping up.
-            autoSweep:   storage.get<boolean>("autoSweepEnabled") === true,
-            autoHire:    storage.get<boolean>("autoHireEnabled") !== false,
+            autoSweep:   settings.autoSweep.get(),
+            autoHire:    settings.autoHire.get(),
             guests:      cache.guests,
             handymen:    cache.handymanCount,
             needed:      computeNeededHandymen(cache.pathTiles, cache.guests),
@@ -213,8 +216,8 @@ function trashManagerMain(): void {
         dbg.time("day.needSample", sampleGuestNeeds);
         dbg.time("day.facilities", manageFacilities);
 
-        const autoHire  = storage.get<boolean>("autoHireEnabled") !== false;
-        const autoSweep = storage.get<boolean>("autoSweepEnabled") === true;
+        const autoHire  = settings.autoHire.get();
+        const autoSweep = settings.autoSweep.get();
 
         if (autoSweep) {
             litter.forEach(function(e: Litter): void { e.remove(); });
@@ -308,17 +311,12 @@ function trashManagerMain(): void {
      * Per-tick: process deferred sweep requests from UI buttons.
      * entity.remove() is only safe in this context (game state is mutable here).
      */
-    context.subscribe("interval.tick", function(): void {
-        if (!pendingSweepAll && !pendingSweepOld && !pendingFixOrders) return;
+    // enforceOrders writes directly to entity properties; must run on the tick, not in onClick.
+    const requestFixOrders = deferred.define(function(): void { enforceOrders(); });
 
-        // enforceOrders writes directly to entity properties; must run here, not in onClick.
-        if (pendingFixOrders) { enforceOrders(); pendingFixOrders = false; }
-        if (!pendingSweepAll && !pendingSweepOld) return;
-
-        const sweepOldOnly = pendingSweepOld && !pendingSweepAll;
-        pendingSweepAll  = false;
-        pendingSweepOld  = false;
-
+    // Sweep All and Sweep Old share one queued sweep. If both are pressed before the
+    // tick, the full sweep wins: `oldOnly` stays true only if every request was "old".
+    const requestSweep = deferred.defineWithArg(function(sweepOldOnly: boolean): void {
         let litter: Litter[] = map.getAllEntities("litter");
 
         if (sweepOldOnly) {
@@ -344,7 +342,7 @@ function trashManagerMain(): void {
 
         console.log("[Trash Manager] Swept " + litter.length +
             (sweepOldOnly ? " old (penalty-causing)" : "") + " litter items.");
-    });
+    }, function(queued: boolean, next: boolean): boolean { return queued && next; });
 
     // -------------------------------------------------------------------------
     // UI
@@ -357,12 +355,12 @@ function trashManagerMain(): void {
     if (typeof ui === "undefined") return; // headless / dedicated server
 
     const { openWindow } = createTrashWindow({
-        storage, scan, staffing, hireHandyman, clearHandymanZone, clearAllZones, getMaxHandymen,
+        storage, settings, scan, staffing, hireHandyman, clearHandymanZone, clearAllZones, getMaxHandymen,
         isAdaptiveStaffing, isAutoAmenities, isAmenityRemoval, isAutoFacilities,
         resetStaffingSeed: function(): void { staffingSeeded = false; },
-        requestSweepAll: function(): void { pendingSweepAll = true; },
-        requestSweepOld: function(): void { pendingSweepOld = true; },
-        requestFixOrders: function(): void { pendingFixOrders = true; },
+        requestSweepAll: function(): void { requestSweep(false); },
+        requestSweepOld: function(): void { requestSweep(true); },
+        requestFixOrders: requestFixOrders,
     });
 
     ui.registerMenuItem("Trash Manager", openWindow);

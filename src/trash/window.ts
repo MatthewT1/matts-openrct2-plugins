@@ -4,16 +4,17 @@
  * Split out of trash-manager.ts (#6) with no behaviour change.
  */
 
-import { isDebugEnabled, setDebugEnabled } from "../debug";
+import { diagnosticsCheckbox } from "../debug";
 import {
     LITTER_PENALTY_CAP, FREE_ROAMING_BUFFER, GUESTS_PER_HANDYMAN,
-    PATH_TILES_PER_HANDYMAN, computeRatingPenalty, computeNeededHandymen,
+    PATH_TILES_PER_HANDYMAN, computeRatingPenalty, computeNeededHandymen, TrashSettings,
 } from "./shared";
 import { StaffingController } from "../staffing";
 import { MapScan } from "./map-scan";
 
 export interface TrashWindowDeps {
     storage: Configuration;
+    settings: TrashSettings;
     scan: MapScan;
     staffing: StaffingController;
     hireHandyman(onHired: ((peepId: number) => void) | undefined): void;
@@ -33,7 +34,7 @@ export interface TrashWindowDeps {
 
 export function createTrashWindow(deps: TrashWindowDeps) {
     const {
-        storage, scan, staffing, hireHandyman, clearHandymanZone, clearAllZones, getMaxHandymen,
+        storage, settings, scan, staffing, hireHandyman, clearHandymanZone, clearAllZones, getMaxHandymen,
         isAdaptiveStaffing, isAutoAmenities, isAmenityRemoval, isAutoFacilities,
         resetStaffingSeed, requestSweepAll, requestSweepOld, requestFixOrders,
     } = deps;
@@ -71,15 +72,15 @@ export function createTrashWindow(deps: TrashWindowDeps) {
                     x: 14, y: 174, width: 276, height: 14,
                     text: "Auto-hire / fire handymen",
                     tooltip: "Targets 1 handyman per " + GUESTS_PER_HANDYMAN + " guests (or 1 per " + PATH_TILES_PER_HANDYMAN + " path tiles minimum) + " + FREE_ROAMING_BUFFER + " free-roaming; fires when overstaffed by >3",
-                    isChecked: storage.get<boolean>("autoHireEnabled") !== false,
-                    onChange: function(v: boolean): void { storage.set("autoHireEnabled", v); },
+                    isChecked: settings.autoHire.get(),
+                    onChange: function(v: boolean): void { settings.autoHire.set(v); },
                 },
                 {
                     type: "checkbox", name: "chkAutoSweep",
                     x: 14, y: 192, width: 276, height: 14,
                     text: "Auto-sweep all litter each day",
-                    isChecked: storage.get<boolean>("autoSweepEnabled") === true,
-                    onChange: function(v: boolean): void { storage.set("autoSweepEnabled", v); },
+                    isChecked: settings.autoSweep.get(),
+                    onChange: function(v: boolean): void { settings.autoSweep.set(v); },
                 },
                 {
                     type: "checkbox", name: "chkAdaptive",
@@ -88,7 +89,7 @@ export function createTrashWindow(deps: TrashWindowDeps) {
                     tooltip: "Reduce handymen while the park stays clean and the fleet has nothing to do; hire back immediately if litter starts costing park rating. Never exceeds the formula's recommendation, never drops below path-coverage minimum.",
                     isChecked: isAdaptiveStaffing(),
                     onChange: function(v: boolean): void {
-                        storage.set("adaptiveStaffing", v);
+                        settings.adaptiveStaffing.set(v);
                         resetStaffingSeed(); // re-seed from the live roster
                     },
                 },
@@ -98,7 +99,7 @@ export function createTrashWindow(deps: TrashWindowDeps) {
                     text: "Auto-place benches & bins where needed",
                     tooltip: "Each in-game day, place benches near nauseating ride exits and vomit hotspots, and bins near stalls. Benches stop guests vomiting (a seated guest sheds nausea); handymen only clean up afterwards. Costs money, so it is off by default.",
                     isChecked: isAutoAmenities(),
-                    onChange: function(v: boolean): void { storage.set("autoAmenities", v); },
+                    onChange: function(v: boolean): void { settings.autoAmenities.set(v); },
                 },
                 {
                     type: "checkbox", name: "chkAmenityRemoval",
@@ -106,7 +107,7 @@ export function createTrashWindow(deps: TrashWindowDeps) {
                     text: "...and remove ones no longer needed",
                     tooltip: "Remove benches and bins that are no longer near any stall, nauseating ride exit or vomit hotspot. ONLY removes amenities this plugin placed itself - anything you placed is never touched.",
                     isChecked: isAmenityRemoval(),
-                    onChange: function(v: boolean): void { storage.set("autoAmenityRemoval", v); },
+                    onChange: function(v: boolean): void { settings.amenityRemoval.set(v); },
                 },
                 {
                     type: "checkbox", name: "chkFacilities",
@@ -114,7 +115,7 @@ export function createTrashWindow(deps: TrashWindowDeps) {
                     text: "Auto-build toilets, first aid & food stalls",
                     tooltip: "Watches where guests actually go hungry, thirsty or need a toilet, and builds a facility there once the same gap has persisted across many samples. Costs real money and needs Diagnostics-quality sampling, which it turns on for itself. Never demolishes anything, caps how many of each kind it will build, and builds at most one at a time. Off by default.",
                     isChecked: isAutoFacilities(),
-                    onChange: function(v: boolean): void { storage.set("autoFacilities", v); },
+                    onChange: function(v: boolean): void { settings.autoFacilities.set(v); },
                 },
                 { type: "label", x: 14, y: 284, width: 116, height: 14, text: "Max handymen cap:" },
                 {
@@ -180,14 +181,7 @@ export function createTrashWindow(deps: TrashWindowDeps) {
                 },
 
                 { type: "label", name: "lblStatus", x: 14, y: 386, width: 276, height: 14, text: "" },
-                {
-                    type: "checkbox", name: "chkDebug",
-                    x: 14, y: 406, width: 276, height: 14,
-                    text: "Diagnostics: stream timings to log sink",
-                    tooltip: "Stream timing and counter data to a local log sink on 127.0.0.1:7777 for performance analysis. Off by default; costs nothing when off.",
-                    isChecked: isDebugEnabled(),
-                    onChange: function(v: boolean): void { setDebugEnabled(v); },
-                },
+                diagnosticsCheckbox(14, 406, 276),
             ],
             onClose: function(): void {
                 win = null;

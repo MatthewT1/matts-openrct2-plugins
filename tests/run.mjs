@@ -25,7 +25,7 @@ const buildDir = join(here, "build");
 const MODULES = [
     "hotspots", "staff-activity", "staffing",
     "vomit", "amenities", "needs", "thoughts", "ops", "facilities", "queues",
-    "entertainer-targeting", "marketing", "staff-hiring",
+    "entertainer-targeting", "marketing", "staff-hiring", "deferred", "settings",
 ];
 
 function compile() {

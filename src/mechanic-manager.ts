@@ -1,7 +1,9 @@
-import { createDebugChannel, isDebugEnabled, setDebugEnabled } from "./debug";
+import { createDebugChannel, diagnosticsCheckbox } from "./debug";
+import { boolSetting } from "./settings";
 import { createActivityTracker } from "./staff-activity";
 import { MECHANIC_THRESHOLDS, createStaffingController, StaffingDecision } from "./staffing";
 import { createStaffHirer, HIRE_BACKOFF_DAYS } from "./staff-hiring";
+import { createDeferredActions } from "./deferred";
 
 registerPlugin({
     name: "Mechanic Manager",
@@ -37,20 +39,19 @@ registerPlugin({
         // Max rides shown in the "needs attention" watch list.
         const MAX_WATCH_LIST = 5;
 
-        // Deferred-mutation flags: game state writes (ride property sets, executeAction)
-        // are only safe from interval hooks, NOT from UI onClick handlers.
-        let pendingApplyIntervals = false;
-        let pendingHireToTarget = false;
-        let pendingAssignZones = false;
-
         const storage: Configuration = context.getParkStorage();
+        const settings = {
+            autoManage: boolSetting(storage, "autoManage", true),
+            emergencyRepair: boolSetting(storage, "emergencyRepair", false),
+            adaptiveMechanics: boolSetting(storage, "adaptiveMechanics", true),
+        };
 
         // Debug channel; off unless the shared-storage debug flag is set (see debug.ts).
         const dbg = createDebugChannel("mechanic-manager");
 
         /** Auto-manage toggle, persisted per save file (was reset on every load). */
         function getAutoManage(): boolean {
-            return storage.get<boolean>("autoManage") !== false;
+            return settings.autoManage.get();
         }
 
         const recentBreakdowns: string[] = [];
@@ -96,11 +97,11 @@ registerPlugin({
         let brokenDays: Record<number, number> = {};
 
         function isEmergencyRepair(): boolean {
-            return storage.get<boolean>("emergencyRepair") === true;
+            return settings.emergencyRepair.get();
         }
 
         function isAdaptiveMechanics(): boolean {
-            return storage.get<boolean>("adaptiveMechanics") !== false;
+            return settings.adaptiveMechanics.get();
         }
 
         // Tracks whether each mechanic's fix/inspect counters are advancing. See
@@ -413,13 +414,11 @@ registerPlugin({
             refreshWindow();
         });
 
-        // Deferred mutations: process pending flags each tick.
-        context.subscribe("interval.tick", () => {
-            if (!pendingApplyIntervals && !pendingHireToTarget && !pendingAssignZones) return;
-            if (pendingApplyIntervals) { applyInspectionIntervals(); pendingApplyIntervals = false; }
-            if (pendingHireToTarget) { hireToTarget(); pendingHireToTarget = false; }
-            if (pendingAssignZones) { assignZones(getMechanics()); pendingAssignZones = false; }
-        });
+        // Button actions that change game state run on the next tick; see deferred.ts.
+        const deferred = createDeferredActions((onTick) => context.subscribe("interval.tick", onTick));
+        const requestApplyIntervals = deferred.define(() => applyInspectionIntervals());
+        const requestHireToTarget = deferred.define(() => { hireToTarget(); });
+        const requestAssignZones = deferred.define(() => assignZones(getMechanics()));
 
         // Daily: refresh cache and optionally auto-manage everything.
         /**
@@ -639,21 +638,21 @@ registerPlugin({
                         x: 8, y: 236, width: 128, height: 16,
                         text: "Set Optimal Intervals",
                         tooltip: "Set all rides to inspect every 10 minutes. Inspections do not slow reliability decay - they restore a share of what has already been lost, so inspecting more often raises average reliability. Costs mechanic travel time.",
-                        onClick: () => { pendingApplyIntervals = true; }
+                        onClick: () => { requestApplyIntervals(); }
                     },
                     {
                         type: "button",
                         x: 144, y: 236, width: 128, height: 16,
                         text: "Hire / Fire to Target",
                         tooltip: "Hire or fire to recommended level: 1 mechanic per " + TARGET_RIDES_PER_MECHANIC + " rides + " + FREE_ROAMING_BUFFER + " free-roaming overflow",
-                        onClick: () => { pendingHireToTarget = true; }
+                        onClick: () => { requestHireToTarget(); }
                     },
                     {
                         type: "button",
                         x: 8, y: 256, width: 128, height: 16,
                         text: "Clear Patrol Zones",
                         tooltip: "Remove all mechanic patrol zones so they can reach any ride. OpenRCT2 dispatches the nearest mechanic to each breakdown automatically — zone restrictions block this.",
-                        onClick: () => { pendingAssignZones = true; }
+                        onClick: () => { requestAssignZones(); }
                     },
                     {
                         type: "button",
@@ -667,7 +666,7 @@ registerPlugin({
                         x: 8, y: 278, width: 264, height: 14,
                         text: "Auto-manage daily  (intervals + hiring + zones)",
                         isChecked: getAutoManage(),
-                        onChange: (checked: boolean) => { storage.set("autoManage", checked); }
+                        onChange: (checked: boolean) => { settings.autoManage.set(checked); }
                     },
                     {
                         type: "checkbox", name: "chkAdaptiveMech",
@@ -676,7 +675,7 @@ registerPlugin({
                         tooltip: "Release mechanics while no ride is breaking down and the fleet has nothing to do; hire back immediately if breakdowns go unattended or park rating falls. Never exceeds the formula's recommendation, never drops below 2 while the park has rides.",
                         isChecked: isAdaptiveMechanics(),
                         onChange: (checked: boolean) => {
-                            storage.set("adaptiveMechanics", checked);
+                            settings.adaptiveMechanics.set(checked);
                             mechanicStaffingSeeded = false; // re-seed from the live roster
                         }
                     },
@@ -686,18 +685,11 @@ registerPlugin({
                         text: "Emergency repair stuck rides  (cheat)",
                         tooltip: "Clears the breakdown on any ride still broken after " + EMERGENCY_REPAIR_DAYS + " days. This is a CHEAT: no mechanic travels and no reliability is restored, the ride simply stops being broken. It exists for rides no mechanic can physically reach, which is a long-standing pathfinding problem in the game itself. Off by default.",
                         isChecked: isEmergencyRepair(),
-                        onChange: (checked: boolean) => { storage.set("emergencyRepair", checked); }
+                        onChange: (checked: boolean) => { settings.emergencyRepair.set(checked); }
                     },
                     // Status feedback
                     { type: "label", name: "lblStatus", x: 8, y: 334, width: 264, height: 14, text: "" },
-                    {
-                        type: "checkbox", name: "chkDebug",
-                        x: 8, y: 354, width: 264, height: 14,
-                        text: "Diagnostics: stream timings to log sink",
-                        tooltip: "Stream timing and counter data to a local log sink on 127.0.0.1:7777 for performance analysis. Off by default; costs nothing when off.",
-                        isChecked: isDebugEnabled(),
-                        onChange: (checked: boolean) => { setDebugEnabled(checked); }
-                    }
+                    diagnosticsCheckbox(8, 354, 264)
                 ],
                 onClose: () => {
                     pluginWindow = null;

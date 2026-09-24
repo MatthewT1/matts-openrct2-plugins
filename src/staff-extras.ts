@@ -33,13 +33,15 @@
  * an explicit checkbox with the cost stated in its tooltip.
  */
 
-import { createDebugChannel, isDebugEnabled, setDebugEnabled } from "./debug";
+import { createDebugChannel, diagnosticsCheckbox } from "./debug";
+import { boolSetting } from "./settings";
 import {
     selectEntertainerTargets, censusQueues, entertainerStaffingSignals,
     ENTERTAINER_THRESHOLDS, EntertainerTarget, RideQueueSignal, MAX_TARGETED_ENTERTAINERS,
 } from "./entertainer-targeting";
 import { createStaffingController, StaffingDecision } from "./staffing";
 import { createStaffHirer } from "./staff-hiring";
+import { createDeferredActions } from "./deferred";
 
 registerPlugin({
     name: "Staff Extras",
@@ -65,10 +67,11 @@ registerPlugin({
         const PATROL_MODE_CLEAR_ALL = 2;
         const MAX_WATCH_LIST = 5;
 
-        let pendingHireToTarget = false;
-        let pendingAssignPatrols = false;
 
         const storage: Configuration = context.getParkStorage();
+        const settings = {
+            autoManage: boolSetting(storage, "autoManageEntertainers", false),
+        };
         const dbg = createDebugChannel("staff-extras");
 
         // Shared hire/fire; see staff-hiring.ts. No backoff: an entertainer refusal is a
@@ -85,7 +88,7 @@ registerPlugin({
         });
 
         function getAutoManage(): boolean {
-            return storage.get<boolean>("autoManageEntertainers") === true;
+            return settings.autoManage.get();
         }
 
         // Closed-loop entertainer staffing, reusing the controller proven on handymen
@@ -436,11 +439,10 @@ registerPlugin({
             };
         }
 
-        context.subscribe("interval.tick", () => {
-            if (!pendingHireToTarget && !pendingAssignPatrols) return;
-            if (pendingHireToTarget) { hireToTarget(getEntertainers(), cache.targetCount); pendingHireToTarget = false; }
-            if (pendingAssignPatrols) { assignPatrols(getEntertainers(), cache.targets); pendingAssignPatrols = false; }
-        });
+        // Button actions that change game state run on the next tick; see deferred.ts.
+        const deferred = createDeferredActions((onTick) => context.subscribe("interval.tick", onTick));
+        const requestHireToTarget = deferred.define(() => { hireToTarget(getEntertainers(), cache.targetCount); });
+        const requestAssignPatrols = deferred.define(() => assignPatrols(getEntertainers(), cache.targets));
 
         context.subscribe("interval.day", () => {
             // Check the toggle FIRST. The cache refresh is by far the most expensive
@@ -523,7 +525,7 @@ registerPlugin({
                         text: "Hire / Fire to Target",
                         tooltip: "Hire or fire entertainers (GBP " + ENTERTAINER_WAGE_PER_MONTH
                             + "/month each) to the adaptive target, and re-assign patrol zones.",
-                        onClick: () => { pendingHireToTarget = true; pendingAssignPatrols = true; }
+                        onClick: () => { requestHireToTarget(); requestAssignPatrols(); }
                     },
                     {
                         type: "button",
@@ -541,19 +543,12 @@ registerPlugin({
                             + "congested queues (3+ minute posted wait). Off by default.",
                         isChecked: getAutoManage(),
                         onChange: (checked: boolean) => {
-                            storage.set("autoManageEntertainers", checked);
+                            settings.autoManage.set(checked);
                             entertainerStaffingSeeded = false;
                         }
                     },
                     { type: "label", name: "lblStatus", x: 8, y: 198, width: 264, height: 14, text: "" },
-                    {
-                        type: "checkbox", name: "chkDebug",
-                        x: 8, y: 218, width: 264, height: 14,
-                        text: "Diagnostics: stream timings to log sink",
-                        tooltip: "Stream timing and counter data to a local log sink on 127.0.0.1:7777. Off by default; costs nothing when off.",
-                        isChecked: isDebugEnabled(),
-                        onChange: (checked: boolean) => { setDebugEnabled(checked); }
-                    }
+                    diagnosticsCheckbox(8, 218, 264)
                 ],
                 onClose: () => {
                     pluginWindow = null;
