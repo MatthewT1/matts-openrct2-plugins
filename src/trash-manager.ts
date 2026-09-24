@@ -31,6 +31,7 @@
 import { createDebugChannel, isDebugEnabled, setDebugEnabled } from "./debug";
 import { createActivityTracker, ActivitySnapshot } from "./staff-activity";
 import { createStaffingController, StaffingDecision } from "./staffing";
+import { createStaffHirer, HIRE_BACKOFF_DAYS } from "./staff-hiring";
 import { createHotspotAccumulator, Hotspot } from "./hotspots";
 import { attributeVomit, describeDiagnosis, NauseaSource, MIN_NAUSEA } from "./vomit";
 import { planAmenities, AmenityDemand, AmenityKind, AmenitySite } from "./amenities";
@@ -618,66 +619,34 @@ function trashManagerMain(): void {
     // Staff management
     // -------------------------------------------------------------------------
 
-    /**
-     * In-game days to stop attempting hires after one is refused.
-     *
-     * For a handyman or mechanic the ONLY way `staffhire` can fail is the entity budget:
-     * it refuses when `getNumFreeEntities() < 400`, and again if entity creation itself
-     * fails (`StaffHireNewAction.cpp:74-100`). The staff type is a constant we control
-     * and costumes are not validated for these types, so nothing else can reject it.
-     *
-     * That condition is transient — it clears as guests leave — but the controller would
-     * otherwise retry every single in-game day and put the game's "can't hire new staff"
-     * message in front of the player each time. Backing off turns a repeating error into
-     * one message and a counter.
-     */
-    const HIRE_BACKOFF_DAYS = 10;
-    let hireBackoff = 0;
+    // Hire/fire and the entity-budget backoff are shared with the other staffing
+    // plugins; see staff-hiring.ts.
+    const hirer = createStaffHirer({
+        staffType: 0, // 0 = handyman
+        orders: HANDYMAN_ORDERS,
+        noun: "handyman",
+        plugin: "Trash Manager",
+        counterPrefix: "handyman",
+        backoffDays: HIRE_BACKOFF_DAYS,
+        execute: (action, args, cb) => context.executeAction(action, args, cb),
+        count: (name, n) => dbg.count(name, n),
+    });
 
     /** True while a recent refusal says there is no room for more staff. */
     function hiringBlocked(): boolean {
-        if (hireBackoff <= 0) return false;
-        hireBackoff--;
-        dbg.count("handymanHireBlocked");
-        return true;
+        return hirer.blocked();
     }
 
     /** Hires one handyman with correct orders. Calls onHired(peepId) on success. */
     function hireHandyman(onHired: ((peepId: number) => void) | undefined): void {
-        context.executeAction("staffhire", {
-            autoPosition: true,
-            staffType:    0, // 0 = handyman
-            costumeIndex: 0,
-            staffOrders:  HANDYMAN_ORDERS,
-        }, function(result: StaffHireNewActionResult): void {
-            if ((!result.error || result.error === 0) && result.peep != null) {
-                if (onHired) onHired(result.peep);
-                return;
-            }
-            // A refusal used to be swallowed here: no counter, no log, and a retry the
-            // next day. The player saw the game's error repeatedly while the telemetry
-            // said nothing at all.
-            dbg.count("handymanHireFailed");
-            if (hireBackoff === 0) {
-                console.log("[Trash Manager] Could not hire a handyman - the park is at " +
-                    "its entity limit. Pausing hiring for " + HIRE_BACKOFF_DAYS + " days.");
-            }
-            hireBackoff = HIRE_BACKOFF_DAYS;
-        });
+        hirer.hire(onHired);
     }
 
     function fireHandyman(handymen?: Handyman[]): void {
         const h = handymen !== undefined ? handymen : getHandymen();
         if (h.length > 0) {
             const id = h[h.length - 1].id;
-            context.executeAction("stafffire", { id: id }, (result: GameActionResult) => {
-                if (!result.error || result.error === 0) return;
-                // A refusal here used to be silent: no counter, no log. Firing a stale
-                // or already-gone peep id should show up in telemetry, not vanish.
-                dbg.count("handymanFireFailed");
-                console.log("[Trash Manager] Could not fire handyman #" + id + ": " +
-                    (result.errorMessage || "error code " + result.error));
-            });
+            if (id !== null) hirer.fire(id);
         }
     }
 

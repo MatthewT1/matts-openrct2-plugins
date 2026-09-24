@@ -39,6 +39,7 @@ import {
     ENTERTAINER_THRESHOLDS, EntertainerTarget, RideQueueSignal, MAX_TARGETED_ENTERTAINERS,
 } from "./entertainer-targeting";
 import { createStaffingController, StaffingDecision } from "./staffing";
+import { createStaffHirer } from "./staff-hiring";
 
 registerPlugin({
     name: "Staff Extras",
@@ -69,6 +70,19 @@ registerPlugin({
 
         const storage: Configuration = context.getParkStorage();
         const dbg = createDebugChannel("staff-extras");
+
+        // Shared hire/fire; see staff-hiring.ts. No backoff: an entertainer refusal is a
+        // costume problem (see entertainerCostume below), not the entity budget.
+        const hirer = createStaffHirer({
+            staffType: STAFF_TYPE_ENTERTAINER,
+            orders: ENTERTAINER_ORDERS,
+            noun: "entertainer",
+            plugin: "Staff Extras",
+            counterPrefix: "entertainer",
+            backoffDays: 0,
+            execute: (action, args, cb) => context.executeAction(action, args, cb),
+            count: (name, n) => dbg.count(name, n),
+        });
 
         function getAutoManage(): boolean {
             return storage.get<boolean>("autoManageEntertainers") === true;
@@ -322,17 +336,7 @@ registerPlugin({
             if (diff > 0) {
                 withCostume(function (costume: number): void {
                     for (let i = 0; i < diff; i++) {
-                        context.executeAction("staffhire", {
-                            autoPosition: true,
-                            staffType: STAFF_TYPE_ENTERTAINER,
-                            costumeIndex: costume,
-                            staffOrders: ENTERTAINER_ORDERS,
-                        }, function (r: StaffHireNewActionResult): void {
-                            if (r.error && r.error !== 0) {
-                                dbg.count("entertainerHireFailed");
-                                return;
-                            }
-                            if (r.peep === undefined) return;
+                        hirer.hire(function (peepId: number): void {
                             // Counted HERE, on confirmed success, not optimistically
                             // before the action runs. The previous version reported
                             // `entertainersHired: 15` for a run in which every single
@@ -342,9 +346,9 @@ registerPlugin({
                             dbg.count("entertainersHired");
                             // Remember what we hired, so we know what we may fire later.
                             const owned2 = loadOwned();
-                            owned2[String(r.peep)] = true;
+                            owned2[String(peepId)] = true;
                             saveOwned(owned2);
-                        });
+                        }, costume);
                     }
                 });
                 return true;
@@ -373,7 +377,7 @@ registerPlugin({
                 for (let i = 0; i < canFire; i++) {
                     const id = ours[i].id;
                     if (id === null) continue;
-                    context.executeAction("stafffire", { id: id }, function (): void { });
+                    hirer.fire(id);
                     delete remaining[String(id)];
                 }
                 saveOwned(remaining);

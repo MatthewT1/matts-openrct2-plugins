@@ -1,6 +1,7 @@
 import { createDebugChannel, isDebugEnabled, setDebugEnabled } from "./debug";
 import { createActivityTracker } from "./staff-activity";
 import { MECHANIC_THRESHOLDS, createStaffingController, StaffingDecision } from "./staffing";
+import { createStaffHirer, HIRE_BACKOFF_DAYS } from "./staff-hiring";
 
 registerPlugin({
     name: "Mechanic Manager",
@@ -352,21 +353,18 @@ registerPlugin({
             }
         }
 
-        /**
-         * In-game days to stop attempting hires after one is refused.
-         *
-         * For a handyman or mechanic the ONLY way `staffhire` can fail is the entity budget:
-         * it refuses when `getNumFreeEntities() < 400`, and again if entity creation itself
-         * fails (`StaffHireNewAction.cpp:74-100`). The staff type is a constant we control
-         * and costumes are not validated for these types, so nothing else can reject it.
-         *
-         * That condition is transient — it clears as guests leave — but the controller would
-         * otherwise retry every single in-game day and put the game's "can't hire new staff"
-         * message in front of the player each time. Backing off turns a repeating error into
-         * one message and a counter.
-             */
-        const HIRE_BACKOFF_DAYS = 10;
-        let hireBackoff = 0;
+        // Hire/fire and the entity-budget backoff are shared with the other staffing
+        // plugins; see staff-hiring.ts.
+        const hirer = createStaffHirer({
+            staffType: 1, // 1 = mechanic
+            orders: MECHANIC_ORDERS,
+            noun: "mechanic",
+            plugin: "Mechanic Manager",
+            counterPrefix: "mechanic",
+            backoffDays: HIRE_BACKOFF_DAYS,
+            execute: (action, args, cb) => context.executeAction(action, args, cb),
+            count: (name, n) => dbg.count(name, n),
+        });
 
         /** Returns true if the roster changed, meaning any cached Mechanic[] is now stale. */
         function hireToTarget(knownMechanics?: Mechanic[], knownTarget?: number): boolean {
@@ -383,41 +381,19 @@ registerPlugin({
             const effectiveTarget = Math.max(target, floor);
 
             const diff = effectiveTarget - mechanics.length;
-            if (diff > 0 && hireBackoff > 0) {
-                hireBackoff--;
-                dbg.count("mechanicHireBlocked");
-                return false;
-            }
+            if (diff > 0 && hirer.blocked()) return false;
             if (diff > 0) {
                 // Cap hires per day, same as the handyman path in trash-manager.ts. A
                 // large target jump - enabling auto-manage on an already-built park, or
                 // several rides finishing construction in one day - would otherwise fire
                 // `diff` executeAction calls synchronously in a single tick.
                 const hireCount = Math.min(3, diff);
-                for (let i = 0; i < hireCount; i++) {
-                    context.executeAction("staffhire", {
-                        autoPosition: true,
-                        staffType: 1, // 1 = mechanic
-                        costumeIndex: 0,
-                        staffOrders: MECHANIC_ORDERS
-                    }, (result: StaffHireNewActionResult) => {
-                        if (!result.error || result.error === 0) return;
-                        // Previously an empty callback, so a refusal was invisible here
-                        // and visible to the player - the worst way round.
-                        dbg.count("mechanicHireFailed");
-                        if (hireBackoff === 0) {
-                            console.log("[Mechanic Manager] Could not hire a mechanic - " +
-                                "the park is at its entity limit. Pausing hiring for " +
-                                HIRE_BACKOFF_DAYS + " days.");
-                        }
-                        hireBackoff = HIRE_BACKOFF_DAYS;
-                    });
-                }
+                for (let i = 0; i < hireCount; i++) hirer.hire();
                 return true;
             } else if (diff < 0) {
                 mechanics.slice(0, -diff).forEach((m: Mechanic) => {
                     if (m.id === null) return;
-                    context.executeAction("stafffire", { id: m.id }, () => {});
+                    hirer.fire(m.id);
                 });
                 return true;
             }
