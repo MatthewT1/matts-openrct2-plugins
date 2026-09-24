@@ -1,6 +1,6 @@
 # OpenRCT2 Plugin Project
 
-Four TypeScript plugins for OpenRCT2, built with rollup and deployed straight into the
+Six TypeScript plugins for OpenRCT2, built with rollup and deployed straight into the
 game's plugin folder.
 
 ## Documentation
@@ -13,7 +13,11 @@ game's plugin folder.
 | [docs/roadmap.md](docs/roadmap.md) | Proposed improvements, prioritised, each tagged with its basis and cost. |
 | [docs/marketing-research.md](docs/marketing-research.md) | Verified marketing-campaign mechanics (costs, guest-generation math, hidden penalties) for the proposed `marketing-manager` plugin. |
 | [docs/marketing-roadmap.md](docs/marketing-roadmap.md) | Step-by-step build plan for `marketing-manager` — done through Phase 6 (auto-run), verified live. |
-| [docs/handyman-scale-fix.md](docs/handyman-scale-fix.md) | In-progress fix for the adaptive handyman controller under-hiring as a park scales up (guests 3x, handymen dropped). |
+| [docs/user-guide.md](docs/user-guide.md) | Player-facing guide: every toggle, defaults, how to tell it is working. |
+| [docs/scale-audit.md](docs/scale-audit.md) | Read-only audit of how each controller behaves across park sizes and regimes. |
+| [docs/HISTORY.md](docs/HISTORY.md) | Session-by-session development timeline (reconstructed). |
+| [TODO.md](TODO.md) | Current fix/optimisation backlog from the 2026-09-24 review. |
+| [docs/handyman-scale-fix.md](docs/handyman-scale-fix.md) | Completed fix (all 4 phases verified 2026-09-20) for the adaptive handyman controller under-hiring as a park scales up (guests 3x, handymen dropped). |
 
 **Start here if you are:**
 
@@ -32,6 +36,8 @@ openrct2 plugin/
 │   ├── trash-manager.ts
 │   ├── wait-time-optimizer.ts
 │   ├── mechanic-manager.ts
+│   ├── marketing-manager.ts    # campaign ranking + auto-run
+│   ├── marketing.ts            # campaign value model (pure, unit-tested)
 │   ├── staff-extras.ts         # entertainers (security measured zero demand, closed)
 │   ├── path-connector.ts
 │   ├── debug.ts                # shared opt-in telemetry channel
@@ -46,7 +52,7 @@ openrct2 plugin/
 │   ├── facilities.ts           # facility placement planner (pure, unit-tested)
 │   ├── queues.ts               # queue trend + per-ride intervention attribution (pure)
 │   └── entertainer-targeting.ts # entertainer ride selection + patrol boxes (pure)
-├── tests/                      # 337 tests over the pure modules
+├── tests/                      # 396 tests over the pure modules
 │   ├── run.mjs                 # compiles src/*.ts, runs every *.test.mjs
 │   └── *.test.mjs
 ├── tools/
@@ -79,7 +85,7 @@ node ./node_modules/typescript/bin/tsc --noEmit -p tsconfig.json
 ```
 
 ```bash
-# Run the test suite (337 tests over the pure logic modules)
+# Run the test suite (396 tests over the pure logic modules)
 node tests/run.mjs
 ```
 
