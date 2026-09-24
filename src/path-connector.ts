@@ -59,7 +59,7 @@ interface Dir {
 
 registerPlugin({
     name: "Path Connector",
-    version: "3.0",
+    version: __PLUGIN_VERSION__,
     authors: ["MattT"],
     type: "local",
     licence: "MIT",
@@ -671,7 +671,7 @@ function pathConnectorMain(): void {
 
         win = ui.openWindow({
             classification: "path-connector",
-            title: "Path Connector v3",
+            title: "Path Connector v" + __PLUGIN_VERSION__,
             width: 280,
             height: 290,
             widgets: [

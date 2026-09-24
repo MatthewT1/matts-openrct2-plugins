@@ -4,13 +4,13 @@ import { MECHANIC_THRESHOLDS, createStaffingController, StaffingDecision } from 
 
 registerPlugin({
     name: "Mechanic Manager",
-    version: "1.0",
+    version: __PLUGIN_VERSION__,
     authors: ["MattT"],
     type: "local",
     licence: "MIT",
     targetApiVersion: 87,
     main(): void {
-        const PLUGIN_VERSION = "1.0";
+        const PLUGIN_VERSION = __PLUGIN_VERSION__;
         // Community consensus (myrct guide, CoasterBuzz): 1 per 3-4 rides for coasters.
         // 1 per 4 is a safe middle ground across mixed ride types.
         const TARGET_RIDES_PER_MECHANIC = 4;
