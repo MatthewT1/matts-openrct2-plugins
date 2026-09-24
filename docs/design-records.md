@@ -327,7 +327,7 @@ because opening a ride's construction window resets it
 
 ### M5 — Breakdown repair trace
 
-**Status:** instrumentation only (2026-09-24) · **Basis:** measured need · **Cost:** ~0ms, Diagnostics only
+**Status:** instrumentation only (2026-09-24). **#22 closed, no fix: working as designed** · **Basis:** measured need · **Cost:** ~0ms, Diagnostics only
 
 The Session 2 baseline (Thunder Rock, 22 days) had one breakdown that took **~4 in-game
 days** to repair. The daily log shows `unattendedBreakdowns` and a hire, but not why it
@@ -382,6 +382,29 @@ or stuck.
 before building it.** The lowest ride reliability on Thunder Rock was 65-75% on **all 91**
 logged days, so a reliability gate would be on permanently. It would really be "never
 release mechanics below the formula", which is a different decision.
+
+**Result (Session 3, 49 days, 5 breakdowns, 5 mechanics = formula the whole run).** Full
+table on [#22](https://github.com/MatthewT1/matts-openrct2-plugins/issues/22).
+
+- Median walk 960 ticks, but walked / start distance ~0.95, so the route is fine.
+- Walking is only 25-50% of a repair. The rest is fixed game cost: pending to broken (up
+  to 320 ticks), ~200-380 ticks standing still on the "take the call" animation, and the
+  fix (~320-450; ~1,470 on a coaster).
+- The run was already at the formula mechanic count, so A would have changed nothing.
+  More mechanics than that saves ~0.2 day a repair for GBP 160/month. All breakdowns
+  together cost ~2.8% of ride-days.
+- **The criterion had a flaw:** raw ticks per tile included the answer-call pause, which
+  pointed at "slopes". Corrected (after seeing the data, and said so on #22) the pace is
+  50-73 ticks per tile, i.e. plain distance.
+- **Decision: close #22, no behaviour change.** Keep M3 for rides nobody can reach.
+  Patrol zones would shorten start distance, but for ~0.7% of ride-days they are not
+  worth the M2 risk (an exit in nobody's zone gets no mechanic).
+
+**Trace fix:** a mechanic already inspecting a ride fixes a pending breakdown without it
+ever becoming `brokenDown` (`Staff.cpp:2016-2020`), and `ride.breakdown` only reports that
+flag (`ScRide.cpp:809`). Such traces waited out the 20-day timeout as `unfinished`, with
+the wrong `fixedBy`. They now finish as `fixedWhilePending` as soon as a mechanic at the
+ride has a `ridesFixed` rise.
 
 ---
 

@@ -65,7 +65,7 @@ openrct2 plugin/
 │   ├── facilities.ts           # facility placement planner (pure, unit-tested)
 │   ├── queues.ts               # queue trend + per-ride intervention attribution (pure)
 │   └── entertainer-targeting.ts # entertainer ride selection + patrol boxes (pure)
-├── tests/                      # 452 tests over the pure modules
+├── tests/                      # 457 tests over the pure modules
 │   ├── run.mjs                 # compiles src/*.ts, runs every *.test.mjs
 │   └── *.test.mjs
 ├── tools/
@@ -98,7 +98,7 @@ node ./node_modules/typescript/bin/tsc --noEmit -p tsconfig.json
 ```
 
 ```bash
-# Run the test suite (452 tests over the pure logic modules)
+# Run the test suite (457 tests over the pure logic modules)
 node tests/run.mjs
 ```
 
