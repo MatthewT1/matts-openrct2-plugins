@@ -168,6 +168,31 @@ traps found along the way. Deeper material:
 - [Research](docs/research.md): game mechanics and community strategy
 - [Project history](docs/HISTORY.md)
 
+## How this was built
+
+These plugins were written with [Claude Code](https://claude.com/claude-code), Anthropic's
+AI coding tool, over several sessions of playing and fixing. The models involved were
+Claude Sonnet 4.6, Opus 5, Sonnet 5 and Opus 5.5, with Haiku 4.5 and Sonnet running
+smaller research and build tasks alongside them.
+
+It wasn't written from guesswork about how the game works. Two things kept it honest:
+
+- **The game's own source code.** A local copy of the OpenRCT2 source was the reference for
+  every question about the plugin API: what a value means, what units it's in, and why an
+  action gets refused. Those answers are written up in the
+  [API reference](docs/api-reference.md), each one cited to a file and line. Several turned
+  out to be different from what the documentation or common sense suggested. For example,
+  money is stored in tenths of a pound, not hundredths, and an in-game day is about 530
+  ticks, not 8,192.
+- **Data from real play.** Each plugin can stream timings and counters from a running game.
+  While I played, that data was read back and used to set thresholds, find slow code and
+  catch features that were quietly doing nothing. Most design choices in
+  [design records](docs/design-records.md) point to a measurement, and a few ideas were
+  dropped because the data showed they wouldn't help.
+
+The decision logic is also covered by 396 unit tests, several of which exist because they
+caught a real bug first.
+
 ## License
 
 [MIT](LICENSE). Use it, change it, mix it into your own plugins. Just keep the license notice.
