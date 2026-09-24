@@ -18,7 +18,7 @@ game's plugin folder.
 | [docs/user-guide.md](docs/user-guide.md) | Player-facing guide: every toggle, defaults, how to tell it is working. |
 | [docs/scale-audit.md](docs/scale-audit.md) | Read-only audit of how each controller behaves across park sizes and regimes. |
 | [docs/HISTORY.md](docs/HISTORY.md) | Session-by-session development timeline (reconstructed). |
-| [TODO.md](TODO.md) | Current fix/optimisation backlog from the 2026-09-24 review. |
+| [GitHub Issues](https://github.com/MatthewT1/matts-openrct2-plugins/issues) | Current fix/optimisation backlog, labelled by priority (P1–P3) and whether it needs the game. |
 | [docs/handyman-scale-fix.md](docs/handyman-scale-fix.md) | Completed fix (all 4 phases verified 2026-09-20) for the adaptive handyman controller under-hiring as a park scales up (guests 3x, handymen dropped). |
 
 **Start here if you are:**
@@ -125,6 +125,25 @@ node ./node_modules/nodemon/bin/nodemon.js --watch ./src --ext js,ts --exec "nod
 - **TypeScript pinned to `~5.7.0`.** Do not upgrade to 7.x: `@rollup/plugin-typescript`
   is incompatible (`Cannot read properties of undefined (reading 'ES2015')`).
 - Module resolution `bundler`, types `@openrct2/types` only — no DOM or Node libs.
+
+---
+
+## Test session setup
+
+Any change marked `needs-game` is checked in-game like this (~5 min to set up):
+
+1. **Start the log sink.** Double-click `tools\start-log-sink.cmd` and leave the window open.
+2. **Build and deploy** with the dev build above. It copies fresh plugins straight into
+   `Documents\OpenRCT2\plugin\`.
+3. **Load the park.** If the game was already open, go back to the title screen and reload
+   the park, because plugins only load with a park.
+4. **Turn on Diagnostics.** Open any plugin window from the map menu and tick
+   **Diagnostics** (one tick turns it on for all plugins).
+5. **Play** for the number of in-game days the issue asks for. The numbers land in
+   `tools/rct-debug.log`.
+
+Use the same park each time where you can (Thunder Rock is the usual one), so before and
+after numbers are comparable.
 
 ---
 
