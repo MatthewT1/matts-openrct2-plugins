@@ -43,7 +43,7 @@ import { createStaffingController, StaffingDecision } from "./staffing";
 registerPlugin({
     name: "Staff Extras",
     version: "1.0",
-    authors: ["Matt"],
+    authors: ["MattT"],
     type: "local",
     licence: "MIT",
     targetApiVersion: 87,

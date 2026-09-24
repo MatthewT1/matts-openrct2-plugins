@@ -5,7 +5,7 @@ import { MECHANIC_THRESHOLDS, createStaffingController, StaffingDecision } from 
 registerPlugin({
     name: "Mechanic Manager",
     version: "1.0",
-    authors: ["Matt"],
+    authors: ["MattT"],
     type: "local",
     licence: "MIT",
     targetApiVersion: 87,

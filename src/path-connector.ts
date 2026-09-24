@@ -60,7 +60,7 @@ interface Dir {
 registerPlugin({
     name: "Path Connector",
     version: "3.0",
-    authors: ["Matt"],
+    authors: ["MattT"],
     type: "local",
     licence: "MIT",
     targetApiVersion: 87,

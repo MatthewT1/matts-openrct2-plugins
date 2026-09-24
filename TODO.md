@@ -7,8 +7,7 @@ Backlog from the 2026-09-24 review. Baseline at review time: typecheck clean,
 
 - [ ] Create the GitHub repo and push (see "Publishing" below). Check the first CI run
       passes on Linux (`npm ci` + typecheck + tests + prod build). CI hasn't run yet.
-- [ ] Decide on `authors` in each `registerPlugin` (currently `"Matt"`) and the LICENSE
-      holder (`Matt T`). Change both if you want your GitHub handle instead.
+- [x] Author set to `MattT` in each plugin and LICENSE.
 - [ ] Unify plugin versions. They're currently 0.1 / 1.0 / 3.0 across plugins. Either
       one suite version injected from `package.json` at build time (rollup
       `@rollup/plugin-replace`), or per-plugin semver. Then tag `v1.0.0` and attach
@@ -36,11 +35,15 @@ Backlog from the 2026-09-24 review. Baseline at review time: typecheck clean,
 
 ## Docs (also cuts per-session token use)
 
-- [ ] **Split `docs/performance.md` (1,609 lines) and `docs/roadmap.md` (1,221 lines)**
+Done 2026-09-24: performance.md 1,609 -> 343 lines and roadmap.md 1,221 -> 187. Content moved
+verbatim to docs/design-records.md and docs/archive/. Pre-split state is tagged `backup/pre-docs-restructure`.
+
+
+- [x] **Split `docs/performance.md` (1,609 lines) and `docs/roadmap.md` (1,221 lines)**
       into a short current-state reference and an archived narrative. Most of their length
       is session logs, and they get re-read at the start of sessions. That's the single
       biggest token saving available.
-- [ ] `docs/roadmap.md`, "Project status: feature-complete": the closing note is
+- [x] `docs/roadmap.md`, "Project status: feature-complete": the closing note is
       duplicated with conflicting numbers ("six rounds" / 24% vs "seven rounds" / 28%).
       The status table also still says 5 plugins / 337 tests (now 6 / 396).
 - [ ] `gamesrc/` is gitignored now. Add a setup note to NOTES.md so `api-reference.md`

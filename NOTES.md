@@ -10,6 +10,8 @@ game's plugin folder.
 | [docs/api-reference.md](docs/api-reference.md) | **Verified** API facts, each cited to a file and line in `gamesrc/`. Units, gotchas, lifecycle. Check here before assuming anything about the API. |
 | [docs/performance.md](docs/performance.md) | Cost model, measured timings, the performance rules, and the debug/profiling channel. |
 | [docs/research.md](docs/research.md) | Community research digest — game mechanics, staffing strategy, contested ratios, sources. |
+| [docs/design-records.md](docs/design-records.md) | Per-feature design record (basis, measurements, decisions, rejections). Read before changing or reopening a feature. |
+| [docs/archive/](docs/archive/) | Verbatim field logs and build-out work log moved out of performance.md and roadmap.md. Rarely needed. |
 | [docs/roadmap.md](docs/roadmap.md) | Proposed improvements, prioritised, each tagged with its basis and cost. |
 | [docs/marketing-research.md](docs/marketing-research.md) | Verified marketing-campaign mechanics (costs, guest-generation math, hidden penalties) for the proposed `marketing-manager` plugin. |
 | [docs/marketing-roadmap.md](docs/marketing-roadmap.md) | Step-by-step build plan for `marketing-manager` — done through Phase 6 (auto-run), verified live. |
@@ -157,7 +159,7 @@ can auto-sweep.
   because a cluster is a snapshot of where guests were standing and crowds move.
   Capped at 8 per kind, one build per pass, £20,000 cash floor, and it **never
   demolishes anything**. See
-  [roadmap.md § NEEDS](docs/roadmap.md#needs--guest-need-clustering-then-automatic-facility-placement).
+  [roadmap.md § NEEDS](docs/design-records.md#needs--guest-need-clustering-then-automatic-facility-placement).
   - Only builds what research has unlocked, via `park.research.inventedItems`.
   - The rotation a 1x1 stall wants is undocumented, so all four are probed with silent
     `queryAction` calls and the winner is counted in telemetry.
@@ -184,7 +186,7 @@ Recommends and auto-applies ride min/max wait times.
   so arrival rate is independent of queue length and a backed-up ride diverges rather than
   settling. `queues.ts` flags a ride after 2 consecutive rising days above 3 minutes; any
   fall resets it. Deliberately trend-based rather than a lower threshold — see
-  [roadmap.md § W2](docs/roadmap.md#w2--more-aggressive-emergency-override).
+  [roadmap.md § W2](docs/design-records.md#w2--more-aggressive-emergency-override).
 - **Ride operation tuning** (off by default): shortens the cycle on rides with long queues
   and lengthens it on empty ones, via `operationOption` (maze time limit, laps, rotations,
   speed). The value cannot be read back, so the controller probes each ride's legal range
@@ -220,7 +222,7 @@ Monitors ride reliability, auto-hires/fires mechanics, manages inspection interv
   construction windows reset them.
 - Clears all patrol zones. This was suspected of suppressing inspections; **measurement
   disproved it** — mechanics perform ~100% of the available work. Do not reopen without
-  reading [roadmap.md § M2](docs/roadmap.md#m2--small-patrol-zones-for-mechanics) first.
+  reading [roadmap.md § M2](docs/design-records.md#m2--small-patrol-zones-for-mechanics) first.
 
 ### path-connector.ts
 
@@ -277,9 +279,9 @@ counter revealed it, and not one of them raised an error.
 The corollary is the reason this project keeps a written exit criterion for each
 measurement: *decide in advance what result would mean "build it" and what would mean
 "drop it", then honour both.* It has closed two features without building them
-([M2](docs/roadmap.md#m2--small-patrol-zones-for-mechanics),
-[C](docs/roadmap.md#c--bin-placement-advisor)) and opened one that had been held shut for
-several sessions ([NEEDS](docs/roadmap.md#needs--guest-need-clustering-then-automatic-facility-placement)).
+([M2](docs/design-records.md#m2--small-patrol-zones-for-mechanics),
+[C](docs/design-records.md#c--bin-placement-advisor)) and opened one that had been held shut for
+several sessions ([NEEDS](docs/design-records.md#needs--guest-need-clustering-then-automatic-facility-placement)).
 
 ---
 

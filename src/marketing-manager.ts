@@ -24,7 +24,7 @@ import {
 registerPlugin({
     name: "Marketing Manager",
     version: "0.1",
-    authors: ["Matt"],
+    authors: ["MattT"],
     type: "local",
     licence: "MIT",
     targetApiVersion: 87,

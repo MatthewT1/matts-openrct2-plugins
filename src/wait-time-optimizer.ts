@@ -34,7 +34,7 @@ interface RideCacheEntry {
 registerPlugin({
     name: "Wait Time Optimizer",
     version: "1.0",
-    authors: ["Matt"],
+    authors: ["MattT"],
     type: "local",
     licence: "MIT",
     targetApiVersion: 87,

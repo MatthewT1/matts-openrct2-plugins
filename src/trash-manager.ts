@@ -79,7 +79,7 @@ interface TileCache {
 registerPlugin({
     name: "Trash Manager",
     version: "3.0",
-    authors: ["Matt"],
+    authors: ["MattT"],
     type: "local",
     licence: "MIT",
     targetApiVersion: 87,
