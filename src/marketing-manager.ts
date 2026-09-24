@@ -391,12 +391,12 @@ registerPlugin({
                 rowWidgets.push(
                     {
                         type: "label", name: "lblRow" + i,
-                        x: 8, y: y + 2, width: 224, height: 14,
+                        x: 8, y: y + 2, width: 244, height: 14,
                         text: CAMPAIGN_NAMES[type] + "  -  ...",
                     },
                     {
                         type: "button", name: "btnRow" + i,
-                        x: 236, y: y, width: 56, height: 16,
+                        x: 256, y: y, width: 56, height: 16,
                         text: "Start",
                         isDisabled: true,
                         onClick: () => {
@@ -418,12 +418,13 @@ registerPlugin({
             pluginWindow = ui.openWindow({
                 classification: "marketing-manager",
                 title: "Marketing Manager v" + PLUGIN_VERSION,
-                width: 300,
+                // 320, not 300: "Half-price entry vouchers - £34.87/guest" was cut off (#24).
+                width: 320,
                 height: rowsBottom + 82,
                 widgets: [
                     {
                         type: "label", name: "lblStatus",
-                        x: 8, y: 18, width: 284, height: 14,
+                        x: 8, y: 18, width: 304, height: 14,
                         text: "Manual start only. Before/after is tracked.",
                     },
                     {
@@ -432,7 +433,7 @@ registerPlugin({
                     },
                     {
                         type: "spinner", name: "spnWeeks",
-                        x: 150, y: 32, width: 142, height: 14,
+                        x: 150, y: 32, width: 162, height: 14,
                         text: String(weeksToStart) + " weeks",
                         onIncrement: () => {
                             weeksToStart = Math.min(MAX_WEEKS, weeksToStart + 1);
@@ -446,12 +447,12 @@ registerPlugin({
                     ...rowWidgets,
                     {
                         type: "label", name: "lblBlocked",
-                        x: 8, y: rowsBottom + 6, width: 284, height: 14,
+                        x: 8, y: rowsBottom + 6, width: 304, height: 14,
                         text: "",
                     },
                     {
                         type: "checkbox", name: "chkAutoManage",
-                        x: 8, y: rowsBottom + 24, width: 284, height: 14,
+                        x: 8, y: rowsBottom + 24, width: 304, height: 14,
                         text: "Auto-start eligible campaigns",
                         tooltip: "Starts campaigns from the ranked list above, best value first, up to £"
                             + (AUTO_CASH_BUDGET_PER_PASS / 10) + " committed per day and never below the £"
@@ -463,7 +464,7 @@ registerPlugin({
                             refreshWindow();
                         },
                     },
-                    diagnosticsCheckbox(8, rowsBottom + 42, 284),
+                    diagnosticsCheckbox(8, rowsBottom + 42, 304),
                 ],
                 onClose: () => { pluginWindow = null; },
             });
