@@ -113,7 +113,7 @@ node ./node_modules/nodemon/bin/nodemon.js --watch ./src --ext js,ts --exec "nod
 
 > **After every `.ts` edit, rebuild.** The dev build resolves the Documents folder at
 > build time via `getPluginDir()` and writes the compiled `.js` files directly to
-> `C:\Users\Matt\Documents\OpenRCT2\plugin\`. No manual copy needed.
+> `%USERPROFILE%\Documents\OpenRCT2\plugin\`. No manual copy needed.
 >
 > OpenRCT2 only reloads plugins **on park load**, so exit to the title screen and
 > reload the park to pick up a new build — unless `enable_hot_reloading` is set under
@@ -288,7 +288,7 @@ several sessions ([NEEDS](docs/design-records.md#needs--guest-need-clustering-th
 ## Environment
 
 - **OS:** Windows 11 Pro
-- **Node:** v22.23.2 via nvm-windows (symlink at `C:\Users\Matt\nodejs`)
+- **Node:** v22.23.2 via nvm-windows (symlink at `%USERPROFILE%\nodejs`)
 - **npm:** broken — use the direct node calls above
-- **Plugin folder:** `C:\Users\Matt\Documents\OpenRCT2\plugin\`
+- **Plugin folder:** `%USERPROFILE%\Documents\OpenRCT2\plugin\`
 - **Debug log:** `tools/rct-debug.log` (gitignored)
