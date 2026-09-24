@@ -83,6 +83,21 @@ export interface BreakdownTrace {
     fixerStartDistance: number;
     /** Inspections completed fleet-wide during the breakdown (were they busy elsewhere?). */
     inspectionsDuring: number;
+    /**
+     * Tiles the fixer actually walked between the ride being marked broken and first
+     * standing within 2 tiles of the exit, summed sample to sample; -1 if unknown.
+     * Against `fixerStartDistance` this says whether the route was long (a detour, or a
+     * path that doesn't run straight to the exit).
+     */
+    fixerWalkTiles: number;
+    /** Ticks from the broken flag to the fixer's arrival; -1 if unknown. */
+    fixerWalkTicks: number;
+    /**
+     * fixerWalkTicks / fixerWalkTiles. Staff walk ~43 ticks per flat tile and about twice
+     * that on slopes (energy 96, 2 units a step: Peep.cpp:432, :938), so a figure well
+     * above 43 means slopes or waiting, not a long route. -1 if unknown.
+     */
+    fixerTicksPerTile: number;
     samples: TraceSample[];
 }
 
@@ -100,6 +115,11 @@ interface Active {
     startDistances: Record<number, number>;
     startFixed: Record<number, number>;
     startInspected: number;
+    /** Per mechanic: tiles walked since the broken flag, until they first reach the ride. */
+    walked: Record<number, number>;
+    last: Record<number, { x: number; y: number }>;
+    /** Per mechanic: first tick within 2 tiles of the exit after the broken flag. */
+    arrivedAt: Record<number, number>;
     samples: TraceSample[];
 }
 
@@ -142,6 +162,9 @@ export function createBreakdownTracer(): BreakdownTracer {
         }
         delete traces[a.rideId];
         count--;
+        const walked = fixedBy !== -1 && a.walked[fixedBy] !== undefined ? a.walked[fixedBy] : -1;
+        const walkTicks = fixedBy !== -1 && a.arrivedAt[fixedBy] !== undefined && a.brokenAt !== -1
+            ? a.arrivedAt[fixedBy] - a.brokenAt : -1;
         return {
             rideId: a.rideId,
             ride: a.name,
@@ -159,6 +182,9 @@ export function createBreakdownTracer(): BreakdownTracer {
             // Mechanics hired mid-breakdown start from 0, so they count in full; ones
             // fired mid-breakdown drop out. Good enough for "were they busy".
             inspectionsDuring: Math.max(0, inspected - a.startInspected),
+            fixerWalkTiles: walkTicks >= 0 ? Math.round(walked * 10) / 10 : -1,
+            fixerWalkTicks: walkTicks,
+            fixerTicksPerTile: walkTicks > 0 && walked > 0 ? Math.round(walkTicks / walked) : -1,
             samples: a.samples,
         };
     }
@@ -170,7 +196,8 @@ export function createBreakdownTracer(): BreakdownTracer {
                 rideId, reason, startTick: tick, name: "",
                 brokenAt: -1, lastSeenBroken: 0, arriveAt: -1, fixAnimAt: -1,
                 mechanics: -1, startNearest: -1,
-                startDistances: {}, startFixed: {}, startInspected: 0, samples: [],
+                startDistances: {}, startFixed: {}, startInspected: 0,
+                walked: {}, last: {}, arrivedAt: {}, samples: [],
             };
             count++;
         },
@@ -219,6 +246,16 @@ export function createBreakdownTracer(): BreakdownTracer {
                     if (d <= 2) {
                         atRide++;
                         if (isFixAnim(m.animation)) fixing++;
+                    }
+                    // Walk tracking starts at the broken flag, when the game dispatches
+                    // (Ride.cpp:1420), and stops for each mechanic once they reach the ride.
+                    if (broken && a.arrivedAt[m.id] === undefined) {
+                        const p = a.last[m.id];
+                        const w = a.walked[m.id] !== undefined ? a.walked[m.id] : 0;
+                        a.walked[m.id] = p === undefined ? w
+                            : w + (Math.abs(m.x - p.x) + Math.abs(m.y - p.y)) / TILE;
+                        a.last[m.id] = { x: m.x, y: m.y };
+                        if (d <= 2) a.arrivedAt[m.id] = t;
                     }
                     if (isAnswerAnim(m.animation)) answering++;
                 }
