@@ -100,8 +100,8 @@ These go in `docs/images/` and appear in the README. Claude adds them once you'v
 OpenRCT2's own screenshot key saves the whole screen to `Documents\OpenRCT2\screenshot\`,
 which is good for park shots. PNG is fine.
 
-- [ ] Each plugin's window, open on a busy park (6 shots): Trash, Mechanic, Wait Time,
-      Staff Extras, Marketing, Path Connector
+- [ ] Each plugin's window, open on a busy park (6 shots): ~~Trash, Mechanic, Wait Time,
+      Staff Extras, Marketing~~ (done), Path Connector still needed
 - [ ] A park view with plugin-placed benches near a coaster exit
 - [ ] A plugin-built toilet or food stall in a spot that clearly needed one
 - [ ] Path Connector in use: the planned path preview before building

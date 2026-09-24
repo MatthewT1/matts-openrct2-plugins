@@ -28,6 +28,8 @@ Each one adds an entry to the map menu in the top toolbar, which opens its windo
 
 Handles handymen, litter, benches, bins and guest facilities.
 
+<img src="docs/images/trash-manager.png" alt="Trash Manager window" width="320">
+
 - **Handyman staffing.** It starts from the usual guests-and-paths estimate, then works
   down while the park stays clean and hires back quickly once litter starts to hurt the
   rating. On the test park the usual formula asked for 42 handymen; the park stayed at top
@@ -47,6 +49,8 @@ Handles handymen, litter, benches, bins and guest facilities.
 
 Handles mechanics, inspections and breakdowns.
 
+<img src="docs/images/mechanic-manager.png" alt="Mechanic Manager window" width="290">
+
 - **Mechanic staffing.** Works the same way as the handyman controller. The main signal is a
   ride that has been broken for two days or more: one that breaks and gets fixed the same
   day means the current mechanics are coping.
@@ -61,6 +65,8 @@ Handles mechanics, inspections and breakdowns.
 ### Wait Time Optimizer
 
 Handles ride wait settings and queue length.
+
+<img src="docs/images/wait-time-optimizer.png" alt="Wait Time Optimizer window" width="410">
 
 - **Wait times.** Sets each ride's minimum and maximum wait from its cycle length and number
   of trains, and applies them daily.
@@ -78,6 +84,8 @@ Handles ride wait settings and queue length.
 
 Handles entertainers. Off until you turn it on, since entertainers cost wages.
 
+<img src="docs/images/staff-extras.png" alt="Staff Extras window" width="300">
+
 Hires entertainers and places them at queues that are close to the point where guests walk
 out, because that's where an entertainer makes the most difference. It only ever fires
 entertainers it hired itself, so the ones you placed by a themed ride stay put.
@@ -85,6 +93,8 @@ entertainers it hired itself, so the ones you placed by a themed ride stay put.
 ### Marketing Manager
 
 Handles advertising and voucher campaigns.
+
+<img src="docs/images/marketing-manager.png" alt="Marketing Manager window" width="380">
 
 Ranks every campaign by what each extra guest it brings in is likely to cost,
 based on your park's current prices and capacity. Some campaigns are much worse value than
