@@ -8,8 +8,11 @@ import { attributeVomit, describeDiagnosis, NauseaSource, MIN_NAUSEA } from "../
 import { planAmenities, AmenityDemand, AmenityKind, AmenitySite } from "../amenities";
 import { DebugChannel } from "../debug";
 import { MapScan } from "./map-scan";
+import { TrashSettings } from "./shared";
 
-export function createAmenityManager(storage: Configuration, dbg: DebugChannel, scan: MapScan) {
+export function createAmenityManager(
+    storage: Configuration, settings: TrashSettings, dbg: DebugChannel, scan: MapScan,
+) {
     const { hotspots, getCoverageTiles } = scan;
 
     // A vomit cluster smaller than this is not worth naming a culprit for.
@@ -101,10 +104,10 @@ export function createAmenityManager(storage: Configuration, dbg: DebugChannel, 
     }
 
     function isAutoAmenities(): boolean {
-        return storage.get<boolean>("autoAmenities") === true;
+        return settings.autoAmenities.get();
     }
     function isAmenityRemoval(): boolean {
-        return storage.get<boolean>("autoAmenityRemoval") === true;
+        return settings.amenityRemoval.get();
     }
     let lastVomitReport = "";
 

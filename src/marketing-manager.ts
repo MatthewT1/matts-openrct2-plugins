@@ -14,7 +14,8 @@
  * campaigns' evidence to a reload in this project's own 2026-09-20 testing.
  */
 
-import { createDebugChannel, isDebugEnabled, setDebugEnabled } from "./debug";
+import { createDebugChannel, diagnosticsCheckbox } from "./debug";
+import { boolSetting } from "./settings";
 import {
     ALL_CAMPAIGN_TYPES, CAMPAIGN_NAMES, CAMPAIGN_FOOD_OR_DRINK_FREE, CampaignType,
     MIN_WEEKS, MAX_WEEKS, WEEKLY_COST, rankCampaigns, createAttributionTracker,
@@ -32,6 +33,9 @@ registerPlugin({
         const PLUGIN_VERSION = __PLUGIN_VERSION__;
         const dbg = createDebugChannel("marketing-manager");
         const storage: Configuration = context.getParkStorage();
+        const settings = {
+            autoManage: boolSetting(storage, "autoManage", false),
+        };
 
         // Starting point only - no telemetry has justified a specific figure yet.
         // Same reserve-floor pattern as AMENITY_MIN_CASH/FACILITY_MIN_CASH in
@@ -49,7 +53,7 @@ registerPlugin({
         const AUTO_CASH_BUDGET_PER_PASS = 2_000 * 10; // £2,000, raw tenths
 
         function isAutoManage(): boolean {
-            return storage.get<boolean>("autoManage") === true;
+            return settings.autoManage.get();
         }
 
         // RIDE_TYPE_FOOD_STALL=28 and RIDE_TYPE_DRINK_STALL=30 are the same
@@ -445,18 +449,11 @@ registerPlugin({
                             + "type already running. Off by default - this spends real money on its own.",
                         isChecked: isAutoManage(),
                         onChange: (checked: boolean) => {
-                            storage.set("autoManage", checked);
+                            settings.autoManage.set(checked);
                             refreshWindow();
                         },
                     },
-                    {
-                        type: "checkbox", name: "chkDebug",
-                        x: 8, y: rowsBottom + 26, width: 284, height: 14,
-                        text: "Diagnostics: stream timings to log sink",
-                        tooltip: "Stream timing and counter data to a local log sink on 127.0.0.1:7777 for performance analysis. Off by default; costs nothing when off.",
-                        isChecked: isDebugEnabled(),
-                        onChange: (checked: boolean) => { setDebugEnabled(checked); },
-                    },
+                    diagnosticsCheckbox(8, rowsBottom + 26, 284),
                 ],
                 onClose: () => { pluginWindow = null; },
             });

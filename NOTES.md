@@ -54,6 +54,8 @@ openrct2 plugin/
 │   ├── staff-activity.ts       # idle/stuck staff detection (pure, unit-tested)
 │   ├── staffing.ts             # closed-loop staffing controller (pure, unit-tested)
 │   ├── staff-hiring.ts         # shared staff hire/fire + entity-budget backoff (unit-tested)
+│   ├── deferred.ts             # shared UI-click -> next-tick action queue (unit-tested)
+│   ├── settings.ts             # shared on/off park settings (unit-tested)
 │   ├── vomit.ts                # vomit -> nauseating-ride attribution (pure, unit-tested)
 │   ├── amenities.ts            # bench/bin placement planner (pure, unit-tested)
 │   ├── needs.ts                # guest-need clustering, facility gaps, sample rotation (pure)
@@ -62,7 +64,7 @@ openrct2 plugin/
 │   ├── facilities.ts           # facility placement planner (pure, unit-tested)
 │   ├── queues.ts               # queue trend + per-ride intervention attribution (pure)
 │   └── entertainer-targeting.ts # entertainer ride selection + patrol boxes (pure)
-├── tests/                      # 413 tests over the pure modules
+├── tests/                      # 428 tests over the pure modules
 │   ├── run.mjs                 # compiles src/*.ts, runs every *.test.mjs
 │   └── *.test.mjs
 ├── tools/
@@ -95,7 +97,7 @@ node ./node_modules/typescript/bin/tsc --noEmit -p tsconfig.json
 ```
 
 ```bash
-# Run the test suite (413 tests over the pure logic modules)
+# Run the test suite (428 tests over the pure logic modules)
 node tests/run.mjs
 ```
 

@@ -1,4 +1,6 @@
-import { createDebugChannel, isDebugEnabled, setDebugEnabled } from "./debug";
+import { createDebugChannel, diagnosticsCheckbox } from "./debug";
+import { boolSetting } from "./settings";
+import { createDeferredActions } from "./deferred";
 import { createOpsController, RideOpsState, OpsAction } from "./ops";
 import { createQueueTrendTracker, QueuePressure, FLOOR_MINUTES,
     createInterventionTracker, InterventionTracker } from "./queues";
@@ -79,12 +81,11 @@ registerPlugin({
         // sit idle. 800 = 8.00 in the 2-decimal-point fixed-integer format OpenRCT2 uses.
         const INTENSITY_HIGH          = 800;
 
-        // Deferred-mutation flags: ride property writes are only safe from interval hooks.
-        let pendingApplyAll: boolean = false;
-        let pendingApplyRideId: number = -1;
-        let pendingBoostTrains: boolean = false;
-
         const storage: Configuration = context.getParkStorage();
+        const settings = {
+            autoOps: boolSetting(storage, "autoOperationTuning", false),
+            autoManage: boolSetting(storage, "autoManage", true),
+        };
 
         // --- Ride operation tuning -------------------------------------------
         //
@@ -112,7 +113,7 @@ registerPlugin({
         const opsController = createOpsController(OPS_PROBE_CEILING);
 
         function isAutoOps(): boolean {
-            return storage.get<boolean>("autoOperationTuning") === true;
+            return settings.autoOps.get();
         }
 
         // Debug channel; off unless the shared-storage debug flag is set (see debug.ts).
@@ -120,7 +121,7 @@ registerPlugin({
 
         /** Auto-manage toggle, persisted per save file (was reset on every load). */
         function getAutoManage(): boolean {
-            return storage.get<boolean>("autoManage") !== false;
+            return settings.autoManage.get();
         }
 
         let selectedRow: number = -1;
@@ -499,13 +500,11 @@ registerPlugin({
 
         // --- Event subscriptions ---
 
-        // Process deferred mutations each tick.
-        context.subscribe("interval.tick", () => {
-            if (!pendingApplyAll && pendingApplyRideId < 0 && !pendingBoostTrains) return;
-            if (pendingApplyAll)    { applyToAll(); pendingApplyAll = false; }
-            if (pendingApplyRideId >= 0) { applyToRide(pendingApplyRideId); pendingApplyRideId = -1; }
-            if (pendingBoostTrains) { boostTrains(); pendingBoostTrains = false; }
-        });
+        // Button actions that change game state run on the next tick; see deferred.ts.
+        const deferred = createDeferredActions((onTick) => context.subscribe("interval.tick", onTick));
+        const requestApplyAll = deferred.define(() => applyToAll());
+        const requestApplyRide = deferred.defineWithArg((rideId: number) => applyToRide(rideId));
+        const requestBoostTrains = deferred.define(() => boostTrains());
 
         // Log capacity-bound rides once, when the set changes. Re-applying wait times
         // to these is futile, so the plugin should say what actually needs doing.
@@ -784,7 +783,7 @@ registerPlugin({
                         x: 8, y: 200, width: 155, height: 18,
                         text: "Apply Recommended to All",
                         tooltip: "Set min/max wait times for all rides. Queues >= " + QUEUE_WARN_MINUTES + " min get emergency override (0s / 20s); others use ride-duration formula.",
-                        onClick: () => { pendingApplyAll = true; }
+                        onClick: () => { requestApplyAll(); }
                     },
                     {
                         type: "button",
@@ -793,7 +792,7 @@ registerPlugin({
                         tooltip: "Apply recommended wait times to the highlighted ride",
                         onClick: () => {
                             if (selectedRow >= 0 && selectedRow < rideCache.length) {
-                                pendingApplyRideId = rideCache[selectedRow].id;
+                                requestApplyRide(rideCache[selectedRow].id);
                             }
                         }
                     },
@@ -810,7 +809,7 @@ registerPlugin({
                         x: 8, y: 222, width: 385, height: 18,
                         text: "Boost [!] Ride Capacity (trains, then cars)",
                         tooltip: "For every ride with a queue >= " + QUEUE_WARN_MINUTES + " min: briefly close the ride, attempt to add one train AND one car per train (both capped at the ride's max), then reopen.",
-                        onClick: () => { pendingBoostTrains = true; }
+                        onClick: () => { requestBoostTrains(); }
                     },
                     // Auto-manage toggle
                     {
@@ -819,7 +818,7 @@ registerPlugin({
                         text: "Auto-adjust wait times daily",
                         tooltip: "Each in-game day, automatically apply recommended wait times to all open rides",
                         isChecked: getAutoManage(),
-                        onChange: (checked: boolean) => { storage.set("autoManage", checked); }
+                        onChange: (checked: boolean) => { settings.autoManage.set(checked); }
                     },
                     // Legend
                     {
@@ -833,16 +832,9 @@ registerPlugin({
                         text: "Tune ride operation settings (laps / rotations / speed)",
                         tooltip: "Shorten the cycle on rides with long queues and lengthen it on empty ones. Changing this discards the ride's excitement/intensity/nausea ratings until it runs again, so it moves one step at a time and only after several consistent readings. Off by default.",
                         isChecked: isAutoOps(),
-                        onChange: (checked: boolean) => { storage.set("autoOperationTuning", checked); }
+                        onChange: (checked: boolean) => { settings.autoOps.set(checked); }
                     },
-                    {
-                        type: "checkbox", name: "chkDebug",
-                        x: 8, y: 302, width: 384, height: 14,
-                        text: "Diagnostics: stream timings to log sink",
-                        tooltip: "Stream timing and counter data to a local log sink on 127.0.0.1:7777 for performance analysis. Off by default; costs nothing when off.",
-                        isChecked: isDebugEnabled(),
-                        onChange: (checked: boolean) => { setDebugEnabled(checked); }
-                    }
+                    diagnosticsCheckbox(8, 302, 384)
                 ],
                 onClose: () => {
                     pluginWindow = null;

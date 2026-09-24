@@ -5,6 +5,7 @@
  */
 
 import { isDebugEnabled, DebugChannel } from "../debug";
+import { TrashSettings } from "./shared";
 import {
     createNeedAccumulator, createSampleRotation, findGaps, describeGap,
     CLUSTER_MIN_GUESTS, NeedKind, NeedCounts, NeedGap, Facility,
@@ -15,7 +16,7 @@ import {
 } from "../facilities";
 import { createThoughtAccumulator, describeThoughts, ThoughtTally } from "../thoughts";
 
-export function createFacilityManager(storage: Configuration, dbg: DebugChannel) {
+export function createFacilityManager(settings: TrashSettings, dbg: DebugChannel) {
 
 
     // --- Guest-need instrumentation (Phase 1: measure, do not act) ------------
@@ -127,7 +128,7 @@ export function createFacilityManager(storage: Configuration, dbg: DebugChannel)
     let lastFacilityPlans = 0;
 
     function isAutoFacilities(): boolean {
-        return storage.get<boolean>("autoFacilities") === true;
+        return settings.autoFacilities.get();
     }
 
     // Guests keep several thoughts, oldest last, with LOWER freshness meaning more

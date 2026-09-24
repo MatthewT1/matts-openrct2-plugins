@@ -74,6 +74,21 @@ export function setDebugEnabled(on: boolean): void {
     context.sharedStorage.set(DEBUG_FLAG, on);
 }
 
+/**
+ * The "Diagnostics" checkbox every plugin window carries. One definition, so the five
+ * windows cannot drift apart (one already had a shorter tooltip).
+ */
+export function diagnosticsCheckbox(x: number, y: number, width: number): CheckboxDesc {
+    return {
+        type: "checkbox", name: "chkDebug",
+        x: x, y: y, width: width, height: 14,
+        text: "Diagnostics: stream timings to log sink",
+        tooltip: "Stream timing and counter data to a local log sink on 127.0.0.1:7777 for performance analysis. Off by default; costs nothing when off.",
+        isChecked: isDebugEnabled(),
+        onChange: function (checked: boolean): void { setDebugEnabled(checked); },
+    };
+}
+
 /** Creates a debug channel tagged with the given plugin name. */
 export function createDebugChannel(plugin: string, isEnabled?: () => boolean): DebugChannel {
     const enabled = isEnabled !== undefined ? isEnabled : isDebugEnabled;
