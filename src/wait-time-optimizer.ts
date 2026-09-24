@@ -33,13 +33,13 @@ interface RideCacheEntry {
 
 registerPlugin({
     name: "Wait Time Optimizer",
-    version: "1.0",
+    version: __PLUGIN_VERSION__,
     authors: ["MattT"],
     type: "local",
     licence: "MIT",
     targetApiVersion: 87,
     main(): void {
-        const PLUGIN_VERSION = "1.0";
+        const PLUGIN_VERSION = __PLUGIN_VERSION__;
         // Guests begin complaining at 5 min queue wait and walk out at 15 min.
         // Trigger emergency dispatch mode at 5 min so trains push out faster
         // before guests start leaving the queue.

@@ -2,6 +2,7 @@ import resolve from "@rollup/plugin-node-resolve";
 import terser from "@rollup/plugin-terser";
 import typescript from "@rollup/plugin-typescript";
 import { exec } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { promisify } from "node:util";
 
@@ -15,6 +16,20 @@ const plugins = [
 ];
 
 const build = process.env.BUILD || "development";
+
+// One release number for every plugin, taken from package.json.
+const { version } = JSON.parse(readFileSync("./package.json", "utf8"));
+
+/** Replaces the `__PLUGIN_VERSION__` placeholder (declared in src/version.d.ts). */
+function stampVersion() {
+	return {
+		name: "stamp-version",
+		transform(code) {
+			if (!code.includes("__PLUGIN_VERSION__")) return null;
+			return { code: code.replaceAll("__PLUGIN_VERSION__", JSON.stringify(version)), map: null };
+		},
+	};
+}
 
 async function getPluginDir() {
 	if (build !== "development") {
@@ -50,6 +65,7 @@ const config = plugins.map((name) => ({
 	treeshake: "smallest",
 	plugins: [
 		resolve(),
+		stampVersion(),
 		typescript(),
 		terser({
 			compress: {

@@ -78,7 +78,7 @@ interface TileCache {
 
 registerPlugin({
     name: "Trash Manager",
-    version: "3.0",
+    version: __PLUGIN_VERSION__,
     authors: ["MattT"],
     type: "local",
     licence: "MIT",
@@ -2054,7 +2054,7 @@ function trashManagerMain(): void {
 
         win = ui.openWindow({
             classification: "trash-manager",
-            title: "Trash Manager v3",
+            title: "Trash Manager v" + __PLUGIN_VERSION__,
             width: 300,
             height: 446,
             widgets: [

@@ -23,13 +23,13 @@ import {
 
 registerPlugin({
     name: "Marketing Manager",
-    version: "0.1",
+    version: __PLUGIN_VERSION__,
     authors: ["MattT"],
     type: "local",
     licence: "MIT",
     targetApiVersion: 87,
     main(): void {
-        const PLUGIN_VERSION = "0.1";
+        const PLUGIN_VERSION = __PLUGIN_VERSION__;
         const dbg = createDebugChannel("marketing-manager");
         const storage: Configuration = context.getParkStorage();
 

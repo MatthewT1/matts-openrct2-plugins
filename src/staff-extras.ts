@@ -42,13 +42,13 @@ import { createStaffingController, StaffingDecision } from "./staffing";
 
 registerPlugin({
     name: "Staff Extras",
-    version: "1.0",
+    version: __PLUGIN_VERSION__,
     authors: ["MattT"],
     type: "local",
     licence: "MIT",
     targetApiVersion: 87,
     main(): void {
-        const PLUGIN_VERSION = "1.0";
+        const PLUGIN_VERSION = __PLUGIN_VERSION__;
         // Source-verified wage (Staff.cpp:2645): entertainers are GBP 60/month, same
         // tier as handymen and below mechanics.
         const ENTERTAINER_WAGE_PER_MONTH = 60;
