@@ -35,7 +35,14 @@ game's plugin folder.
 ```
 openrct2 plugin/
 ├── src/                        # TypeScript sources (edit these)
-│   ├── trash-manager.ts
+│   ├── trash-manager.ts        # entry point: wiring, staffing decision, hooks
+│   ├── trash/                  # trash-manager split by job (#6)
+│   │   ├── shared.ts           # constants, types, litter helpers
+│   │   ├── map-scan.ts         # tile/entity scans, hotspots, coverage tiles
+│   │   ├── handymen.ts         # hire/fire, orders, patrol zones, activity
+│   │   ├── amenities.ts        # benches/bins, vomit attribution
+│   │   ├── facilities.ts       # guest-need sampling, facility placement
+│   │   └── window.ts           # the Trash Manager window
 │   ├── wait-time-optimizer.ts
 │   ├── mechanic-manager.ts
 │   ├── marketing-manager.ts    # campaign ranking + auto-run
