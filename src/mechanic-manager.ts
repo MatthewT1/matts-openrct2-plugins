@@ -1,9 +1,10 @@
-import { createDebugChannel, diagnosticsCheckbox } from "./debug";
+import { createDebugChannel, diagnosticsCheckbox, isDebugEnabled } from "./debug";
 import { boolSetting } from "./settings";
 import { createActivityTracker } from "./staff-activity";
 import { MECHANIC_THRESHOLDS, createStaffingController, StaffingDecision } from "./staffing";
 import { createStaffHirer, HIRE_BACKOFF_DAYS } from "./staff-hiring";
 import { createDeferredActions } from "./deferred";
+import { createBreakdownTracer, RideSnapshot, MechanicSnapshot } from "./breakdown-trace";
 
 registerPlugin({
     name: "Mechanic Manager",
@@ -411,7 +412,50 @@ registerPlugin({
             dbg.count("breakdowns");
             recentBreakdowns.unshift(entry);
             if (recentBreakdowns.length > MAX_BREAKDOWN_LOG) recentBreakdowns.pop();
+            if (isDebugEnabled()) tracer.start(e.rideId, e.breakdownReason, date.ticksElapsed);
             refreshWindow();
+        });
+
+        // --- Breakdown repair trace (Diagnostics only) ------------------------
+        //
+        // Observes where the time goes between a breakdown and its repair; see
+        // breakdown-trace.ts. Changes nothing in the game. Costs one boolean check per
+        // tick while no traced ride is broken, and a ride + staff read every
+        // TRACE_SAMPLE_TICKS while one is.
+        const TRACE_SAMPLE_TICKS = 64;
+        const tracer = createBreakdownTracer();
+        let traceTicks = 0;
+
+        function traceSample(): void {
+            const rides: RideSnapshot[] = [];
+            map.rides.forEach((r: Ride) => {
+                if (r.classification !== "ride") return;
+                const exit = r.stations.length > 0 ? r.stations[0].exit : null;
+                rides.push({
+                    id: r.id, name: r.name, breakdown: r.breakdown as string,
+                    exit: exit !== null ? { x: exit.x, y: exit.y } : null,
+                });
+            });
+            const mechanics: MechanicSnapshot[] = [];
+            getMechanics().forEach((m: Mechanic) => {
+                if (m.id === null) return;
+                mechanics.push({
+                    id: m.id, x: m.x, y: m.y, animation: m.animation,
+                    ridesFixed: m.ridesFixed, ridesInspected: m.ridesInspected,
+                });
+            });
+            const done = tracer.sample(date.ticksElapsed, rides, mechanics);
+            for (let i = 0; i < done.length; i++) {
+                dbg.count("breakdownTraces");
+                dbg.event("breakdownTrace", done[i] as unknown as Record<string, unknown>);
+            }
+        }
+
+        context.subscribe("interval.tick", () => {
+            if (!tracer.active()) return;
+            if (++traceTicks < TRACE_SAMPLE_TICKS) return;
+            traceTicks = 0;
+            dbg.time("tick.breakdownTrace", traceSample);
         });
 
         // Button actions that change game state run on the next tick; see deferred.ts.

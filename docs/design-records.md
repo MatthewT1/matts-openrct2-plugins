@@ -325,6 +325,30 @@ Also worth documenting in-code: the daily interval re-application is load-bearin
 because opening a ride's construction window resets it
 ([#25601](https://github.com/OpenRCT2/OpenRCT2/issues/25601)).
 
+### M5 — Breakdown repair trace
+
+**Status:** instrumentation only (2026-09-24) · **Basis:** measured need · **Cost:** ~0ms, Diagnostics only
+
+The Session 2 baseline (Thunder Rock, 22 days) had one breakdown that took **~4 in-game
+days** to repair. The daily log shows `unattendedBreakdowns` and a hire, but not why it
+took so long. The plugin API has no `ride.mechanicStatus` or `ride.mechanic`.
+
+Reading `Ride.cpp:1387-1560` gives three candidate causes: no mechanic free to dispatch
+(`FindClosestMechanic` only takes patrolling mechanics, or ones heading to an inspection
+with `subState < 4`), a long walk, or a slow fix. Clearing a patrol area
+(`StaffSetPatrolAreaAction`) doesn't touch the peep's state, so the daily zone sync
+doesn't interrupt a repair.
+
+`breakdown-trace.ts` separates the three. From the `ride.breakdown` event it samples every
+64 ticks: nearest mechanic distance to the exit, mechanics at the ride, and `staffFix*` /
+`staffAnswerCall*` animations. When the ride is fixed it emits one `breakdownTrace`
+event that says who fixed it (from their `ridesFixed` counter), how far away they started,
+the time to the broken flag, to arrival and to the fix animation, and how many inspections
+the fleet did in the meantime.
+
+**Next:** read the traces from the Session 2 run, then decide on a fix. Don't change
+mechanic behaviour before that.
+
 ---
 
 ## Wait Time Optimizer
