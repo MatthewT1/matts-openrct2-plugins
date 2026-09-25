@@ -136,6 +136,42 @@ export function selectEntertainerTargets(
     }));
 }
 
+/** What one daily pass should do to the entertainer roster. */
+export interface EntertainerRosterPlan {
+    /** New entertainers to hire. */
+    hire: number;
+    /** Ids to fire: only ever entertainers this plugin hired. */
+    fireIds: number[];
+    /** Surplus left in place because it belongs to the player. */
+    protectedCount: number;
+}
+
+/**
+ * Hire/fire plan for one pass, from the LIVE roster (#54).
+ *
+ * `liveIds` must be read the same tick the plan is applied. The old code sized hires
+ * from a list cached for 15 real seconds; at speed 4 that is ~7 in-game days, and every
+ * one of those days hired the whole deficit again (Dynamite Dunes: 22 entertainers
+ * against a cap of 4). The target is clamped to `MAX_TARGETED_ENTERTAINERS` so no
+ * caller can ask for more than the cap, and firing only ever picks ids in `owned`.
+ */
+export function planEntertainerRoster(
+    target: number,
+    liveIds: number[],
+    owned: Record<string, true>,
+): EntertainerRosterPlan {
+    const capped = Math.max(0, Math.min(target, MAX_TARGETED_ENTERTAINERS));
+    const diff = capped - liveIds.length;
+    if (diff >= 0) return { hire: diff, fireIds: [], protectedCount: 0 };
+
+    const wanted = -diff;
+    const fireIds: number[] = [];
+    for (let i = 0; i < liveIds.length && fireIds.length < wanted; i++) {
+        if (owned[String(liveIds[i])]) fireIds.push(liveIds[i]);
+    }
+    return { hire: 0, fireIds, protectedCount: wanted - fireIds.length };
+}
+
 /** How many rides currently qualify at each severity, and the worst queue seen. */
 export interface QueueCensus {
     urgentCount: number;

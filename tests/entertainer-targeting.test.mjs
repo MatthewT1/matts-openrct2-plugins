@@ -1,7 +1,7 @@
 import {
     selectEntertainerTargets, censusQueues, entertainerStaffingSignals,
     QUEUE_FLOOR_MINUTES, QUEUE_URGENT_MINUTES, MAX_TARGETED_ENTERTAINERS,
-    PATROL_RADIUS_TILES, TILE_SIZE, ENTERTAINER_THRESHOLDS, costumeCandidates,
+    PATROL_RADIUS_TILES, TILE_SIZE, ENTERTAINER_THRESHOLDS, planEntertainerRoster, costumeCandidates,
 } from "./build/entertainer-targeting.mjs";
 import { createStaffingController } from "./build/staffing.mjs";
 
@@ -93,6 +93,44 @@ const ride = (rideId, name, queueMinutes, stationX = 1000, stationY = 2000) =>
     const c = censusQueues(rides);
     const sig = entertainerStaffingSignals(c, 999);
     ok(sig.formulaTarget === MAX_TARGETED_ENTERTAINERS, "formula target capped, got " + sig.formulaTarget);
+}
+
+// --- #54 roster plan: hire = max(0, min(target, cap) - live)
+{
+    ok(planEntertainerRoster(3, [10], {}).hire === 2, "hires the deficit from the live count");
+    ok(planEntertainerRoster(4, [1, 2, 3, 4], {}).hire === 0, "at target: no hire");
+    ok(planEntertainerRoster(20, [], {}).hire === MAX_TARGETED_ENTERTAINERS, "target clamped to cap");
+    ok(planEntertainerRoster(-3, [], {}).hire === 0, "negative target hires nothing");
+}
+
+// --- #54 regression: daily passes over the LIVE roster never pass the cap. The bug fed a
+// roster cached for ~7 in-game days, so each day re-hired the same deficit (0 -> 22).
+{
+    const roster = []; let nextId = 100, peak = 0;
+    for (let day = 0; day < 10; day++) {
+        const plan = planEntertainerRoster(4, roster.slice(), {});
+        for (let i = 0; i < plan.hire; i++) roster.push(nextId++);
+        peak = Math.max(peak, roster.length);
+    }
+    ok(peak === 4, "live roster peaks at cap over 10 days, got " + peak);
+
+    // The stale shape, for contrast: the same plan fed a frozen empty list overshoots.
+    const stale = []; let staleRoster = 0;
+    for (let day = 0; day < 10; day++) staleRoster += planEntertainerRoster(4, stale, {}).hire;
+    ok(staleRoster > MAX_TARGETED_ENTERTAINERS, "stale input is what overshoots (documents the bug)");
+}
+
+// --- #54 firing: only owned ids, surplus of player staff reported as protected
+{
+    const owned = { "5": true, "7": true };
+    const plan = planEntertainerRoster(1, [4, 5, 6, 7], owned);
+    ok(plan.hire === 0, "no hire when over target");
+    ok(plan.fireIds.join(",") === "5,7", "fires only owned ids, got " + plan.fireIds.join(","));
+    ok(plan.protectedCount === 1, "player surplus protected, got " + plan.protectedCount);
+    const none = planEntertainerRoster(0, [1, 2], {});
+    ok(none.fireIds.length === 0 && none.protectedCount === 2, "never fires a hand-hired entertainer");
+    const clamp = planEntertainerRoster(9, [1, 2, 3, 4, 5, 6], { "6": true, "5": true });
+    ok(clamp.fireIds.join(",") === "5,6", "over cap trims owned back to cap, got " + clamp.fireIds.join(","));
 }
 
 // --- #50 costume candidates: entertainer objects first, known non-entertainers never.
