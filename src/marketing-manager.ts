@@ -310,11 +310,11 @@ registerPlugin({
         }
 
         /**
-         * Auto-starts from the TOP of the ranked list down, not just the single
-         * best entry - up to 6 campaigns can run concurrently (marketing-research.md
-         * "multiple campaigns run concurrently"), so stopping after one would leave
-         * cheap, independent guest generation on the table on a park eligible for
-         * several at once.
+         * Auto-starts the best-value campaign that fits the budget and cash floor -
+         * ONE per batch (#74). Starting every eligible campaign at once (up to 6 run
+         * concurrently) bought guests the park couldn't hold and never paid back in
+         * the #63 study; one at a time lets each batch's payback be judged before the
+         * next is risked.
          *
          * Spends up to `AUTO_CASH_BUDGET_PER_PASS` per call, and never below
          * `rankCampaigns`'s own cash floor - `rankCampaigns` already guarantees
@@ -344,7 +344,8 @@ registerPlugin({
             let batchCost = 0;
 
             for (const candidate of ranked) {
-                const cost = weeksToStart * WEEKLY_COST[candidate.type];
+                // WEEKLY_COST is in whole pounds; budget, cash and income are raw tenths (#74).
+                const cost = weeksToStart * WEEKLY_COST[candidate.type] * 10;
                 if (cost > budgetLeft) {
                     dbg.count("autoSkippedBudget");
                     continue;
@@ -362,6 +363,8 @@ registerPlugin({
                 budgetLeft -= cost;
                 cashLeft -= cost;
                 batchCost += cost;
+                // #74: one campaign per batch, so each payback trial risks one campaign's cost.
+                break;
             }
             if (batchCost > 0 && income !== null && rate !== null) {
                 pendingBatch = { startDay: dayCounter, cost: batchCost, incomeAtStart: income.cum, dailyIncomeBefore: rate, days: weeksToStart * 7 };
@@ -533,8 +536,8 @@ registerPlugin({
                         tooltip: "Starts campaigns from the ranked list above, best value first, up to "
                             + formatMoney(AUTO_CASH_BUDGET_PER_PASS / 10) + " committed per day and never below the "
                             + formatMoney(MARKETING_MIN_CASH / 10) + " cash reserve. Never starts a second campaign of a "
-                            + "type already running. Only starts while guests are below 80% of the park's capacity, one "
-                            + "batch at a time; when a batch ends it checks the extra income against the cost, and after one "
+                            + "type already running. Starts one campaign at a time, only while guests are below 80% of the park's capacity"
+                            + "; when it ends it checks the extra income against the cost, and after one "
                             + "that did not pay for itself it waits " + PAYBACK_COOLDOWN_DAYS + " days. Off by default - this spends real money on its own.",
                         isChecked: isAutoManage(),
                         onChange: (checked: boolean) => {
