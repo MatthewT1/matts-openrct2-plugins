@@ -468,7 +468,7 @@ export function createAmenityManager(
             maxRemove:       AMENITY_MAX_REMOVE,
             satisfiedWithin: AMENITY_SATISFIED,
             allowRemoval:    isAmenityRemoval(),
-        });
+        }, demands);   // removal is judged on ALL demands, not just the open ones (#56)
 
         let changed = false;
 

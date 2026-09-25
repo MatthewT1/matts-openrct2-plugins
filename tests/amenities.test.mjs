@@ -76,5 +76,37 @@ ok(bp.place.length===1 && bp.place[0].y===2, "falls through to the nearest place
 // a blocked tile that already holds OUR amenity can still be removed
 bp=planAmenities([site(80,80,{blocked:true,occupied:true,existing:"bench",ours:true})],[dem(0,0,"bench",10)],OPT);
 ok(bp.remove.length===1, "blocked tiles are still removable, got "+bp.remove.length);
+// --- #56: the caller pre-filters demands to the ones not yet covered. A bench covering its
+// own coverage demand filters that demand out; judged on the filtered list it looked
+// unjustified, was removed, and was placed again next pass (R P R P on one tile).
+{
+    const covered = (d, sites) => sites.some(s => s.existing === d.kind &&
+        Math.abs(s.x - d.x) + Math.abs(s.y - d.y) <= OPT.satisfiedWithin);
+    // Our bench on its own coverage tile, plus an open demand elsewhere so the pass runs.
+    const sites = [site(29, 39, { occupied: true, existing: "bench", ours: true }), site(80, 80)];
+    const demands = [dem(29, 39, "bench", 1), dem(80, 80, "bench", 1)];
+    const open = demands.filter(d => !covered(d, sites));
+    const one = planAmenities(sites, open, OPT, demands);
+    ok(one.remove.length === 0, "#56 bench on its own coverage tile is not removed, got " + one.remove.length);
+
+    // 10 simulated passes with the caller's 5-pass removal hysteresis: no removal, ever.
+    // A demand with no placeable site in reach stays open every pass, as unreachable
+    // coverage cells do in a real park, so every pass runs the removal check.
+    demands.push(dem(200, 200, "bench", 1));
+    let removals = 0, streak = 0;
+    const live = sites.map(s => ({ ...s }));
+    for (let pass = 0; pass < 10; pass++) {
+        const o = demands.filter(d => !covered(d, live));
+        const plan = planAmenities(live, o, OPT, demands);
+        for (const a of plan.place) Object.assign(live.find(s => s.x === a.x && s.y === a.y), { occupied: true, existing: a.kind, ours: true });
+        if (plan.remove.length > 0) { if (++streak >= 5) { removals++; streak = 0; } } else streak = 0;
+    }
+    ok(removals === 0, "#56 10-pass loop with stable demands removes nothing, got " + removals);
+
+    // Still removes a bench of ours that no demand at all justifies.
+    const stale = planAmenities([site(5, 5, { occupied: true, existing: "bench", ours: true })], [dem(60, 60, "bench", 1)], OPT, [dem(60, 60, "bench", 1)]);
+    ok(stale.remove.length === 1, "#56 unjustified bench of ours is still removed");
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail) process.exitCode = 1;
