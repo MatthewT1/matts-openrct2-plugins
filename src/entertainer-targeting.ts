@@ -257,3 +257,35 @@ export function entertainerStaffingSignals(
         floor: 0,
     };
 }
+
+/**
+ * Costume indexes to try for an entertainer hire, best first (#50).
+ *
+ * The game accepts only peep-animation objects of the entertainer type
+ * (StaffHireNewAction.cpp:85-93) and writes an ERROR line for every refused index, even
+ * from a `queryAction`. Walking 0, 1, 2, ... hit guest/handyman/mechanic/security first
+ * (the default objects, DefaultObjects.cpp:114-117): 4 errors per park in the #49 matrix.
+ * Objects named `*entertainer*` (every RCT2 costume, Legacy.cpp:2282-2292) go first;
+ * the rest follow in index order, minus the four known non-entertainers, so a custom
+ * costume with an unusual name is still found.
+ */
+export function costumeCandidates(
+    objects: { index: number; identifier: string }[],
+    maxIndex: number,
+): number[] {
+    const NOT_ENTERTAINER = ["guest", "handyman", "mechanic", "security"];
+    const named: number[] = [];
+    const skip: Record<number, true> = {};
+    for (let i = 0; i < objects.length; i++) {
+        const id = objects[i].identifier.toLowerCase();
+        const idx = objects[i].index;
+        if (idx < 0 || idx > maxIndex) continue;
+        if (id.indexOf("entertainer") >= 0) { named.push(idx); skip[idx] = true; continue; }
+        const tail = id.substring(id.lastIndexOf(".") + 1);
+        if (NOT_ENTERTAINER.indexOf(tail) >= 0) skip[idx] = true;
+    }
+    named.sort((a, b) => a - b);
+    const out = named.slice();
+    for (let i = 0; i <= maxIndex; i++) if (!skip[i]) out.push(i);
+    return out;
+}

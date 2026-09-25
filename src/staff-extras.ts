@@ -39,7 +39,7 @@ import { formatMoney } from "./money";
 import {
     selectEntertainerTargets, censusQueues, entertainerStaffingSignals,
     ENTERTAINER_THRESHOLDS, EntertainerTarget, RideQueueSignal, MAX_TARGETED_ENTERTAINERS,
-    planEntertainerRoster,
+    planEntertainerRoster, costumeCandidates,
 } from "./entertainer-targeting";
 import { createStaffingController, StaffingDecision } from "./staffing";
 import { createStaffHirer } from "./staff-hiring";
@@ -154,16 +154,20 @@ registerPlugin({
         /**
          * Finds a usable costume index, then runs `then`.
          *
-         * Silent throughout: probes are queries, so a player never sees the failures.
+         * Probes are queries, so a player never sees the failures, but each refusal is
+         * still an ERROR line in the game log (#50). Candidates are ordered so the first
+         * query is normally an entertainer object and nothing is refused.
          */
         function withCostume(then: (costume: number) => void): void {
             if (entertainerCostume !== null) { then(entertainerCostume); return; }
             if (costumeSearchDone) return;   // searched already and found nothing
 
-            let index = 0;
+            const candidates = costumeCandidates(
+                objectManager.getAllObjects("peep_animations"), MAX_COSTUME_INDEX);
+            let next = 0;
 
             function tryNext(): void {
-                if (index > MAX_COSTUME_INDEX) {
+                if (next >= candidates.length) {
                     // No entertainer animation object is loaded in this park at all.
                     costumeSearchDone = true;
                     dbg.count("entertainerNoCostume");
@@ -171,8 +175,8 @@ registerPlugin({
                         "this park, so entertainers cannot be hired.");
                     return;
                 }
-                const candidate = index;
-                index++;
+                const candidate = candidates[next];
+                next++;
 
                 context.queryAction("staffhire", {
                     autoPosition: true,

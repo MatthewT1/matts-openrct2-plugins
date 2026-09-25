@@ -200,7 +200,13 @@ function clamp(value: number, min: number, max: number): number {
     return value;
 }
 
-export function createOpsController(probeCeiling: number): OpsController {
+/**
+ * A ride type's legal range when it is known up front (#50): `[min, max]`, `"untunable"`
+ * for a known type with nothing to tune, or null when unknown (then the range is probed).
+ */
+export type KnownOpsRange = (rideType: number) => [number, number] | "untunable" | null;
+
+export function createOpsController(probeCeiling: number, knownRange?: KnownOpsRange): OpsController {
     let records: { [rideId: string]: RideOpsRecord } = {};
 
     function ensure(rideId: number, name: string, rideType: number): RideOpsRecord {
@@ -221,6 +227,19 @@ export function createOpsController(probeCeiling: number): OpsController {
                 nextProbe: clamp(probeCeiling, MIN_VALUE, probeCeiling),
                 probeExhausted: false,
             };
+            // A known range skips probing entirely: every probe refusal is an ERROR line
+            // in the game log (#50), and the range is static per ride type anyway.
+            const known = knownRange !== undefined ? knownRange(rideType) : null;
+            if (known === "untunable") {
+                record.nextProbe = null;
+                record.probeExhausted = true;
+            } else if (known !== null) {
+                record.min = known[0];
+                record.max = known[1];
+                record.probeLow = known[1];
+                record.probeHigh = known[1] + 1;
+                record.nextProbe = null;
+            }
             records[key] = record;
         } else if (record.rideType !== rideType) {
             // Ride ids are reused when a ride is demolished and another is built. Since

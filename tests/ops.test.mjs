@@ -304,4 +304,49 @@ cFloorD.noteSetRejected(73, 1);
 const st73 = cFloorD.describe(73);
 ok(st73.min < st73.max, "the ride remains tunable: " + st73.min + " < " + st73.max);
 
+// --- #50: a known per-type range means no probing and no out-of-range values, ever.
+// Every refused value (query or set) is an ERROR line in the game log.
+{
+  const RT = (id, q, rideType) => ({ ...R(id, q), rideType });
+  const oracle = [7, 25]; // swinging ship, RIDE_TYPE 26
+  const run = (ctrl) => {
+    let refused = 0;
+    for (let pass = 0; pass < 120; pass++) {
+      const q = pass < 60 ? 0 : 20; // empty queue then congested: walks both ways
+      for (const a of ctrl.update([RT(1, q, 26)])) {
+        const okValue = a.value >= oracle[0] && a.value <= oracle[1];
+        if (!okValue) refused++;
+        if (a.kind === "probe") ctrl.noteProbe(1, a.value, okValue);
+        else if (okValue) ctrl.noteSet(1, a.value); else ctrl.noteSetRejected(1, a.value);
+      }
+    }
+    return refused;
+  };
+  const probed = run(createOpsController(32));
+  const seeded = createOpsController(32, (t) => t === 26 ? [7, 25] : null);
+  const refusedSeeded = run(seeded);
+  ok(probed > 0, "#50 probing refuses values (the log noise), got " + probed);
+  ok(refusedSeeded === 0, "#50 known range: zero refused values over 120 passes, got " + refusedSeeded);
+  const d = seeded.describe(1);
+  ok(d.min === 7 && d.max === 25, "#50 known range seeds min/max, got " + d.min + "-" + d.max);
+
+  const first = createOpsController(32, () => [5, 18]).update([RT(2, 0, 0)]);
+  ok(first.every(a => a.kind !== "probe"), "#50 known range emits no probe");
+  const none = createOpsController(32, () => "untunable");
+  let acts = 0; for (let i = 0; i < 30; i++) acts += none.update([RT(3, i % 2 ? 20 : 0, 60)]).length;
+  ok(acts === 0, "#50 untunable type: no actions at all, got " + acts);
+  const unknown = createOpsController(32, () => null).update([RT(4, 0, 200)]);
+  ok(unknown.some(a => a.kind === "probe"), "#50 unknown type still probes");
+}
+{
+  const { operationRange, isKnownRideType } = await import("./build/op-ranges.mjs");
+  const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  // Spot checks against gamesrc 6fb525e906 and the refusals seen in #50/#55 logs.
+  ok(eq(operationRange(26), [7, 25]), "swinging ship 7-25");
+  ok(eq(operationRange(33), [4, 25]), "merry-go-round 4-25 (#55 walked 13->25 and stopped)");
+  ok(eq(operationRange(20), [1, 64]), "maze 1-64");
+  ok(operationRange(29) === null && isKnownRideType(29), "dummy slot 29: known, untunable");
+  ok(!isKnownRideType(500) && operationRange(500) === null, "out of table: unknown");
+}
+
 console.log(`\n${pass} passed, ${fail} failed`); if (fail) process.exitCode = 1;

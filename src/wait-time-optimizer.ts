@@ -2,6 +2,7 @@ import { createDebugChannel, diagnosticsCheckbox } from "./debug";
 import { boolSetting } from "./settings";
 import { createDeferredActions } from "./deferred";
 import { createOpsController, RideOpsState, OpsAction } from "./ops";
+import { isKnownRideType, operationRange } from "./op-ranges";
 import { createQueueTrendTracker, QueuePressure, FLOOR_MINUTES,
     createInterventionTracker, InterventionTracker } from "./queues";
 
@@ -110,7 +111,10 @@ registerPlugin({
         // it exists to enable, while the genuinely expensive action was no rarer for it.
         const OPS_MAX_PROBES        = 10;  // per pass; queries are free and change nothing
         const OPS_MAX_SETS          = 1;   // per pass; each one invalidates ride ratings
-        const opsController = createOpsController(OPS_PROBE_CEILING);
+        // Seeded from the game's own per-type table so the range is not probed (#50);
+        // an unknown type (newer game build) still falls back to probing.
+        const opsController = createOpsController(OPS_PROBE_CEILING, (rideType: number) =>
+            !isKnownRideType(rideType) ? null : (operationRange(rideType) ?? "untunable"));
 
         function isAutoOps(): boolean {
             return settings.autoOps.get();
