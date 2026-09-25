@@ -4,6 +4,7 @@ import {
     WEEKLY_COST, BASE_PROBABILITY, MIN_WEEKS, MAX_WEEKS,
     expectedGuestsPerWeek, costPerGuest, rankCampaigns, createAttributionTracker,
     ATTRIBUTION_WINDOW_DAYS,
+    hasHeadroom, dailyIncomeRate, judgeBatch, autoStartHold, PAYBACK_COOLDOWN_DAYS,
 } from "./build/marketing.mjs";
 
 let pass = 0, fail = 0;
@@ -268,6 +269,36 @@ function baseSignals(overrides = {}) {
 {
     const t = createAttributionTracker(undefined);
     ok(t.summarize(1).length === 0, "no snapshot -> starts empty, same as before this feature existed");
+}
+
+// --- #74: headroom + payback gate for auto starts --------------------------------
+
+{
+    ok(hasHeadroom(baseSignals({ guests: 790, suggestedGuestMaximum: 1000 })), "79% of capacity has headroom");
+    ok(!hasHeadroom(baseSignals({ guests: 800, suggestedGuestMaximum: 1000 })), "80% of capacity has none");
+    ok(!hasHeadroom(baseSignals({ guests: 900, suggestedGuestMaximum: 1000, difficultGuestGeneration: true })),
+        "difficult guest generation doesn't lift the headroom rule");
+    ok(hasHeadroom(baseSignals({ guests: 900, suggestedGuestMaximum: 1000, guestCountObjective: 2000 })),
+        "a guest objective raises the ceiling");
+
+    const hist = [0, 1, 2, 3, 4, 5, 6, 7].map((d) => ({ day: d, income: d * 100 }));
+    ok(dailyIncomeRate(hist.slice(0, 7), 7) === null, "7 samples is not 7 days of history");
+    ok(dailyIncomeRate(hist, 7) === 100, "rate = income per day over the window");
+
+    const batch = { startDay: 10, cost: 1000, incomeAtStart: 5000, dailyIncomeBefore: 100, days: 14 };
+    ok(judgeBatch(batch, 23, 99999) === null, "not judged before it has run");
+    const paid = judgeBatch(batch, 24, 5000 + 1400 + 1000);
+    ok(paid.paid && paid.extra === 1000, "extra income equal to cost pays");
+    ok(!judgeBatch(batch, 24, 5000 + 1400 + 999).paid, "one short does not pay");
+
+    const sig = baseSignals({ guests: 100, suggestedGuestMaximum: 1000 });
+    ok(autoStartHold(sig, 30, null, 0, true) === null, "headroom, baseline, no pending -> go");
+    ok(autoStartHold(sig, 30, batch, 0, true) !== null, "pending batch holds");
+    ok(autoStartHold(sig, 30, null, 31, true) !== null, "cooldown holds");
+    ok(autoStartHold(sig, 31, null, 31, true) === null, "cooldown ends on its day");
+    ok(autoStartHold(sig, 30, null, 0, false) !== null, "no income baseline holds");
+    ok(autoStartHold(baseSignals({ guests: 950, suggestedGuestMaximum: 1000 }), 30, null, 0, true) !== null, "no headroom holds");
+    ok(PAYBACK_COOLDOWN_DAYS === 56, "cooldown is 8 weeks");
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

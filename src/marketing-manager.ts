@@ -21,6 +21,7 @@ import {
     ALL_CAMPAIGN_TYPES, CAMPAIGN_NAMES, CAMPAIGN_FOOD_OR_DRINK_FREE, CampaignType,
     MIN_WEEKS, MAX_WEEKS, WEEKLY_COST, rankCampaigns, createAttributionTracker,
     CampaignRankingResult, MarketingSignals, AttributionTracker, AttributionSnapshot,
+    AutoBatch, IncomeSample, PAYBACK_BASELINE_DAYS, PAYBACK_COOLDOWN_DAYS, autoStartHold, dailyIncomeRate, judgeBatch,
 } from "./marketing";
 import { spendGate } from "./cash-gate";
 
@@ -92,6 +93,54 @@ registerPlugin({
         function persistAttribution(): void {
             storage.set("dayCounter", dayCounter);
             storage.set("attribution", attribution.snapshot());
+        }
+
+        // --- #74 payback: cumulative park income, from the game's monthly expenditure table
+        // (index 0 = this month, income positive). A day is shorter than a month, so at most one
+        // rollover happens between two daily reads - same method as the headless harness.
+        const INCOME_TYPES: ExpenditureType[] = ["park_entrance_tickets", "park_ride_tickets", "shop_sales", "food_drink_sales"];
+        interface IncomeState { month: number; last: number[]; cum: number; history: IncomeSample[]; }
+        let income: IncomeState | null = storage.get<IncomeState>("income") ?? null;
+        let pendingBatch: AutoBatch | null = storage.get<AutoBatch>("autoBatch") ?? null;
+        let cooldownUntil = storage.get<number>("autoCooldownUntil") ?? 0;
+        let lastHold: string | null = null;
+
+        function monthNow(type: ExpenditureType): { cur: number; prev: number } {
+            const arr = park.getMonthlyExpenditure(type);
+            return { cur: arr.length > 0 ? arr[0] : 0, prev: arr.length > 1 ? arr[1] : 0 };
+        }
+
+        function updateIncome(): void {
+            const month = date.monthsElapsed;
+            if (income === null) {
+                income = { month, last: INCOME_TYPES.map((t) => monthNow(t).cur), cum: 0, history: [] };
+            } else {
+                const rolled = month !== income.month;
+                for (let i = 0; i < INCOME_TYPES.length; i++) {
+                    const m = monthNow(INCOME_TYPES[i]);
+                    income.cum += rolled ? (m.prev - income.last[i]) + m.cur : m.cur - income.last[i];
+                    income.last[i] = m.cur;
+                }
+                income.month = month;
+            }
+            income.history.push({ day: dayCounter, income: income.cum });
+            if (income.history.length > PAYBACK_BASELINE_DAYS + 1) income.history.shift();
+            storage.set("income", income);
+        }
+
+        /** Judge the pending batch once it has run; a batch that didn't pay back starts the cooldown. */
+        function judgePending(): void {
+            if (pendingBatch === null || income === null) return;
+            const v = judgeBatch(pendingBatch, dayCounter, income.cum);
+            if (v === null) return;
+            dbg.count(v.paid ? "autoBatchPaid" : "autoBatchUnpaid");
+            console.log("[Marketing Manager] Auto campaigns from day " + pendingBatch.startDay + ": extra income "
+                + formatMoney(Math.round(v.extra / 10)) + " vs cost " + formatMoney(pendingBatch.cost / 10)
+                + (v.paid ? " - paid for themselves." : " - did not pay; no auto starts for " + PAYBACK_COOLDOWN_DAYS + " days."));
+            if (!v.paid) cooldownUntil = dayCounter + PAYBACK_COOLDOWN_DAYS;
+            pendingBatch = null;
+            storage.set("autoBatch", null);
+            storage.set("autoCooldownUntil", cooldownUntil);
         }
 
         // --- Tracked campaign state ------------------------------------------------
@@ -273,7 +322,8 @@ registerPlugin({
          * candidate's lump sum could still exceed the surplus above that floor, so
          * both limits are tracked explicitly rather than assumed compatible.
          */
-        function autoStartCampaigns(ranked: CampaignRankingResult["ranked"]): void {
+        function autoStartCampaigns(ranked: CampaignRankingResult["ranked"], signals: MarketingSignals): void {
+            lastHold = null;
             if (!isAutoManage()) return;
             // #44: players cannot market in a no-money park (no Finances window), so neither do we.
             if (spendGate(park.cash, MARKETING_MIN_CASH, park.getFlag("noMoney"), "marketing") === "unavailable") {
@@ -281,8 +331,17 @@ registerPlugin({
                 return;
             }
 
+            // #74: only with headroom, one batch at a time, and not after a batch that didn't pay.
+            const rate = income === null ? null : dailyIncomeRate(income.history, PAYBACK_BASELINE_DAYS);
+            lastHold = ranked.length === 0 ? null : autoStartHold(signals, dayCounter, pendingBatch, cooldownUntil, rate !== null);
+            if (lastHold !== null) {
+                dbg.count("autoHeld");
+                return;
+            }
+
             let budgetLeft = AUTO_CASH_BUDGET_PER_PASS;
             let cashLeft = park.cash - MARKETING_MIN_CASH;
+            let batchCost = 0;
 
             for (const candidate of ranked) {
                 const cost = weeksToStart * WEEKLY_COST[candidate.type];
@@ -302,6 +361,11 @@ registerPlugin({
                 dbg.count("autoStarted");
                 budgetLeft -= cost;
                 cashLeft -= cost;
+                batchCost += cost;
+            }
+            if (batchCost > 0 && income !== null && rate !== null) {
+                pendingBatch = { startDay: dayCounter, cost: batchCost, incomeAtStart: income.cum, dailyIncomeBefore: rate, days: weeksToStart * 7 };
+                storage.set("autoBatch", pendingBatch);
             }
         }
 
@@ -329,6 +393,10 @@ registerPlugin({
                     costPerGuest: Math.round(r.costPerGuest * 100) / 100,
                 })),
                 blockedReason: lastRanking.blockedReason,
+                autoHold: lastHold,
+                autoBatch: pendingBatch,
+                autoCooldownUntil: cooldownUntil,
+                incomeCum: income?.cum ?? null,
                 // Phase 4: what's actually running, per the plugin's own tracked state.
                 activeCampaigns: ALL_CAMPAIGN_TYPES
                     .filter((t) => lastTracked[t] !== undefined)
@@ -377,7 +445,8 @@ registerPlugin({
 
             const blocked = pluginWindow.findWidget<LabelWidget>("lblBlocked");
             if (blocked) {
-                blocked.text = lastRanking.blockedReason !== null ? "Blocked: " + lastRanking.blockedReason : "";
+                blocked.text = lastRanking.blockedReason !== null ? "Blocked: " + lastRanking.blockedReason
+                    : lastHold !== null ? "Auto-start waiting: " + lastHold : "";
             }
 
             const status = pluginWindow.findWidget<LabelWidget>("lblStatus");
@@ -464,7 +533,9 @@ registerPlugin({
                         tooltip: "Starts campaigns from the ranked list above, best value first, up to "
                             + formatMoney(AUTO_CASH_BUDGET_PER_PASS / 10) + " committed per day and never below the "
                             + formatMoney(MARKETING_MIN_CASH / 10) + " cash reserve. Never starts a second campaign of a "
-                            + "type already running. Off by default - this spends real money on its own.",
+                            + "type already running. Only starts while guests are below 80% of the park's capacity, one "
+                            + "batch at a time; when a batch ends it checks the extra income against the cost, and after one "
+                            + "that did not pay for itself it waits " + PAYBACK_COOLDOWN_DAYS + " days. Off by default - this spends real money on its own.",
                         isChecked: isAutoManage(),
                         onChange: (checked: boolean) => {
                             settings.autoManage.set(checked);
@@ -483,6 +554,8 @@ registerPlugin({
             dayCounter++;
             attribution.observe(dayCounter, park.guests);
             persistAttribution();
+            updateIncome();
+            judgePending();
 
             lastTracked = upkeepCampaigns(loadTracked());
             saveTracked(lastTracked);
@@ -491,7 +564,7 @@ registerPlugin({
             lastFoodOrDrinkStalls = rideScan.foodOrDrinkStalls;
             const signals = buildSignals(rideScan, lastTracked);
             lastRanking = dbg.time("day.rankCampaigns", () => rankCampaigns(signals));
-            dbg.time("day.autoStart", () => autoStartCampaigns(lastRanking.ranked));
+            dbg.time("day.autoStart", () => autoStartCampaigns(lastRanking.ranked, signals));
             refreshWindow();
             dbg.flushStats(parkContext(rideScan));
         });

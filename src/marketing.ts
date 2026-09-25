@@ -409,3 +409,71 @@ export function createAttributionTracker(initial?: AttributionSnapshot): Attribu
 
     return { observe, recordStart, summarize, snapshot, reset };
 }
+
+// --- #74: auto-start only with headroom, and only while campaigns pay for themselves ----------
+//
+// The #63 study (10 parks, 60 d) found auto-started campaigns bought guests the parks could not
+// hold comfortably (happiness worse in the 4 parks with the biggest guest gains, 'crowded'
+// thoughts up) and did not earn their cost back. These rules gate AUTO starts only; the
+// manual Start buttons are unchanged.
+
+/** Auto-start only while guests are below this share of the guest ceiling. */
+export const AUTO_HEADROOM_SHARE = 0.8;
+/** Days of income history needed before a batch can be judged (the "before" rate). */
+export const PAYBACK_BASELINE_DAYS = 7;
+/** After a batch that did not pay for itself, no auto starts for this many days. */
+export const PAYBACK_COOLDOWN_DAYS = 56;
+
+/** Room for more guests: below AUTO_HEADROOM_SHARE of the ceiling, even in difficult-guest parks. */
+export function hasHeadroom(signals: MarketingSignals): boolean {
+    return signals.guests < AUTO_HEADROOM_SHARE * effectiveGuestCeiling(signals);
+}
+
+/** One day's cumulative park income (raw tenths), for the payback check. */
+export interface IncomeSample { day: number; income: number; }
+
+/** Mean daily income over the last `days` days of history, or null with too little history. */
+export function dailyIncomeRate(history: IncomeSample[], days: number): number | null {
+    if (history.length < days + 1) return null;
+    const a = history[history.length - 1 - days], b = history[history.length - 1];
+    return (b.income - a.income) / (b.day - a.day);
+}
+
+/** A batch of campaigns auto-started on one day, judged once the longest has run. */
+export interface AutoBatch {
+    startDay: number;
+    /** Lump-sum cost of the batch, raw tenths. */
+    cost: number;
+    /** Cumulative income on the start day. */
+    incomeAtStart: number;
+    /** Mean daily income over the PAYBACK_BASELINE_DAYS before the start. */
+    dailyIncomeBefore: number;
+    /** Days the batch runs (weeks x 7). */
+    days: number;
+}
+
+/**
+ * Income above the pre-campaign rate over the batch's run, and whether it covered the cost.
+ * Null until the batch has run its full length.
+ */
+export function judgeBatch(batch: AutoBatch, day: number, incomeNow: number): { extra: number; paid: boolean } | null {
+    const elapsed = day - batch.startDay;
+    if (elapsed < batch.days) return null;
+    const extra = incomeNow - batch.incomeAtStart - batch.dailyIncomeBefore * elapsed;
+    return { extra, paid: extra >= batch.cost };
+}
+
+/**
+ * Why auto-start should wait today, or null to go ahead. `pending` is the last batch while it
+ * is still running or unjudged; `cooldownUntil` is the day after which a failed batch stops
+ * blocking.
+ */
+export function autoStartHold(
+    signals: MarketingSignals, day: number, pending: AutoBatch | null, cooldownUntil: number, hasBaseline: boolean,
+): string | null {
+    if (pending !== null) return "waiting to judge the last campaigns";
+    if (day < cooldownUntil) return "the last campaigns did not pay for themselves";
+    if (!hasHeadroom(signals)) return "park near guest capacity";
+    if (!hasBaseline) return "measuring income first";
+    return null;
+}
