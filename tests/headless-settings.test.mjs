@@ -34,7 +34,7 @@ const ok = (c, m) => { c ? pass++ : (fail++, console.log("FAIL:", m)); };
     const all = settingsToWrite("all");
     ok(all["Staff Extras"].autoManageEntertainers === true && all["Trash Manager"].autoAmenities === true, "all turns everything on");
     const def = settingsToWrite("defaults");
-    ok(def["Trash Manager"].autoAmenities === false && def["Mechanic Manager"].autoManage === true, "defaults writes code defaults");
+    ok(def["Trash Manager"].autoAmenities === true && def["Marketing Manager"].autoManage === false && def["Mechanic Manager"].autoManage === true, "defaults writes code defaults");
 }
 
 // JSON settings: only known keys, only booleans.
@@ -54,14 +54,14 @@ ok(Object.values(settingsKeys()).flat().length === TOGGLES.length, "keys cover a
 
 // Effective values follow src/settings.ts: unset or non-boolean reads as the default.
 {
-    const e = effectiveSettings({ "Trash Manager": { autoAmenities: true, autoHireEnabled: null, autoSweepEnabled: "x" } });
+    const e = effectiveSettings({ "Trash Manager": { autoAmenities: false, autoHireEnabled: null, autoSweepEnabled: "x" }, "Wait Time Optimizer": { autoOperationTuning: "x" } });
     const get = (p, k) => e.find((s) => s.plugin === p && s.key === k);
-    ok(get("Trash Manager", "autoAmenities").on === true, "stored true");
+    ok(get("Trash Manager", "autoAmenities").on === false, "stored false beats default-on");
     ok(get("Trash Manager", "autoHireEnabled").on === true && get("Trash Manager", "autoHireEnabled").stored === null, "unset default-on");
-    ok(get("Trash Manager", "autoSweepEnabled").on === false, "non-boolean default-off stays off");
+    ok(get("Trash Manager", "autoSweepEnabled").on === true && get("Wait Time Optimizer", "autoOperationTuning").on === false, "non-boolean reads as default");
     ok(get("Marketing Manager", "autoManage").on === false, "missing plugin reads default");
     const table = settingsTable(e);
-    ok(table.includes("| Trash Manager | autoAmenities | off | **on** (changed) |"), "table marks changes");
+    ok(table.includes("| Trash Manager | autoAmenities | on | **off** (changed) |"), "table marks changes");
     ok(table.includes("| Marketing Manager | autoManage | off | **off** |"), "table unchanged row");
 }
 

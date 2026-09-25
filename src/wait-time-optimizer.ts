@@ -47,9 +47,11 @@ registerPlugin({
         // Trigger emergency dispatch mode at 5 min so trains push out faster
         // before guests start leaving the queue.
         const QUEUE_WARN_MINUTES = 5;
-        // Guests leave the queue at 15 minutes, absolutely — OpenRCT2 removed vanilla
-        // RCT2's "entertainers make guests wait forever" behaviour (#5753). A ride
-        // sitting just under this is losing guests at the margin, and deserves a louder
+        // Walk-out rule (#68, Guest.cpp:5729): only once a guest's queue timer reaches
+        // 4300 (~15 minutes) AND happiness is 65 or less (of 255), and then with a ~3%
+        // chance per check (2184/65536). Happy guests never walk out. Entertainers help
+        // twice: queue timer -200 and happiness +3 (Staff.cpp:915-928). A ride sitting
+        // just under this is at risk of losing its unhappy guests, and deserves a louder
         // marker than one merely past the 5-minute complaint threshold.
         const QUEUE_CRITICAL_MINUTES = 12;
         // Consecutive days a ride must stay in warning *with our recommended settings

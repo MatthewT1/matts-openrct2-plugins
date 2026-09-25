@@ -638,7 +638,7 @@ export function createFacilityManager(settings: TrashSettings, dbg: DebugChannel
     /**
      * Builds at most one facility where guests have a measured, persistent unmet need.
      *
-     * Off by default. Rate-limited, cash-floored, capped per kind, and gated on a gap
+     * On by default since #51. Rate-limited, cash-floored, capped per kind, and gated on a gap
      * having persisted across many sampling sweeps - every one of those bounds is
      * enforced in facilities.ts and unit-tested there. Nothing is ever demolished.
      */

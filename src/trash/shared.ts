@@ -98,10 +98,10 @@ export type TrashSettings = ReturnType<typeof createTrashSettings>;
 export function createTrashSettings(storage: SettingsStore) {
     return {
         adaptiveStaffing: boolSetting(storage, "adaptiveStaffing", true),
-        autoSweep:        boolSetting(storage, "autoSweepEnabled", false),
+        autoSweep:        boolSetting(storage, "autoSweepEnabled", true),
         autoHire:         boolSetting(storage, "autoHireEnabled", true),
-        autoAmenities:    boolSetting(storage, "autoAmenities", false),
-        amenityRemoval:   boolSetting(storage, "autoAmenityRemoval", false),
-        autoFacilities:   boolSetting(storage, "autoFacilities", false),
+        autoAmenities:    boolSetting(storage, "autoAmenities", true),
+        amenityRemoval:   boolSetting(storage, "autoAmenityRemoval", true),
+        autoFacilities:   boolSetting(storage, "autoFacilities", true),
     };
 }

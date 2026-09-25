@@ -4,15 +4,14 @@ Runs a copy of a save with our plugins **on** and again with them **off**, fast-
 with no game window, and records the park every in-game day. Built for #46.
 
 ```bash
-node tools/headless/run.mjs --save "C:/Users/Matt/Documents/OpenRCT2/save/Thunder Rock.park" --days 60 --settings all
+node tools/headless/run.mjs --save "<OpenRCT2 user dir>/save/YourPark.park" --days 60 --settings all
 ```
 
 **Check the settings before reading the results.** Without `--settings`, the on arm uses
 whatever toggles the save had stored, or the code defaults if the save never ran the
-plugins. Most of the features that matter default **off**: auto sweep, auto benches and
-bins, amenity removal, auto shops, marketing, entertainers, emergency repair and operation
-tuning. A defaults run only tests staffing, mechanics and wait times. `summary.md` lists
-every toggle for the run.
+plugins. Since #51, auto sweep, auto benches and bins, amenity removal, auto shops,
+entertainers and emergency repair default **on**; marketing and operation tuning default
+**off**, so a defaults run doesn't test them. `summary.md` lists every toggle for the run.
 
 At speed 4 (the default) 60 days take about 105 s per arm, plus a few seconds of start-up.
 Output goes to `harness-runs/<time>-<save>/` (gitignored):
@@ -43,6 +42,26 @@ Money in `summary.md` is in currency units. The CSV and JSON keep the game's raw
 | `--game <exe>` | `C:/Program Files/OpenRCT2/openrct2.com` | |
 | `--out <dir>` | `harness-runs/<time>-<save>` | |
 | `--game-port`, `--agent-port` | 11800, 47820 | Both bound to 127.0.0.1. |
+| `--perturb <n>` | 0 | Draw the scenario RNG n times at the first day tick (#63), giving a replicate of an otherwise deterministic run. |
+| `--min-open-rides <n>` | 0 | Exit with code 3 and no output when the park has fewer open rides at load. |
+
+Each day row also records (#63): ride reliability/downtime (mean of open rides), rides broken
+now, breakdowns that day, vomit, a tally of selected guest thoughts (`th*`, plus negative and
+positive totals), and money totals since day 1 (`*Cum`: income, expenses, entrance, ride
+tickets, sales, stock, wages, running costs, build, marketing; costs negative).
+
+## Viability study (#63)
+
+```
+node tools/headless/viability.mjs run --parks 5 --post
+node tools/headless/viability.mjs rollup --post
+```
+
+Walks a seeded shuffle of saves + user scenarios + RCT2 and RCT1 scenarios, skips parks
+with fewer than 5 open rides, and runs 4 arms per park (off/on × perturb 0/1, 60 days,
+`--settings all`, ~8 min). Per metric, effect = mean(on) − mean(off) and noise = the larger
+same-arm spread; an effect within the noise is reported as noise. Resumable: finished and
+skipped parks are kept in `harness-runs/viability-seed63/state.json`.
 
 ## How it works
 
@@ -64,8 +83,9 @@ Money in `summary.md` is in currency units. The CSV and JSON keep the game's raw
 
 - **Runs are deterministic.** With the same save and plugins, two 60-day runs of Thunder
   Rock gave byte-identical CSVs, for both the off arm and the on arm (2026-09-25). A
-  single run per arm is enough, and on − off differences are real effects for that save
-  and start date, not noise.
+  single run per arm reproduces exactly. That does **not** make an on − off difference a
+  real effect: one extra RNG draw (`--perturb 1`) changes a 5-day Dynamite Dunes run
+  (litter 3 vs 1, cash 7659 vs 7613), so compare against perturbed replicates (#63).
 - **Some plugin cooldowns use real time, not game time.** `Date.now()` rate-limits the
   Staff Extras entertainer cache, Trash Manager guest-need sampling, facility build
   timeout, and tile scan. At 8× these run less often per in-game day than they do at
