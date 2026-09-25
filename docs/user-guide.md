@@ -12,7 +12,7 @@ This is a suite of six plugins that take over the repetitive parts of running a 
 
 **Marketing Manager** — Advertising and voucher campaigns. Ranks every campaign type by actual value for your park's current pricing (some campaigns are quietly far worse value than others) and can start them for you, tracking whether they're actually bringing in guests.
 
-**Path Connector** — A manual tool, not automation: draws a footpath between two tiles you pick, with warnings before you commit. No toggles, nothing runs in the background.
+**Path Connector** (experimental: unreviewed, no tests) — A manual tool, not automation: draws a footpath between two tiles you pick, with warnings before you commit. No toggles, nothing runs in the background.
 
 The rest of this guide covers every toggle across the five automated plugins in detail — what it does, why it defaults the way it does, and how to tell it's working.
 

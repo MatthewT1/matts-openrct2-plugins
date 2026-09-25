@@ -20,7 +20,7 @@ If the park is clean with 20 handymen, the plugin won't hire 40 because a formul
 | [Wait Time Optimizer](#wait-time-optimizer) | Keeps queues from getting out of hand | No |
 | [Staff Extras](#staff-extras) | Puts entertainers where queues need them | Yes: entertainer wages (#51) |
 | [Marketing Manager](#marketing-manager) | Shows which campaigns are worth the money | No (off until you turn it on) |
-| [Path Connector](#path-connector) | Draws a footpath between two tiles | Only for paths you choose to build |
+| [Path Connector](#path-connector-experimental) (experimental) | Draws a footpath between two tiles | Only for paths you choose to build |
 
 Each one adds an entry to the map menu in the top toolbar, which opens its window.
 
@@ -112,7 +112,10 @@ needs more guests.
 The game doesn't let plugins see which campaigns are running, so this window keeps its own
 record, saved with the park.
 
-### Path Connector
+### Path Connector (experimental)
+
+> **Experimental.** Path Connector has not been reviewed and has no automated tests, and
+> picking a tile is known to be unreliable ([#30](https://github.com/MatthewT1/matts-openrct2-plugins/issues/30)). Save before using it.
 
 A building tool, not automation. Pick two tiles and it plans a footpath between them,
 routing around rides and scenery, and warns you about problems before you build. Nothing
