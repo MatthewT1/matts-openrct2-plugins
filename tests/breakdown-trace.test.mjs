@@ -42,6 +42,21 @@ const mech = (id, tx, ty, animation = "walking", ridesFixed = 0, ridesInspected 
     ok(r.samples[1].answering === 1 && r.samples[3].fixing === 1 && r.samples[3].atRide === 1, "animations counted");
 }
 
+// Fix animation far from the exit (at the vehicle / station end) still counts, and only
+// the fixer's own animation is reported, not another mechanic's repair elsewhere.
+{
+    const tr = createBreakdownTracer();
+    tr.start(4, "vehicle_malfunction", 0);
+    const R = () => [ride("vehicle_malfunction")];
+    tr.sample(64, R(), [mech(1, 12, 10), mech(2, 40, 40, "staffFix2")]);  // 2 fixes another ride
+    tr.sample(128, R(), [mech(1, 16, 10, "staffFixGround"), mech(2, 40, 40)]); // 6 tiles from exit
+    const out = tr.sample(192, [ride("none")], [mech(1, 16, 10, "walking", 1), mech(2, 40, 40)]);
+    const r = out[0];
+    ok(r.fixedBy === 1, "fixer found");
+    ok(r.ticksToFixAnim === 128, "fixer's fix animation 6 tiles from the exit: " + r.ticksToFixAnim);
+    ok(r.samples[0].fixing === 1 && r.samples[1].fixing === 1, "fixing counted at any distance");
+}
+
 // Fixer walk: distance actually walked vs the straight-line start, from the broken flag.
 {
     const tr = createBreakdownTracer();
