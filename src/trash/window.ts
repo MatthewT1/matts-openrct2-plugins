@@ -10,6 +10,7 @@ import {
     PATH_TILES_PER_HANDYMAN, computeRatingPenalty, computeNeededHandymen, TrashSettings,
 } from "./shared";
 import { StaffingController } from "../staffing";
+import { formatMoney } from "../money";
 import { MapScan } from "./map-scan";
 
 export interface TrashWindowDeps {
@@ -233,7 +234,7 @@ export function createTrashWindow(deps: TrashWindowDeps) {
             " / max " + getMaxHandymen();
         const saving = (needed - cache.handymanCount) * 50;
         win.findWidget<LabelWidget>("lblFormula").text =
-            "Formula " + needed + (saving > 0 ? ", saving £" + saving + "/mo" : "");
+            "Formula " + needed + (saving > 0 ? ", saving " + formatMoney(saving) + "/mo" : "");
         win.findWidget<LabelWidget>("lblBins").text     =
             "Bins: " + cache.fullBins + " full, " + cache.brokenBins + " broken  (guests: " + cache.guests + ")";
         win.findWidget<LabelWidget>("lblTiles").text    =
