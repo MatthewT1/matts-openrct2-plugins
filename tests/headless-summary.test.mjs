@@ -1,4 +1,4 @@
-import { summariseMetric, summariseRun, compareRuns, toCsv, markdownReport, countLogErrors } from "../tools/headless/summary.mjs";
+import { summariseMetric, summariseRun, compareRuns, toCsv, markdownReport, countLogErrors, classifyEffect, metricValue, METRICS } from "../tools/headless/summary.mjs";
 let pass = 0, fail = 0;
 const ok = (c, m) => { c ? pass++ : (fail++, console.log("FAIL:", m)); };
 
@@ -66,6 +66,27 @@ ok(summariseMetric(rows, "litter") === null, "missing metric is null");
     ok(c["Invalid operation option value: N"] === 2, "grouped ride errors " + JSON.stringify(c));
     ok(c["Staff entity not found for spriteID N"] === 1, "staff error");
     ok(Object.keys(c).length === 2, "only ERROR lines counted");
+}
+
+// #63 verdicts: effect vs same-arm replicate spread.
+{
+    const a = classifyEffect([110, 114], [100, 102], 1);
+    ok(a.effect === 11 && a.noise === 4 && a.verdict === "improved", "improved " + JSON.stringify(a));
+    ok(classifyEffect([110, 114], [100, 102], -1).verdict === "worse", "lower-is-better flips the verdict");
+    ok(classifyEffect([100, 110], [102, 104], 1).verdict === "noise", "effect 2 within spread 10 is noise");
+    ok(classifyEffect([5, 5], [5, 5], 1).verdict === "noise", "identical arms are noise, not a win");
+    ok(classifyEffect([1, 1], [5, 5], 0).verdict === "down", "unjudged metric reports direction only");
+    ok(classifyEffect([1], [5, 5], 1) === null, "needs two replicates per arm");
+    ok(classifyEffect([1, null], [5, 5], 1) === null, "missing value is null");
+}
+
+// Roll-up value: end by default, mean for per-day counts.
+{
+    const sum = summariseRun([{ day: 0, breakdowns: 0, vomit: 1 }, { day: 1, breakdowns: 4, vomit: 3 }]);
+    const byKey = Object.fromEntries(METRICS.map((m) => [m.key, m]));
+    ok(metricValue(sum, byKey.breakdowns) === 2, "breakdowns use the mean");
+    ok(metricValue(sum, byKey.vomit) === 3, "vomit uses the end value");
+    ok(METRICS.every((m) => m.better === 1 || m.better === -1 || m.better === 0), "every metric has a direction");
 }
 
 console.log(`${pass} passed, ${fail} failed`);
