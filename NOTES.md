@@ -72,7 +72,6 @@ openrct2 plugin/
 ├── tools/
 │   └── log-sink.mjs            # TCP sink for the debug channel
 ├── docs/                       # see table above
-├── archive/                    # original JS sources, pre-TypeScript
 ├── gamesrc/OpenRCT2/           # full OpenRCT2 source clone (read-only reference)
 │   └── distribution/scripting/openrct2.d.ts   <- authoritative type definitions
 ├── rollup.config.js            # multi-entry build; dev -> OpenRCT2/plugin/, prod -> dist/
