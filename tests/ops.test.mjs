@@ -52,7 +52,7 @@ for(let i=0;i<20;i++){
 }
 ok(flapSets===0,"alternating pressure never acts, got "+flapSets);
 
-// --- direction: HIGH queue shortens, LOW queue lengthens ---
+// --- direction: HIGH queue shortens (LOW never lengthens since #67) ---
 const c5=createOpsController(16); seedMax(c5,5,16);
 let s1=null; for(let i=0;i<8 && !s1;i++) s1=c5.update([R(5,HIGH_QUEUE_MINUTES+9)]).filter(a=>a.kind==="set")[0];
 ok(!!s1,"high-queue produced a set");
@@ -71,15 +71,15 @@ const c5b=createOpsController(16); seedMax(c5b,15,16); c5b.noteSet(15, 9);
 let d1=null; for(let i=0;i<8 && !d1;i++) d1=c5b.update([R(15,HIGH_QUEUE_MINUTES+9)]).filter(a=>a.kind==="set")[0];
 ok(d1 && d1.value===8, `high queue steps DOWN by one: 9 -> ${d1 && d1.value}`);
 
-// An EMPTY ride still calibrates to the midpoint: a longer ride costs nothing when
-// nobody is waiting, and may raise excitement.
+// #67: an EMPTY ride is never lengthened - not by calibration (unknown current) and not
+// by stepping up from a known value. Extra rotations add nausea on flat rides, and
+// tracked rides gain nothing past their duration threshold.
 const c6=createOpsController(16); seedMax(c6,6,16);
-let l1=null; for(let i=0;i<8 && !l1;i++) l1=c6.update([R(6,0)]).filter(a=>a.kind==="set")[0];
-ok(l1 && l1.value>1 && l1.value<16, "empty ride calibrates to the midpoint, got "+(l1&&l1.value));
-c6.noteSet(6,l1.value);
-let l2=null; for(let i=0;i<8 && !l2;i++) l2=c6.update([R(6,0)]).filter(a=>a.kind==="set")[0];
-ok(l2 && l2.value > l1.value, `low queue steps UP: ${l1.value} -> ${l2 && l2.value}`);
-ok(l2 && Math.abs(l2.value-l1.value)===1,"steps by exactly 1, got "+(l2&&Math.abs(l2.value-l1.value)));
+let l1=0; for(let i=0;i<20;i++) l1+=c6.update([R(6,0)]).filter(a=>a.kind==="set").length;
+ok(l1===0, "empty ride with unknown current is left alone, got "+l1+" sets");
+c6.noteSet(6,5);
+let l2=0; for(let i=0;i<20;i++) l2+=c6.update([R(6,0)]).filter(a=>a.kind==="set").length;
+ok(l2===0, "empty ride with a known value is never stepped up, got "+l2+" sets");
 
 // --- never repeats the known current value ---
 const c7=createOpsController(16); seedMax(c7,7,16); c7.noteSet(7,1);
@@ -166,26 +166,16 @@ for (let i = 0; i < 30 && !secondSet; i++) {
 }
 ok(secondSet && secondSet.value < firstSet.value,
    "acts on history not latest sample: " + firstSet.value + " -> " + (secondSet && secondSet.value));
-// --- Community-informed guard: never lengthen an already-extreme ride ---------
-// Consensus is intensity must stay BELOW 10 to stay exciting; past that, excitement is
-// capped near 5.50. Lengthening raises intensity, so doing it to an empty extreme ride
-// makes guests avoid it MORE - emptying the queue further and inviting another lengthen.
-const cI = createOpsController(16); seedMax(cI, 30, 16);
-let iSets = 0;
-for (let i2 = 0; i2 < 40; i2++) {
-  for (const a of cI.update([{ rideId: 30, name: "Extreme", queueTime: 0, rideTime: 60, intensity: 950 }]))
-    if (a.kind === "set") { iSets++; cI.noteSet(30, a.value); }
+// --- #67: no lengthening at any intensity ----------------------------------------
+for (const [id, intensity] of [[30, 950], [31, 400]]) {
+  const cI = createOpsController(16); seedMax(cI, id, 16);
+  let iSets = 0;
+  for (let i2 = 0; i2 < 40; i2++) {
+    for (const a of cI.update([{ rideId: id, name: "Quiet", queueTime: 0, rideTime: 60, intensity }]))
+      if (a.kind === "set") { iSets++; cI.noteSet(id, a.value); }
+  }
+  ok(iSets === 0, "never lengthens a quiet ride at intensity " + intensity + ", got " + iSets);
 }
-ok(iSets === 0, "never lengthens a ride at intensity 9.50, got " + iSets);
-
-// The same ride below the ceiling IS lengthened.
-const cJ = createOpsController(16); seedMax(cJ, 31, 16);
-let jSets = 0;
-for (let i2 = 0; i2 < 40; i2++) {
-  for (const a of cJ.update([{ rideId: 31, name: "Mild", queueTime: 0, rideTime: 60, intensity: 400 }]))
-    if (a.kind === "set") { jSets++; cJ.noteSet(31, a.value); }
-}
-ok(jSets > 0, "still lengthens a mild ride, got " + jSets);
 
 // An extreme ride with a LONG queue is still shortened - the guard is one-directional.
 const cK = createOpsController(16); seedMax(cK, 32, 16);

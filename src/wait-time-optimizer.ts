@@ -847,7 +847,7 @@ registerPlugin({
                         type: "checkbox", name: "chkOps",
                         x: 8, y: 296, width: 384, height: 14,
                         text: "Tune ride operation settings (laps / rotations / speed)",
-                        tooltip: "Shorten the cycle on rides with long queues and lengthen it on empty ones. Changing this discards the ride's excitement/intensity/nausea ratings until it runs again, so it moves one step at a time and only after several consistent readings. Off by default.",
+                        tooltip: "Shorten the cycle on rides with long queues (quiet rides are left alone). Changing this discards the ride's excitement/intensity/nausea ratings until it runs again, so it moves one step at a time and only after several consistent readings. Off by default.",
                         isChecked: isAutoOps(),
                         onChange: (checked: boolean) => { settings.autoOps.set(checked); }
                     },

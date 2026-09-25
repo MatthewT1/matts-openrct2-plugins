@@ -29,8 +29,9 @@
  * does not need to touch directly: the caller already reduces the situation to `queueTime`
  * (worst queue across stations, in minutes), and this module reduces that further to a
  * `QueuePressure`. A long queue means the ride is throughput-limited, so a shorter cycle
- * (lower operation value) serves more guests. An empty queue means the ride is underused,
- * so a longer, more satisfying cycle (higher operation value) is free. Anything in between
+ * (lower operation value) serves more guests. An empty queue is left alone
+ * (#67: lengthening added nausea on flat rides and nothing past tracked rides' duration
+ * threshold). Anything in between
  * is left alone, because doing nothing is the only change-free default and changes are
  * never free (see point 3 above).
  *
@@ -89,18 +90,6 @@ const MIN_VALUE = 1;
 
 /** Absolute cap on upward probing, so a permissive ride cannot loop forever. */
 const PROBE_HARD_CEILING = 255;
-
-/**
- * Intensity at or above which the cycle is never lengthened, as a 2-decimal fixed
- * integer (900 = 9.00).
- *
- * Community consensus is that intensity must stay **below 10** for a ride to remain
- * exciting; once it reads Extreme, excitement is effectively capped around 5.50. Since
- * more rotations, swings or laps push intensity up, lengthening an already-intense ride
- * would make guests avoid it *more* — emptying the queue further and inviting this
- * controller to lengthen it again. A feedback trap, so it is blocked outright.
- */
-export const INTENSITY_CEILING = 900;
 
 export interface RideOpsState {
     rideId: number;
@@ -323,10 +312,13 @@ export function createOpsController(probeCeiling: number, knownRange?: KnownOpsR
             }
             const acting: QueuePressure = record.streak > 0 ? "high" : "low";
 
-            // Check the intensity ceiling BEFORE anything else that could raise the
-            // value — including the blind midpoint calibration below, which has no idea
-            // whether it is stepping up or down.
-            if (acting === "low" && ride.intensity >= INTENSITY_CEILING) {
+            // #67: never lengthen. An empty queue used to lengthen the cycle "since it costs
+            // nothing", but it does cost: flat rides gain intensity and nausea with every
+            // extra rotation, uncapped (bonusRotations / bonusOperationOption), and tracked
+            // rides gain no excitement past their duration threshold (RideRatings.cpp:1868).
+            // The #55 rerun measured ops tuning alone lowering happiness in 2 of 3 parks.
+            // So only congestion acts: shorten the cycle for throughput.
+            if (acting === "low") {
                 continue;
             }
 
@@ -335,49 +327,16 @@ export function createOpsController(probeCeiling: number, knownRange?: KnownOpsR
             let reason: string;
 
             if (record.current === null) {
-                // No known baseline. Calibrate in the direction the queue is asking for,
-                // NOT blindly to the midpoint.
-                //
-                // **This was a bug, and a consequential one.** The midpoint is
-                // direction-blind, so a ride under sustained queue pressure whose current
-                // value happened to sit below the midpoint would be LENGTHENED — cutting
-                // throughput on precisely the ride that needed more of it. Since
-                // `operationOption` cannot be read back, the controller had no way to
-                // notice it was making things worse.
-                //
-                // Measured 2026-09-20: `tuned` climbed 0 -> 4 while the worst queue rose
-                // 7 -> 10 minutes and later to 16, past the 15-minute walk-out cliff.
-                // That rise has other plausible causes (a ride broken for 8 days, a
-                // growing park) so OPS is NOT being blamed for all of it — but a
-                // calibration that can only ever hurt a congested ride is wrong on its
-                // own terms, whatever else was happening.
-                //
-                // Congested: go straight to the minimum. That is the shortest cycle the
-                // ride type allows and therefore its maximum throughput — unambiguously
-                // right for a ride with a queue, and it makes the first change useful
-                // rather than a coin flip.
-                //
-                // Empty: the midpoint is still right. A longer ride costs nothing when
-                // nobody is waiting, and may raise excitement.
-                if (acting === "high") {
-                    target = record.min;
-                    reason = "sustained queue pressure with an unknown current setting; " +
-                        "calibrating to the shortest cycle for maximum throughput";
-                } else {
-                    target = clamp(Math.round((record.min + max) / 2), record.min, max);
-                    reason = "calibrating baseline operation value (current setting is unknown)";
-                }
-            } else if (acting === "high") {
-                // Branch on the ACCUMULATED direction, not the instantaneous reading.
-                // Using `pressure` here would act backwards whenever the current sample
-                // happened to be quiet while the history said congested.
+                // No known baseline: go straight to the minimum, the shortest cycle the
+                // ride type allows and so its maximum throughput. (A direction-blind
+                // midpoint used to LENGTHEN congested rides; measured 2026-09-20.)
+                target = record.min;
+                reason = "sustained queue pressure with an unknown current setting; " +
+                    "calibrating to the shortest cycle for maximum throughput";
+            } else {
                 target = clamp(record.current - 1, record.min, max);
                 reason = "sustained queue pressure (score " + record.streak +
                     "); shortening the cycle to raise throughput";
-            } else {
-                target = clamp(record.current + 1, record.min, max);
-                reason = "sustained empty queue (score " + record.streak +
-                    "); lengthening the cycle since it costs nothing";
             }
 
             if (record.current !== null && target === record.current) {

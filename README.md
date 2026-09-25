@@ -83,7 +83,7 @@ Handles ride wait settings and queue length.
   approaching that point, or has been growing for two days running, the plugin lets trains
   leave sooner so the line moves.
 - **Ride operation tuning** *(optional)*. Shortens the cycle (laps, rotations, time limit) on
-  rides with long queues and lengthens it on quiet ones. Each change resets the ride's
+  rides with long queues; quiet rides are left alone. Each change resets the ride's
   ratings until it runs again, so it changes things one step at a time.
 
 ### Staff Extras
