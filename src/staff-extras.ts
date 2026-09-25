@@ -28,7 +28,7 @@
  * This file only reads game state, calls those modules, and issues the resulting
  * `staffhire` / `stafffire` / `staffsetpatrolarea` actions.
  *
- * Off by default (rule 6): entertainers cost GBP 60/month each (`Staff.cpp:2645`) and
+ * On by default since #51 (was off under rule 6): entertainers cost GBP 60/month each (`Staff.cpp:2645`) and
  * this plugin can hire up to `MAX_TARGETED_ENTERTAINERS`, so auto-management is behind
  * an explicit checkbox with the cost stated in its tooltip.
  */
@@ -73,7 +73,7 @@ registerPlugin({
 
         const storage: Configuration = context.getParkStorage();
         const settings = {
-            autoManage: boolSetting(storage, "autoManageEntertainers", false),
+            autoManage: boolSetting(storage, "autoManageEntertainers", true),
         };
         const dbg = createDebugChannel("staff-extras");
 
@@ -543,7 +543,7 @@ registerPlugin({
                         text: "Auto-manage entertainers daily  (spends money)",
                         tooltip: "Hires up to " + MAX_TARGETED_ENTERTAINERS + " entertainers at "
                             + formatMoney(ENTERTAINER_WAGE_PER_MONTH) + "/month each and patrols them near "
-                            + "congested queues (3+ minute posted wait). Off by default.",
+                            + "congested queues (3+ minute posted wait). On by default (#51); entertainers cost wages.",
                         isChecked: getAutoManage(),
                         onChange: (checked: boolean) => {
                             settings.autoManage.set(checked);

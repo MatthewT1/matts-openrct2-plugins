@@ -22,3 +22,6 @@ Thumbs.db
 
 # Headless harness output (#46): per-run user-data copies, logs, CSVs
 harness-runs/
+
+# Machine-specific harness pool folders (#72)
+tools/headless/pool.local.json

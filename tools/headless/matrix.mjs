@@ -7,6 +7,7 @@
 import { readdirSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { join, dirname } from "node:path";
+import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
 const MODE = process.argv[2];
 const flag = (name) => { const i = process.argv.indexOf(name); return i > 0 ? process.argv[i + 1] : undefined; };
@@ -14,7 +15,7 @@ const SETTINGS = flag("--settings") ?? "save", POST = process.argv.includes("--p
 if (MODE !== "broad" && MODE !== "speed") { console.error("usage: node matrix.mjs broad|speed [--settings ...] [--post] [--debug]"); process.exit(1); }
 const SEED = 49, N = MODE === "broad" ? 5 : 1, SPEEDS = MODE === "broad" ? [4] : [1, 4], DAYS = MODE === "broad" ? 60 : 14;
 const repo = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
-const saveDir = "C:/Users/Matt/Documents/OpenRCT2/save";
+const saveDir = join(homedir(), "Documents", "OpenRCT2", "save");
 const outRoot = join(repo, "harness-runs", SETTINGS === "save" ? `matrix-seed${SEED}-${MODE}` : `matrix-seed${SEED}-${SETTINGS.replace(/[^\w-]+/g, "_")}-${MODE}`);
 function mulberry32(a) { return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const all = readdirSync(saveDir).filter((f) => /\.(park|sv6)$/i.test(f)).sort();

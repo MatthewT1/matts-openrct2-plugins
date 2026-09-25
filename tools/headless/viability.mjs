@@ -9,6 +9,7 @@
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { join, dirname, basename } from "node:path";
+import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { METRICS, classifyEffect, metricValue } from "./summary.mjs";
 
@@ -20,11 +21,18 @@ if (CMD !== "run" && CMD !== "rollup") { console.error("usage: node viability.mj
 
 const repo = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const outRoot = join(repo, "harness-runs", `viability-seed${SEED}`);
+// The original RCT2/RCT1 scenario folders are wherever the games are installed: set them with
+// RCT2_SCENARIOS / RCT1_SCENARIOS or in tools/headless/pool.local.json (gitignored), e.g.
+// {"rct2": "D:/Games/RCT2/Scenarios", "rct1": "D:/Games/RCT1/Scenarios"}. A missing folder is
+// skipped, which changes the pool and so the seeded park order; #63 used all four.
+const userDir = join(homedir(), "Documents", "OpenRCT2");
+const localPool = existsSync(join(repo, "tools", "headless", "pool.local.json"))
+    ? JSON.parse(readFileSync(join(repo, "tools", "headless", "pool.local.json"), "utf8")) : {};
 const POOL_DIRS = [
-    ["save", "C:/Users/Matt/Documents/OpenRCT2/save", /\.(park|sv6)$/i],
-    ["scenario", "C:/Users/Matt/Documents/OpenRCT2/scenario", /\.(park|sc6|sc4)$/i],
-    ["rct2", "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios", /\.sc6$/i],
-    ["rct1", "E:/Gog/RollerCoaster Tycoon Deluxe/Scenarios", /\.sc4$/i],
+    ["save", join(userDir, "save"), /\.(park|sv6)$/i],
+    ["scenario", join(userDir, "scenario"), /\.(park|sc6|sc4)$/i],
+    ["rct2", process.env.RCT2_SCENARIOS ?? localPool.rct2, /\.sc6$/i],
+    ["rct1", process.env.RCT1_SCENARIOS ?? localPool.rct1, /\.sc4$/i],
 ];
 const ARMS = [["off", 0], ["off", 1], ["on", 0], ["on", 1]];
 const slug = (s) => s.replace(/[^\w.-]+/g, "_");
@@ -38,7 +46,7 @@ function mulberry32(a) { return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t 
 function pool() {
     const all = [];
     for (const [src, dir, re] of POOL_DIRS) {
-        if (!existsSync(dir)) { console.log("pool dir missing:", dir); continue; }
+        if (!dir || !existsSync(dir)) { console.log("pool dir missing:", src, dir ?? "(not set)"); continue; }
         for (const f of readdirSync(dir).filter((x) => re.test(x)).sort()) all.push({ src, file: join(dir, f) });
     }
     const rnd = mulberry32(SEED);

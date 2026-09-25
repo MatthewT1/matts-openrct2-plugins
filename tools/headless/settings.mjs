@@ -3,7 +3,7 @@
  *
  * Our plugins keep their on/off toggles in park storage, so a run otherwise uses whatever
  * the save had stored, or the code defaults if the save never ran the plugins. Most of the
- * features that matter (auto benches/bins/shops, marketing, entertainers) default off.
+ * features that matter default on since #51; marketing and operation tuning default off.
  * `--settings` makes that explicit: the runner writes a preset before the start and reports
  * what each toggle was.
  *
@@ -14,17 +14,17 @@
 export const TOGGLES = [
     { plugin: "Trash Manager", key: "autoHireEnabled", defaultOn: true },
     { plugin: "Trash Manager", key: "adaptiveStaffing", defaultOn: true },
-    { plugin: "Trash Manager", key: "autoSweepEnabled", defaultOn: false },
-    { plugin: "Trash Manager", key: "autoAmenities", defaultOn: false },
-    { plugin: "Trash Manager", key: "autoAmenityRemoval", defaultOn: false },
-    { plugin: "Trash Manager", key: "autoFacilities", defaultOn: false },
+    { plugin: "Trash Manager", key: "autoSweepEnabled", defaultOn: true },
+    { plugin: "Trash Manager", key: "autoAmenities", defaultOn: true },
+    { plugin: "Trash Manager", key: "autoAmenityRemoval", defaultOn: true },
+    { plugin: "Trash Manager", key: "autoFacilities", defaultOn: true },
     { plugin: "Wait Time Optimizer", key: "autoManage", defaultOn: true },
     { plugin: "Wait Time Optimizer", key: "autoOperationTuning", defaultOn: false },
     { plugin: "Mechanic Manager", key: "autoManage", defaultOn: true },
     { plugin: "Mechanic Manager", key: "adaptiveMechanics", defaultOn: true },
-    { plugin: "Mechanic Manager", key: "emergencyRepair", defaultOn: false },
+    { plugin: "Mechanic Manager", key: "emergencyRepair", defaultOn: true },
     { plugin: "Marketing Manager", key: "autoManage", defaultOn: false },
-    { plugin: "Staff Extras", key: "autoManageEntertainers", defaultOn: false },
+    { plugin: "Staff Extras", key: "autoManageEntertainers", defaultOn: true },
 ];
 
 export const PRESETS = ["save", "defaults", "all"];
