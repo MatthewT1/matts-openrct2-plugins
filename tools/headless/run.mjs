@@ -16,6 +16,7 @@ import { basename, dirname, join, resolve } from "node:path";
 import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { summariseRun, markdownReport, toCsv, countLogErrors, compareRuns } from "./summary.mjs";
+import { PRESETS, settingsToWrite, settingsKeys, effectiveSettings, settingsTable } from "./settings.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "..", "..");
@@ -40,6 +41,7 @@ function parseArgs(argv) {
         out: null,
         gamePort: 11800,
         agentPort: 47820,
+        settings: "save",
     };
     for (let i = 2; i < argv.length; i++) {
         const k = argv[i], v = argv[i + 1];
@@ -55,6 +57,7 @@ function parseArgs(argv) {
             case "--out": a.out = v; i++; break;
             case "--game-port": a.gamePort = Number(v); i++; break;
             case "--agent-port": a.agentPort = Number(v); i++; break;
+            case "--settings": a.settings = v; i++; break;
             case "-h": case "--help":
                 console.log(readFileSync(fileURLToPath(import.meta.url), "utf8").split("*/")[0]);
                 process.exit(0);
@@ -66,7 +69,9 @@ function parseArgs(argv) {
     if (!a.save) throw new Error("--save <park file> is required");
     for (const arm of a.arms) if (arm !== "on" && arm !== "off") throw new Error(`arm must be on or off, got ${arm}`);
     if (!(a.days > 0)) throw new Error("--days must be positive");
-    if (!(a.speed >= 0 && a.speed <= 4)) throw new Error("--speed must be 0..4");
+    // GameSetSpeedAction accepts 1-4; anything else is refused and the save's speed stays.
+    if (!(Number.isInteger(a.speed) && a.speed >= 1 && a.speed <= 4)) throw new Error("--speed must be 1..4 (1 is normal)");
+    a.settingsWrite = settingsToWrite(a.settings, PRESETS.includes(a.settings) ? null : readFileSync(a.settings, "utf8"));
     if (!a.out) {
         const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
         const name = basename(a.save).replace(/\.[^.]+$/, "").replace(/[^A-Za-z0-9-]+/g, "-");
@@ -186,6 +191,7 @@ async function runArm(a, arm) {
 
     const rows = [];
     let hello = null;
+    let settings = null;
     try {
         const sock = await connectAgent(a.agentPort, 120000, game);
         const next = lineReader(sock);
@@ -193,9 +199,19 @@ async function runArm(a, arm) {
         hello = await next(10000);
         console.log(`[${arm}] ${hello.parkName} ${hello.date}, plugins: ${hello.plugins.join(", ")}`);
 
+        // Park storage is saved with the park, so the off arm (no plugins) needs no settings.
+        if (arm === "on") {
+            sock.write(JSON.stringify({ cmd: "settings", set: a.settingsWrite, keys: settingsKeys() }) + "\n");
+            const msg = await next(10000);
+            if (msg.type !== "settings") throw new Error(`agent error: ${msg.error}`);
+            settings = effectiveSettings(msg.stored);
+            const on = settings.filter((x) => x.on).map((x) => `${x.plugin}.${x.key}`);
+            console.log(`[${arm}] settings (${a.settings}) on: ${on.join(", ")}`);
+        }
+
         sock.write(JSON.stringify({ cmd: "start", days: a.days, speed: a.speed }) + "\n");
         for (;;) {
-            // A day is ~530 ticks: ~13 s at speed 0, ~1.6 s at speed 4. Allow for a slow park.
+            // A day is ~530 ticks: ~13 s at speed 1, ~1.6 s at speed 4. Allow for a slow park.
             const msg = await next(60000);
             if (msg.type === "day") {
                 rows.push(msg);
@@ -216,7 +232,7 @@ async function runArm(a, arm) {
     writeFileSync(join(armDir, "days.csv"), toCsv(rows));
     const errors = countLogErrors(readFileSync(logPath, "utf8"));
     console.log(`[${arm}] done: ${rows.length - 1} days in ${seconds.toFixed(0)} s`);
-    return { arm, hello, rows, seconds, provenance, errors, summary: summariseRun(rows) };
+    return { arm, hello, settings, rows, seconds, provenance, errors, summary: summariseRun(rows) };
 }
 
 async function main() {
@@ -238,6 +254,11 @@ async function main() {
         "",
         markdownReport(summaries),
     ];
+    if (results.on?.settings) {
+        report.push("", `## Plugin settings (on arm, \`--settings ${a.settings}\`)`, "");
+        if (a.settings === "save") report.push("As stored in the save. Features that are off here were **not tested** by this run.", "");
+        report.push(settingsTable(results.on.settings), "");
+    }
     for (const arm of a.arms) {
         const r = results[arm];
         report.push(`## ${arm}`, "", `Start ${r.hello?.date}, ${r.rows.length - 1} days in ${r.seconds.toFixed(0)} s.`, "");
@@ -251,7 +272,8 @@ async function main() {
     }
     writeFileSync(join(a.out, "summary.md"), report.join("\n"));
     writeFileSync(join(a.out, "summary.json"), JSON.stringify({
-        args: { save: a.save, days: a.days, speed: a.speed, arms: a.arms, plugins: a.plugins },
+        args: { save: a.save, days: a.days, speed: a.speed, arms: a.arms, plugins: a.plugins, settings: a.settings },
+        settings: results.on?.settings ?? null,
         arms: Object.fromEntries(a.arms.map((arm) => [arm, {
             start: results[arm].hello, seconds: results[arm].seconds, pluginFiles: results[arm].provenance,
             errors: results[arm].errors, summary: results[arm].summary,

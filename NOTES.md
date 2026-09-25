@@ -68,7 +68,7 @@ openrct2 plugin/
 │   ├── facilities.ts           # facility placement planner (pure, unit-tested)
 │   ├── queues.ts               # queue trend + per-ride intervention attribution (pure)
 │   └── entertainer-targeting.ts # entertainer ride selection + patrol boxes (pure)
-├── tests/                      # 523 tests over the pure modules + harness summary
+├── tests/                      # 538 tests over the pure modules + harness summary and settings
 │   ├── run.mjs                 # compiles src/*.ts, runs every *.test.mjs
 │   └── *.test.mjs
 ├── tools/
@@ -104,13 +104,13 @@ node ./node_modules/typescript/bin/tsc --noEmit -p tsconfig.json
 ```
 
 ```bash
-# Run the test suite (523 tests over the pure logic modules)
+# Run the test suite (538 tests over the pure logic modules)
 node tests/run.mjs
 ```
 
 ```bash
 # Headless plugins-on vs plugins-off run (~4 min for 60 days); see docs/headless-harness.md
-node tools/headless/run.mjs --save "C:/Users/Matt/Documents/OpenRCT2/save/Thunder Rock.park" --days 60
+node tools/headless/run.mjs --save "C:/Users/Matt/Documents/OpenRCT2/save/Thunder Rock.park" --days 60 --settings all
 ```
 
 > **The decision logic lives in pure modules on purpose.** `hotspots`, `staff-activity`,
