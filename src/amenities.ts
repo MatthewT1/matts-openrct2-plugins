@@ -187,11 +187,18 @@ function hasNoNearbyDemand(
  * a slightly-redundant amenity of ours standing. An amenity of ours is only removed once
  * nothing in the current demand list of its own kind is within `radius` tiles of it —
  * it no longer serves the purpose it was placed for.
+ *
+ * `removalDemands` is what justifies an existing amenity, and defaults to `demands`.
+ * A caller that pre-filters `demands` down to the ones not yet covered MUST pass the
+ * unfiltered list here (#56): an amenity that covers its own demand filters that demand
+ * out, so judged against the filtered list it looks unjustified, gets removed, and the
+ * next pass places it again — the bench blinking in and out on the same tile.
  */
 export function planAmenities(
     sites: AmenitySite[],
     demands: AmenityDemand[],
     options: AmenityOptions,
+    removalDemands: AmenityDemand[] = demands,
 ): AmenityPlan {
     const place: AmenityAction[] = [];
     const remove: AmenityAction[] = [];
@@ -242,7 +249,7 @@ export function planAmenities(
         for (let i = 0; i < candidates.length && remove.length < options.maxRemove; i++) {
             const site = candidates[i];
             const kind = site.existing as AmenityKind;
-            if (hasNoNearbyDemand(site.x, site.y, kind, demands, options.radius)) {
+            if (hasNoNearbyDemand(site.x, site.y, kind, removalDemands, options.radius)) {
                 remove.push({
                     x: site.x,
                     y: site.y,
