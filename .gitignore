@@ -19,3 +19,6 @@ tools/rct-debug.log*
 Thumbs.db
 .DS_Store
 *.log
+
+# Headless harness output (#46): per-run user-data copies, logs, CSVs
+harness-runs/

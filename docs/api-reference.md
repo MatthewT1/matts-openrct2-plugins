@@ -499,6 +499,13 @@ Only the **`openrct2.com` stdin console** evaluates script, via
 `scriptEngine.Eval()` (`StdInOutConsole.cpp:79`). On Windows, run `openrct2.com`
 rather than `openrct2.exe` to get a JS REPL.
 
+That REPL only starts when stdin **and** stdout are TTYs (`StdInOutConsole.cpp:29`), so a
+script driving `openrct2.com` through pipes gets no REPL. For scripted access use a plugin
+that listens on a local socket; the [headless harness](headless-harness.md) does this.
+Headless (`host <save> --headless`) runs as a network server, and local plugins start
+there (`ScriptEngine::ShouldStartPlugin` only filters clients, `ScriptEngine.cpp:1153`).
+`simulate <park> <ticks>` does **not** start plugins.
+
 ### Networking
 
 `network.createSocket()` returns an outbound TCP client and is **not** gated to
