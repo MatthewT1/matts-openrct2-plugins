@@ -44,7 +44,7 @@ import {
 import { createStaffingController, StaffingDecision } from "./staffing";
 import { createStaffHirer } from "./staff-hiring";
 import { createDeferredActions } from "./deferred";
-import { createCooldown, TICKS_PER_DAY } from "./cooldown";
+import { createCooldown, ENTERTAINER_CENSUS_TICKS } from "./cooldown";
 
 registerPlugin({
     name: "Staff Extras",
@@ -314,7 +314,7 @@ registerPlugin({
          * at speed 4. Two days keeps speed 1 as it was. The census measured 2ms (harness
          * --debug, Dynamite Dunes); the 2 s floor is under 2 speed-4 days (~3.3 s).
          */
-        const cacheCooldown = createCooldown(2 * TICKS_PER_DAY, 2_000);
+        const cacheCooldown = createCooldown(ENTERTAINER_CENSUS_TICKS, 2_000);
 
         function updateCache(force: boolean): void {
             if (force) cacheCooldown.reset();

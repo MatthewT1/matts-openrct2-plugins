@@ -59,5 +59,16 @@ for (const speed of [1, 4]) {
   ok(fired===6, `watchdog fires 5 days after arming at speed ${speed}: day ${fired}`);
 }
 
+// Real day lengths vary (Dynamite Dunes days.csv: 464-547 ticks). "Every N days" must fire on
+// day N, not N+1, when a span is a few ticks short of N*530 (#48 after-run: 3 scans instead of 5).
+import { TILE_SCAN_TICKS, ENTERTAINER_CENSUS_TICKS, NEED_SAMPLE_TICKS, BUILD_WATCHDOG_TICKS } from "./build/cooldown.mjs";
+const REAL = [260968,261432,261961,262489,263018,263546,264075,264603,265132,265660,266207,266753,267299,267845,268391];
+function realFires(ticks){ const cd=createCooldown(ticks, 0); return REAL.map((t,d)=>cd.ready(t,d)?d:-1).filter(d=>d>=0).join(","); }
+ok(realFires(TILE_SCAN_TICKS)==="0,3,6,9,12", `tile scan every 3 real days: ${realFires(TILE_SCAN_TICKS)}`);
+ok(realFires(ENTERTAINER_CENSUS_TICKS)==="0,2,4,6,8,10,12,14", `census every 2 real days: ${realFires(ENTERTAINER_CENSUS_TICKS)}`);
+ok(realFires(NEED_SAMPLE_TICKS)===REAL.map((_,d)=>d).join(","), `need sample every real day: ${realFires(NEED_SAMPLE_TICKS)}`);
+{ const cd=createCooldown(BUILD_WATCHDOG_TICKS, 0); cd.ready(REAL[0],0); let f=-1; for(let d=1; d<REAL.length && f<0; d++) if(cd.ready(REAL[d],d)) f=d;
+  ok(f===5, `watchdog trips 5 real days after arming: day ${f}`); }
+
 console.log(`cooldown: ${pass} passed, ${fail} failed`);
 if (fail) process.exitCode = 1;

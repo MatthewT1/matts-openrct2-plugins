@@ -6,7 +6,7 @@
 
 import { isDebugEnabled, DebugChannel } from "../debug";
 import { TrashSettings } from "./shared";
-import { createCooldown, TICKS_PER_DAY } from "../cooldown";
+import { createCooldown, NEED_SAMPLE_TICKS, BUILD_WATCHDOG_TICKS } from "../cooldown";
 import {
     createNeedAccumulator, createSampleRotation, findGaps, describeGap,
     CLUSTER_MIN_GUESTS, NeedKind, NeedCounts, NeedGap, Facility,
@@ -42,7 +42,6 @@ export function createFacilityManager(settings: TrashSettings, dbg: DebugChannel
     // only every ~1.5 days at speed 4, and facility confirmations (counted in sweeps)
     // came later at speed 4. Half a game day keeps it daily at every speed; the 1 s floor
     // is under one speed-4 day (~1.7 s) so it only binds past speed 4. Max measured 9ms.
-    const NEED_SAMPLE_COOLDOWN_TICKS = TICKS_PER_DAY / 2;
     const NEED_SAMPLE_FLOOR_MS       = 1_000;
     const NEED_SAMPLE_WINDOW      = 400;   // guests read per pass
     const NEED_CELL_TILES         = 8;     // clustering grid, matches the litter grid
@@ -133,7 +132,7 @@ export function createFacilityManager(settings: TrashSettings, dbg: DebugChannel
      * Game time (#48): 60 real seconds was ~5 days at speed 1 but ~37 at speed 4. Five
      * days keeps speed 1 as it was; the 5 s floor is under 5 speed-4 days (~8 s).
      */
-    const buildWatchdog = createCooldown(5 * TICKS_PER_DAY, 5_000);
+    const buildWatchdog = createCooldown(BUILD_WATCHDOG_TICKS, 5_000);
     let lastFacilityPlans = 0;
 
     function isAutoFacilities(): boolean {
@@ -152,7 +151,7 @@ export function createFacilityManager(settings: TrashSettings, dbg: DebugChannel
     // here and got the growing-roster case wrong for an entire play session - see the
     // header on createSampleRotation.
     const needRotation = createSampleRotation(NEED_SAMPLE_WINDOW);
-    const needSampleCooldown = createCooldown(NEED_SAMPLE_COOLDOWN_TICKS, NEED_SAMPLE_FLOOR_MS);
+    const needSampleCooldown = createCooldown(NEED_SAMPLE_TICKS, NEED_SAMPLE_FLOOR_MS);
     let lastNeedCounts: NeedCounts | null = null;
     let lastNeedGaps: NeedGap[] = [];
     let lastGapReport = "";

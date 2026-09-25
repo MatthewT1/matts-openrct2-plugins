@@ -49,3 +49,15 @@ export function createCooldown(minTicks: number, minMs: number): Cooldown {
         reset(): void { fresh = true; },
     };
 }
+
+// Day lengths vary (464-547 ticks seen), so "every N days" is N - 0.5 days of ticks: a
+// span a few ticks short of N * 530 must still fire on day N, not slip to N + 1.
+
+/** Tile scan (trash/map-scan.ts): every 3 days, as speed 1 did with the old 30 s cooldown. */
+export const TILE_SCAN_TICKS = 2.5 * TICKS_PER_DAY;
+/** Entertainer queue census (staff-extras.ts): every 2 days (old 15 s at speed 1). */
+export const ENTERTAINER_CENSUS_TICKS = 1.5 * TICKS_PER_DAY;
+/** Guest-need sampling (trash/facilities.ts): daily (old 2.5 s at speed 1). */
+export const NEED_SAMPLE_TICKS = TICKS_PER_DAY / 2;
+/** Facility build watchdog (trash/facilities.ts): 5 days (old 60 s at speed 1). */
+export const BUILD_WATCHDOG_TICKS = 4.5 * TICKS_PER_DAY;
