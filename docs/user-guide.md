@@ -8,7 +8,7 @@ This is a suite of six plugins that take over the repetitive parts of running a 
 
 **Wait Time Optimizer** — Keeps queues from spiraling. Recommends and applies ride wait-time settings, flags rides that are capacity-bound (need more trains, not tuning) versus genuinely mistuned, and steps in before a queue crosses the point where guests start walking away.
 
-**Staff Extras** — Entertainers. Positions them at queues that are close to that same walk-out point, since an entertainer measurably buys guests more patience.
+**Staff Extras** — Entertainers. Positions them at queues that are close to that same walk-out point, since an entertainer measurably buys guests more patience. (Guests only walk out after ~15 minutes **and** when their happiness is low, 65 of 255 or less; an entertainer both resets the queue timer by 200 and raises happiness.)
 
 **Marketing Manager** — Advertising and voucher campaigns. Ranks every campaign type by actual value for your park's current pricing (some campaigns are quietly far worse value than others) and can start them for you, tracking whether they're actually bringing in guests.
 
