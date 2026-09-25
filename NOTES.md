@@ -110,7 +110,7 @@ node tests/run.mjs
 
 ```bash
 # Headless plugins-on vs plugins-off run (~4 min for 60 days); see docs/headless-harness.md
-node tools/headless/run.mjs --save "C:/Users/Matt/Documents/OpenRCT2/save/Thunder Rock.park" --days 60 --settings all
+node tools/headless/run.mjs --save "<OpenRCT2 user dir>/save/YourPark.park" --days 60 --settings all
 ```
 
 > **The decision logic lives in pure modules on purpose.** `hotspots`, `staff-activity`,
