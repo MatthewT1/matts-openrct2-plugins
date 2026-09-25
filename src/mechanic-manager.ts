@@ -1,5 +1,6 @@
 import { createDebugChannel, diagnosticsCheckbox, isDebugEnabled } from "./debug";
 import { boolSetting } from "./settings";
+import { formatMoney } from "./money";
 import { createActivityTracker } from "./staff-activity";
 import { MECHANIC_THRESHOLDS, createStaffingController, StaffingDecision } from "./staffing";
 import { createStaffHirer, HIRE_BACKOFF_DAYS } from "./staff-hiring";
@@ -630,7 +631,7 @@ registerPlugin({
                 statsLbl.text = "Rides: " + cache.rideCount
                     + "   Mechanics: " + cache.mechanicCount + " / " + target
                     + (adaptive ? " target" : " recommended")
-                    + (saving > 0 ? "   (saving " + saving + "/mo)" : "");
+                    + (saving > 0 ? "   (saving " + formatMoney(saving) + "/mo)" : "");
             }
 
             const relLv = pluginWindow.findWidget<ListViewWidget>("lvReliability");
