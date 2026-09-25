@@ -1,7 +1,7 @@
 import {
     selectEntertainerTargets, censusQueues, entertainerStaffingSignals,
     QUEUE_FLOOR_MINUTES, QUEUE_URGENT_MINUTES, MAX_TARGETED_ENTERTAINERS,
-    PATROL_RADIUS_TILES, TILE_SIZE, ENTERTAINER_THRESHOLDS,
+    PATROL_RADIUS_TILES, TILE_SIZE, ENTERTAINER_THRESHOLDS, costumeCandidates,
 } from "./build/entertainer-targeting.mjs";
 import { createStaffingController } from "./build/staffing.mjs";
 
@@ -93,6 +93,26 @@ const ride = (rideId, name, queueMinutes, stationX = 1000, stationY = 2000) =>
     const c = censusQueues(rides);
     const sig = entertainerStaffingSignals(c, 999);
     ok(sig.formulaTarget === MAX_TARGETED_ENTERTAINERS, "formula target capped, got " + sig.formulaTarget);
+}
+
+// --- #50 costume candidates: entertainer objects first, known non-entertainers never.
+{
+  const objs = [
+    { index: 0, identifier: "rct2.peep_animations.guest" },
+    { index: 1, identifier: "rct2.peep_animations.handyman" },
+    { index: 2, identifier: "rct2.peep_animations.mechanic" },
+    { index: 3, identifier: "rct2.peep_animations.security" },
+    { index: 5, identifier: "rct2.peep_animations.entertainer_elephant" },
+    { index: 4, identifier: "rct2.peep_animations.entertainer_panda" },
+    { index: 6, identifier: "someone.custom_mascot" },
+  ];
+  const c = costumeCandidates(objs, 10);
+  ok(c[0] === 4 && c[1] === 5, "#50 entertainer objects first, got " + c.slice(0, 3).join(","));
+  ok(![0, 1, 2, 3].some(i => c.includes(i)), "#50 guest/handyman/mechanic/security never queried");
+  ok(c.includes(6) && c.indexOf(6) > 1, "#50 custom-named object still tried after the named ones");
+  ok(c.length === 7, "#50 each index once (4,5,6..10), got " + c.length);
+  const bare = costumeCandidates([], 3);
+  ok(bare.join(",") === "0,1,2,3", "#50 no object list: falls back to the full walk");
 }
 
 console.log(`entertainer-targeting: ${pass} passed, ${fail} failed`);
