@@ -13,9 +13,15 @@
  *       set:  { "<plugin name>": { "<key>": true|false } } written to that plugin's park
  *             storage (booleans only; anything else is refused)
  *       keys: { "<plugin name>": ["<key>", ...] } read back after writing
- *   {"cmd":"start","days":60,"speed":4} -> {"type":"day", ...snapshot} once at start and
+ *   {"cmd":"start","days":60,"speed":4,"perturb":0}
+ *                                       -> {"type":"day", ...snapshot} once at start and
  *                                          after every in-game day, then {"type":"done"}
  *                                          (the game is paused again when done)
+ *       perturb (#63): draw the scenario RNG this many times at the first day tick, so
+ *       replicates of an otherwise deterministic run differ. Needs a game-state callback
+ *       (getRandom throws "not mutable" from the socket), and a day tick is the same tick
+ *       in every run. Money totals (*Cum) also count from that tick, since the day-0
+ *       snapshot is taken at a wall-clock-dependent tick.
  *
  * The port is filled in by the runner (the placeholder below).
  */
@@ -32,6 +38,68 @@ registerPlugin({
         var daySub = null;
         var daysWanted = 0;
         var daysDone = 0;
+        var breakdownsToday = 0;
+        context.subscribe("ride.breakdown", function () { breakdownsToday++; });
+
+        // #63 guest thought tally: column name -> thought types counted in it.
+        var THOUGHTS_NEG = {
+            thPathDisgusting: ["path_disgusting"], thLitter: ["bad_litter"], thVandalism: ["vandalism"],
+            thSick: ["sick", "very_sick"], thHungry: ["hungry"], thThirsty: ["thirsty"], thToilet: ["toilet"],
+            thTired: ["tired"], thLost: ["lost", "cant_find", "cant_find_exit"], thCrowded: ["crowded"],
+            thQueuingAges: ["queuing_ages"], thBadValue: ["bad_value"], thCantAfford: ["cant_afford_ride", "cant_afford_item"]
+        };
+        var THOUGHTS_POS = {
+            thGoodValue: ["good_value"], thVeryClean: ["very_clean"], thScenery: ["scenery"], thWasGreat: ["was_great"]
+        };
+        var thoughtCol = {};
+        (function () {
+            var c, i;
+            for (c in THOUGHTS_NEG) for (i = 0; i < THOUGHTS_NEG[c].length; i++) thoughtCol[THOUGHTS_NEG[c][i]] = c;
+            for (c in THOUGHTS_POS) for (i = 0; i < THOUGHTS_POS[c].length; i++) thoughtCol[THOUGHTS_POS[c][i]] = c;
+        })();
+
+        // #63 money: cumulative since start per expenditure type. The game keeps a monthly table
+        // (index 0 = this month, income positive, costs negative); a day is shorter than a month,
+        // so at most one rollover happens between two snapshots.
+        var MONEY_TYPES = ["ride_construction", "ride_runningcosts", "land_purchase", "landscaping",
+            "park_entrance_tickets", "park_ride_tickets", "shop_sales", "shop_stock", "food_drink_sales",
+            "food_drink_stock", "wages", "marketing", "research", "interest"];
+        var moneyLast = {}, moneyCum = {}, moneyMonth = 0;
+        function moneyReset() {
+            moneyMonth = date.monthsElapsed;
+            for (var i = 0; i < MONEY_TYPES.length; i++) {
+                var arr = park.getMonthlyExpenditure(MONEY_TYPES[i]);
+                moneyLast[MONEY_TYPES[i]] = arr.length > 0 ? arr[0] : 0;
+                moneyCum[MONEY_TYPES[i]] = 0;
+            }
+        }
+        function moneyUpdate() {
+            var rolled = date.monthsElapsed !== moneyMonth;
+            for (var i = 0; i < MONEY_TYPES.length; i++) {
+                var t = MONEY_TYPES[i], arr = park.getMonthlyExpenditure(t);
+                var cur = arr.length > 0 ? arr[0] : 0;
+                moneyCum[t] += rolled ? ((arr.length > 1 ? arr[1] : 0) - moneyLast[t]) + cur : cur - moneyLast[t];
+                moneyLast[t] = cur;
+            }
+            moneyMonth = date.monthsElapsed;
+            var c = moneyCum, income = 0, expense = 0;
+            for (var j = 0; j < MONEY_TYPES.length; j++) {
+                if (c[MONEY_TYPES[j]] > 0) income += c[MONEY_TYPES[j]];
+                else expense += c[MONEY_TYPES[j]];
+            }
+            return {
+                incomeCum: income,
+                expenseCum: expense,
+                entranceCum: c.park_entrance_tickets,
+                rideTicketsCum: c.park_ride_tickets,
+                salesCum: c.shop_sales + c.food_drink_sales,
+                stockCum: c.shop_stock + c.food_drink_stock,
+                wagesCum: c.wages,
+                runningCostsCum: c.ride_runningcosts,
+                buildCum: c.ride_construction + c.landscaping + c.land_purchase,
+                marketingCum: c.marketing
+            };
+        }
 
         function send(obj) {
             if (sock) sock.write(JSON.stringify(obj) + "\n");
@@ -49,27 +117,58 @@ registerPlugin({
 
         function guestStats() {
             var guests = map.getAllEntities("guest");
-            var inPark = 0, happy = 0;
+            var inPark = 0, happy = 0, c;
+            var out = { thoughtsNeg: 0, thoughtsPos: 0 };
+            for (c in THOUGHTS_NEG) out[c] = 0;
+            for (c in THOUGHTS_POS) out[c] = 0;
             for (var i = 0; i < guests.length; i++) {
                 if (!guests[i].isInPark) continue;
                 inPark++;
                 happy += guests[i].happiness;
+                var th = guests[i].thoughts;
+                for (var j = 0; j < th.length; j++) {
+                    var col = thoughtCol[th[j].type];
+                    if (!col) continue;
+                    out[col]++;
+                    if (THOUGHTS_NEG[col]) out.thoughtsNeg++;
+                    else out.thoughtsPos++;
+                }
             }
-            return { avgHappiness: inPark > 0 ? Math.round(happy / inPark) : 0 };
+            out.avgHappiness = inPark > 0 ? Math.round(happy / inPark) : 0;
+            return out;
         }
 
-        function openRides() {
-            var rides = map.rides, open = 0;
+        function rideStats() {
+            var rides = map.rides, open = 0, rel = 0, down = 0, broken = 0;
             for (var i = 0; i < rides.length; i++) {
-                if (rides[i].classification === "ride" && rides[i].status === "open") open++;
+                var r = rides[i];
+                if (r.classification !== "ride" || r.status !== "open") continue;
+                open++;
+                rel += r.reliability;
+                down += r.downtime;
+                if (r.breakdown !== "none") broken++;
             }
-            return open;
+            return {
+                openRides: open,
+                avgReliability: open > 0 ? Math.round(rel / open) : 0,
+                avgDowntime: open > 0 ? Math.round(down / open) : 0,
+                ridesBroken: broken
+            };
+        }
+
+        function countVomit() {
+            var litter = map.getAllEntities("litter"), n = 0;
+            for (var i = 0; i < litter.length; i++) {
+                var t = litter[i].litterType;
+                if (t === "vomit" || t === "vomit_alt") n++;
+            }
+            return { litter: litter.length, vomit: n };
         }
 
         function snapshot() {
             var staff = countStaff();
-            var g = guestStats();
-            return {
+            var g = guestStats(), rs = rideStats(), lv = countVomit(), m = moneyUpdate();
+            var row = {
                 type: "day",
                 day: daysDone,
                 date: date.year + "-" + date.month + "-" + date.day,
@@ -86,9 +185,19 @@ registerPlugin({
                 mechanics: staff.mechanic,
                 security: staff.security,
                 entertainers: staff.entertainer,
-                litter: map.getAllEntities("litter").length,
-                openRides: openRides()
+                litter: lv.litter,
+                vomit: lv.vomit,
+                openRides: rs.openRides,
+                avgReliability: rs.avgReliability,
+                avgDowntime: rs.avgDowntime,
+                ridesBroken: rs.ridesBroken,
+                breakdowns: breakdownsToday
             };
+            breakdownsToday = 0;
+            var k;
+            for (k in m) row[k] = m[k];
+            for (k in g) if (k !== "avgHappiness") row[k] = g[k];
+            return row;
         }
 
         function hello() {
@@ -102,6 +211,7 @@ registerPlugin({
                 date: date.year + "-" + date.month + "-" + date.day,
                 parkName: park.name,
                 noMoney: park.getFlag("noMoney"),
+                openRides: rideStats().openRides,
                 plugins: names
             });
         }
@@ -135,10 +245,12 @@ registerPlugin({
             send({ type: "settings", stored: stored });
         }
 
-        function start(days, speed) {
+        function start(days, speed, perturb) {
             if (daySub) daySub.dispose();
             daysWanted = days;
             daysDone = 0;
+            breakdownsToday = 0;
+            moneyReset();
             send(snapshot());
             // Writing context.paused from a socket callback throws "Game state is not
             // mutable in this context"; the pausetoggle action works.
@@ -146,6 +258,10 @@ registerPlugin({
             context.executeAction("gamesetspeed", { speed: speed });
             daySub = context.subscribe("interval.day", function () {
                 daysDone++;
+                if (daysDone === 1) {
+                    for (var n = 0; n < perturb; n++) context.getRandom(0, 2);
+                    moneyReset();
+                }
                 send(snapshot());
                 if (daysDone >= daysWanted) {
                     daySub.dispose();
@@ -171,7 +287,7 @@ registerPlugin({
             if (msg.cmd === "hello") hello();
             else if (msg.cmd === "nomoney") noMoney();
             else if (msg.cmd === "settings") settings(msg.set, msg.keys, msg.debug);
-            else if (msg.cmd === "start") start(msg.days | 0, msg.speed | 0);
+            else if (msg.cmd === "start") start(msg.days | 0, msg.speed | 0, msg.perturb | 0);
             else send({ type: "error", error: "unknown cmd " + msg.cmd });
         }
 
