@@ -65,3 +65,30 @@ No code changes.
 
 Repository prep for GitHub: git history reconstructed, README, LICENSE, CI, `.gitignore`
 (excludes the ~400 MB `gamesrc/` clone and debug logs), `TODO.md` backlog.
+
+## On GitHub: v1.0.0 to v1.3.0 (2026-09-24 to 2026-09-25)
+
+From here the work is in pull requests and issues on
+[GitHub](https://github.com/MatthewT1/matts-openrct2-plugins). Session notes are local only.
+This entry covers the main points.
+
+- **v1.0.0 and v1.1.0**: first releases. Plugin versions are stamped from `package.json` (#1),
+  a PR template and a release approval gate were added (#2), and the backlog moved from
+  `TODO.md` to GitHub Issues (#18).
+- **v1.2.0**: refactor with no behaviour change, tested in-game against a baseline. Shared
+  staff hire/fire helper (#19), `trash-manager.ts` split into `src/trash/` (#20), shared tick
+  and settings code (#21), and a breakdown repair trace (Diagnostics only, #23).
+- **v1.3.0**:
+  - **Breakdown repairs (#22)**: traces (#23, #26, #27, #29) showed that a slow repair is
+    mostly fixed game cost (the answer-call pause and the fix itself). Mechanics walk
+    near-straight routes. No behaviour change; recorded as design record M5.
+  - **Window text (#24, #10)**: text that was cut off now fits, and the Diagnostics checkbox
+    stays in sync across open windows (#28).
+  - **Currency (#31)**: money is shown in the player's currency, not a hardcoded £ (#33).
+  - **Queue measurement (#15, #14, #16)**: throughput is logged per intervention (#35). W2 and
+    OPS were measured, then stopped and recorded (#39). Facility demand and the telemetry
+    watch list needed no change (#34).
+  - **Mechanic release (#32)**: the "fleet underworked" signal was only ever true just after a
+    park load. It was measured in shadow (#36), then replaced by a 14-day activity window that
+    releases the longest-idle mechanic first (#40). An overstaff test with 2 extra mechanics
+    released 1 in 80 days and kept every safety criterion. Accepted as slow and safe (M6).
