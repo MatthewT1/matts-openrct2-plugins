@@ -16,6 +16,7 @@
 
 import { createDebugChannel, diagnosticsCheckbox } from "./debug";
 import { boolSetting } from "./settings";
+import { formatMoney, formatMoney2dp } from "./money";
 import {
     ALL_CAMPAIGN_TYPES, CAMPAIGN_NAMES, CAMPAIGN_FOOD_OR_DRINK_FREE, CampaignType,
     MIN_WEEKS, MAX_WEEKS, WEEKLY_COST, rankCampaigns, createAttributionTracker,
@@ -358,7 +359,7 @@ registerPlugin({
                         + Math.ceil(tracked.daysRemaining / 7) + "w left";
                     button.isDisabled = true;
                 } else if (ranked !== undefined) {
-                    label.text = CAMPAIGN_NAMES[type] + "  -  £" + Math.round(ranked.costPerGuest * 100) / 100 + "/guest";
+                    label.text = CAMPAIGN_NAMES[type] + "  -  " + formatMoney2dp(ranked.costPerGuest) + "/guest";
                     button.isDisabled = false;
                 } else {
                     // The reason is park-wide, so it is shown once on lblBlocked rather
@@ -376,7 +377,7 @@ registerPlugin({
             const status = pluginWindow.findWidget<LabelWidget>("lblStatus");
             if (status) {
                 status.text = isAutoManage()
-                    ? "Auto-start ON, up to £" + (AUTO_CASH_BUDGET_PER_PASS / 10) + "/day."
+                    ? "Auto-start ON, up to " + formatMoney(AUTO_CASH_BUDGET_PER_PASS / 10) + "/day."
                     : "Manual start only. Before/after is tracked.";
             }
         }
@@ -454,9 +455,9 @@ registerPlugin({
                         type: "checkbox", name: "chkAutoManage",
                         x: 8, y: rowsBottom + 24, width: 304, height: 14,
                         text: "Auto-start eligible campaigns",
-                        tooltip: "Starts campaigns from the ranked list above, best value first, up to £"
-                            + (AUTO_CASH_BUDGET_PER_PASS / 10) + " committed per day and never below the £"
-                            + (MARKETING_MIN_CASH / 10) + " cash reserve. Never starts a second campaign of a "
+                        tooltip: "Starts campaigns from the ranked list above, best value first, up to "
+                            + formatMoney(AUTO_CASH_BUDGET_PER_PASS / 10) + " committed per day and never below the "
+                            + formatMoney(MARKETING_MIN_CASH / 10) + " cash reserve. Never starts a second campaign of a "
                             + "type already running. Off by default - this spends real money on its own.",
                         isChecked: isAutoManage(),
                         onChange: (checked: boolean) => {
