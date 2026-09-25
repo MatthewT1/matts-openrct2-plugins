@@ -66,7 +66,7 @@ No code changes.
 Repository prep for GitHub: git history reconstructed, README, LICENSE, CI, `.gitignore`
 (excludes the ~400 MB `gamesrc/` clone and debug logs), `TODO.md` backlog.
 
-## On GitHub: v1.0.0 to v1.3.0 (2026-09-24 to 2026-09-25)
+## On GitHub: v1.0.0 to v1.4.0 (2026-09-24 to 2026-09-25)
 
 From here the work is in pull requests and issues on
 [GitHub](https://github.com/MatthewT1/matts-openrct2-plugins). Session notes are local only.
@@ -92,3 +92,20 @@ This entry covers the main points.
     park load. It was measured in shadow (#36), then replaced by a 14-day activity window that
     releases the longest-idle mechanic first (#40). An overstaff test with 2 extra mechanics
     released 1 in 80 days and kept every safety criterion. Accepted as slow and safe (M6).
+- **v1.4.0**:
+  - **Headless test harness (#46, #49, #63, #72)**: runs parks with no window, the plugins on
+    vs off, with RNG-perturbed replicates and an effect-vs-noise rule. Every gameplay change
+    below was A/B tested with it, with the pass rule posted on the issue first.
+  - **New defaults (#51)**: trash sweep, amenities, amenity removal, facilities, entertainers
+    and emergency repair are on by default (#76). Happiness was not worse in any of 5 parks,
+    and litter and vomit were better in 4. In game, Factory Capers was completed quickly.
+  - **Marketing (#74)**: campaign costs were compared in pounds against tenths, so the budget
+    and reserve checks were 10x too loose. Auto campaigns now run one at a time, behind a
+    happiness/crowding gate (#78). Still off by default.
+  - **Fixes**: no build cash floors or marketing in no-money parks (#44); cooldowns use game
+    time (#48); ride-setting probes no longer spam the log (#50); live entertainer count
+    (#54); no bench add/remove churn (#56).
+  - **Tried and rejected**: ride operation tuning changes (#67). Two attempts both cost
+    happiness; tuning stays off by default.
+  - **Docs**: walk-out rule (#70), doc drift (#71), Path Connector marked experimental (#9),
+    README screenshot (#4).
