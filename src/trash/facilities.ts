@@ -6,6 +6,7 @@
 
 import { isDebugEnabled, DebugChannel } from "../debug";
 import { TrashSettings } from "./shared";
+import { createCooldown, NEED_SAMPLE_TICKS, BUILD_WATCHDOG_TICKS } from "../cooldown";
 import {
     createNeedAccumulator, createSampleRotation, findGaps, describeGap,
     CLUSTER_MIN_GUESTS, NeedKind, NeedCounts, NeedGap, Facility,
@@ -36,7 +37,12 @@ export function createFacilityManager(settings: TrashSettings, dbg: DebugChannel
     // `day.needSample` measured 1-4ms at a 250-guest window, well inside the per-day
     // budget, so there is room to sample harder. 400 guests every 2.5s is roughly a
     // 3x sweep rate for a worst case still under 10ms.
-    const NEED_SAMPLE_COOLDOWN_MS = 2_500;
+    //
+    // #48: the 2.5 s cooldown was real time, so sampling ran every day at speed 1 but
+    // only every ~1.5 days at speed 4, and facility confirmations (counted in sweeps)
+    // came later at speed 4. Half a game day keeps it daily at every speed; the 1 s floor
+    // is under one speed-4 day (~1.7 s) so it only binds past speed 4. Max measured 9ms.
+    const NEED_SAMPLE_FLOOR_MS       = 1_000;
     const NEED_SAMPLE_WINDOW      = 400;   // guests read per pass
     const NEED_CELL_TILES         = 8;     // clustering grid, matches the litter grid
     // Shared with the facility planner via needs.ts, so the two cannot disagree about
@@ -112,7 +118,6 @@ export function createFacilityManager(settings: TrashSettings, dbg: DebugChannel
     const facilityTracker = createFacilityTracker(DEFAULT_FACILITY_OPTIONS);
     /** Set while a build chain is mid-flight, so passes cannot overlap. */
     let facilityBuilding = false;
-    let facilityBuildStarted = 0;
     /**
      * How long an in-flight build may block further passes before the flag is assumed
      * lost and cleared.
@@ -123,8 +128,11 @@ export function createFacilityManager(settings: TrashSettings, dbg: DebugChannel
      * this feature forever with no error to notice - which is precisely how five
      * features on this project shipped dead. The watchdog is counted, so if it ever
      * does fire it shows up as data.
+     *
+     * Game time (#48): 60 real seconds was ~5 days at speed 1 but ~37 at speed 4. Five
+     * days keeps speed 1 as it was; the 5 s floor is under 5 speed-4 days (~8 s).
      */
-    const FACILITY_BUILD_TIMEOUT_MS = 60_000;
+    const buildWatchdog = createCooldown(BUILD_WATCHDOG_TICKS, 5_000);
     let lastFacilityPlans = 0;
 
     function isAutoFacilities(): boolean {
@@ -143,7 +151,7 @@ export function createFacilityManager(settings: TrashSettings, dbg: DebugChannel
     // here and got the growing-roster case wrong for an entire play session - see the
     // header on createSampleRotation.
     const needRotation = createSampleRotation(NEED_SAMPLE_WINDOW);
-    let lastNeedSample   = 0;
+    const needSampleCooldown = createCooldown(NEED_SAMPLE_TICKS, NEED_SAMPLE_FLOOR_MS);
     let lastNeedCounts: NeedCounts | null = null;
     let lastNeedGaps: NeedGap[] = [];
     let lastGapReport = "";
@@ -221,9 +229,7 @@ export function createFacilityManager(settings: TrashSettings, dbg: DebugChannel
         // on, not only while diagnostics are being gathered. A normal game with both
         // switched off still pays nothing.
         if (!isDebugEnabled() && !isAutoFacilities()) return;
-        const now = Date.now();
-        if (now - lastNeedSample < NEED_SAMPLE_COOLDOWN_MS) return;
-        lastNeedSample = now;
+        if (!needSampleCooldown.ready(date.ticksElapsed, Date.now())) return;
 
         const guests = map.getAllEntities("guest");
         if (guests.length === 0) return;
@@ -637,9 +643,8 @@ export function createFacilityManager(settings: TrashSettings, dbg: DebugChannel
      */
     function manageFacilities(): void {
         if (!isAutoFacilities()) return;
-        const now = Date.now();
         if (facilityBuilding) {
-            if (now - facilityBuildStarted < FACILITY_BUILD_TIMEOUT_MS) return;
+            if (!buildWatchdog.ready(date.ticksElapsed, Date.now())) return;
             dbg.count("facilityBuildTimedOut");
             facilityBuilding = false;
         }
@@ -679,7 +684,9 @@ export function createFacilityManager(settings: TrashSettings, dbg: DebugChannel
         }
 
         facilityBuilding = true;
-        facilityBuildStarted = now;
+        // Arm the watchdog: the next ready() is due five days from now.
+        buildWatchdog.reset();
+        buildWatchdog.ready(date.ticksElapsed, Date.now());
         buildFacility(plans[0]);
     }
 

@@ -42,6 +42,7 @@ function parseArgs(argv) {
         gamePort: 11800,
         agentPort: 47820,
         settings: "save",
+        debug: false,
     };
     for (let i = 2; i < argv.length; i++) {
         const k = argv[i], v = argv[i + 1];
@@ -58,6 +59,9 @@ function parseArgs(argv) {
             case "--game-port": a.gamePort = Number(v); i++; break;
             case "--agent-port": a.agentPort = Number(v); i++; break;
             case "--settings": a.settings = v; i++; break;
+            // Turns on the plugins' Diagnostics channel (on arm). Start the log sink first:
+            // node tools/log-sink.mjs (127.0.0.1:7777 -> tools/rct-debug.log).
+            case "--debug": a.debug = true; break;
             case "-h": case "--help":
                 console.log(readFileSync(fileURLToPath(import.meta.url), "utf8").split("*/")[0]);
                 process.exit(0);
@@ -201,7 +205,7 @@ async function runArm(a, arm) {
 
         // Park storage is saved with the park, so the off arm (no plugins) needs no settings.
         if (arm === "on") {
-            sock.write(JSON.stringify({ cmd: "settings", set: a.settingsWrite, keys: settingsKeys() }) + "\n");
+            sock.write(JSON.stringify({ cmd: "settings", set: a.settingsWrite, keys: settingsKeys(), debug: a.debug }) + "\n");
             const msg = await next(10000);
             if (msg.type !== "settings") throw new Error(`agent error: ${msg.error}`);
             settings = effectiveSettings(msg.stored);
@@ -272,7 +276,7 @@ async function main() {
     }
     writeFileSync(join(a.out, "summary.md"), report.join("\n"));
     writeFileSync(join(a.out, "summary.json"), JSON.stringify({
-        args: { save: a.save, days: a.days, speed: a.speed, arms: a.arms, plugins: a.plugins, settings: a.settings },
+        args: { save: a.save, days: a.days, speed: a.speed, arms: a.arms, plugins: a.plugins, settings: a.settings, debug: a.debug },
         settings: results.on?.settings ?? null,
         arms: Object.fromEntries(a.arms.map((arm) => [arm, {
             start: results[arm].hello, seconds: results[arm].seconds, pluginFiles: results[arm].provenance,
