@@ -121,8 +121,13 @@ registerPlugin({
         // far better "was there work to do" signal than any derived ride property.
         let breakdownsToday = 0;
         let lastFleetUnderworked = false;
-        // #32 phase 1 (shadow): rolling-window active fraction for candidate windows,
-        // logged only. The controller still uses the lifetime `fleetUnderworked`.
+        // #32: the release signal is "fewer than half the mechanics did a job in the
+        // last N days". The lifetime definition only ever fired in the days after a load,
+        // because every mechanic that had once fixed anything stayed "active" forever.
+        // N = 14 from the phase 1 shadow run (true on 16% of steady days at a fleet of 5
+        // that was holding the park; N = 10 was 42%, which would ratchet down).
+        const MECHANIC_WINDOW_DAYS = 14;
+        // Still logged so the phase 2 run can be compared with the phase 1 shadow data.
         const SHADOW_WINDOW_DAYS = [7, 10, 14, 21];
         let shadowActiveFraction: Record<string, number | null> = {};
 
@@ -398,10 +403,11 @@ registerPlugin({
                 for (let i = 0; i < hireCount; i++) hirer.hire();
                 return true;
             } else if (diff < 0) {
-                mechanics.slice(0, -diff).forEach((m: Mechanic) => {
-                    if (m.id === null) return;
-                    hirer.fire(m.id);
-                });
+                // Release whoever has been idle longest. Firing an active mechanic would
+                // leave the idle ones behind and keep the window signal firing.
+                const ids: number[] = [];
+                mechanics.forEach((m: Mechanic) => { if (m.id !== null) ids.push(m.id); });
+                activity.releaseOrder(ids).slice(0, -diff).forEach((id: number) => hirer.fire(id));
                 return true;
             }
             return false;
@@ -524,9 +530,12 @@ registerPlugin({
             // during the day or is broken now. Inspections happen on the game's own
             // schedule, so a quiet day says nothing about whether a mechanic can work.
             const snap = activity.endSweep(cache.ridesBroken > 0 || breakdownsToday > 0);
-            lastFleetUnderworked = snap.fleetUnderworked;
+            // Warm-up gate: false until MECHANIC_WINDOW_DAYS of work have been observed.
+            lastFleetUnderworked = activity.fleetUnderworkedWithin(MECHANIC_WINDOW_DAYS);
             dbg.count("mechanicWorkDone", snap.workDone);
-            if (snap.fleetUnderworked) dbg.count("mechanicFleetUnderworked");
+            if (lastFleetUnderworked) dbg.count("mechanicFleetUnderworked");
+            // The old lifetime flag, logged only. It still gates `stuck` reporting.
+            if (snap.fleetUnderworked) dbg.count("mechanicFleetUnderworkedLifetime");
             shadowActiveFraction = {};
             for (let i = 0; i < SHADOW_WINDOW_DAYS.length; i++) {
                 const n = SHADOW_WINDOW_DAYS[i];

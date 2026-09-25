@@ -132,7 +132,7 @@ If you enable **Diagnostics** and run the log sink, the file `tools/rct-debug.lo
 | Counter | What it means |
 |---|---|
 | `handymenStuck` | Handymen idling while work exists (should be zero) |
-| `mechanicFleetUnderworked` | Days where no mechanic had anything to do (drives the controller to hire downward) |
+| `mechanicFleetUnderworked` | Days where fewer than half the mechanics did a job in the last 14 days (drives the controller to release one). Never counted in the first 14 days after a load |
 | `amenityDemandsOpen` | Unmet demands after placement (should be zero on a park with enough benches) |
 | `facilityPlaced` | Facilities actually built (will be zero if no persistent gaps are found) |
 | `facilityCapped` | A facility kind hit its 8-per-kind build cap and was skipped |
