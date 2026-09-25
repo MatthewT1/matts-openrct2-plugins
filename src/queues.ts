@@ -200,6 +200,15 @@ export function createQueueTrendTracker(): QueueTrendTracker {
 /** Days of history kept, and consulted, on each side of an intervention. */
 export const ATTRIBUTION_WINDOW_DAYS = 5;
 
+/**
+ * Throughput is only counted on days the ride was queued at BOTH daily readings
+ * bounding the day (#15). While a queue exists, guests served per day is capped by the
+ * ride's capacity rather than by how many guests are in the park, so it measures what
+ * W2 and OPS actually change, independent of the always-moving guest count. A ride
+ * without a queue is short of guests, and its throughput measures demand instead.
+ */
+export const THROUGHPUT_QUEUE_MINUTES = 1;
+
 /** How an intervention was triggered. */
 export type InterventionKind = "w2-preemptive" | "ops-set";
 
@@ -208,15 +217,39 @@ interface QueueSample {
     minutes: number;
 }
 
+/**
+ * First reading of a day. The daily hook is always the first caller for a new day;
+ * later same-day reads (window open, boosts) would shift the interval, so they only
+ * contribute `broken`, which is sticky across the day.
+ */
+interface DailyReading {
+    day: number;
+    customers: number;
+    queueMinutes: number;
+    broken: boolean;
+}
+
+interface ThroughputWindow {
+    /** Mean guests served per qualifying day, 1 dp. Null if no qualifying day. */
+    mean: number | null;
+    days: number;
+}
+
 interface InterventionRideRecord {
     name: string;
+    /** One entry per day, oldest first, when the caller supplies `totalCustomers`. */
+    daily: DailyReading[];
     /** Oldest first. Trimmed to what a before/after window could ever need. */
     history: QueueSample[];
     /**
      * `before` is computed once, when the intervention is recorded, and never
      * recomputed - see the comment on `recordIntervention` for why.
      */
-    intervention: { day: number; kind: InterventionKind; before: number | null } | null;
+    intervention: {
+        day: number; kind: InterventionKind; before: number | null;
+        /** Frozen at record time, same reason as `before`. */
+        throughputBefore: ThroughputWindow;
+    } | null;
     seen: boolean;
 }
 
@@ -232,11 +265,28 @@ export interface RideAttribution {
     afterMinutes: number | null;
     /** afterMinutes - beforeMinutes. Null unless both sides have data. */
     deltaMinutes: number | null;
+    /**
+     * Mean guests served per queued day (see THROUGHPUT_QUEUE_MINUTES). "Before" covers
+     * the ATTRIBUTION_WINDOW_DAYS intervals ending at the intervention-day reading,
+     * "after" the same number starting from it. Null without `totalCustomers` input.
+     */
+    throughputBefore: number | null;
+    throughputAfter: number | null;
+    qualifyingDaysBefore: number;
+    qualifyingDaysAfter: number;
+    /** (after - before) / before * 100, rounded. Null unless both sides have data. */
+    throughputDeltaPct: number | null;
 }
 
 export interface InterventionTracker {
-    /** Records one ride's queue reading for `day`. Call once per ride per pass. */
-    observe(rideId: number, name: string, day: number, queueMinutes: number): void;
+    /**
+     * Records one ride's queue reading for `day`. Call once per ride per pass.
+     * `customers` is the ride's cumulative `totalCustomers`; `broken` is whether it was
+     * broken down now or at any point since the last reading. Both optional: without
+     * them only the queue-minute fields are reported.
+     */
+    observe(rideId: number, name: string, day: number, queueMinutes: number,
+            customers?: number, broken?: boolean): void;
     /**
      * Records that an intervention of `kind` was applied to `rideId` on `day`.
      * A new call overwrites any prior intervention for the ride — only the most
@@ -256,32 +306,56 @@ export interface InterventionTracker {
 export function createInterventionTracker(): InterventionTracker {
     let records: Record<number, InterventionRideRecord> = {};
 
-    // Only ever needed: ATTRIBUTION_WINDOW_DAYS on each side of an intervention day.
-    // Trimming to this keeps the per-day cost of `observe` O(1) amortised rather than
-    // letting history grow for the life of the save.
-    const MAX_HISTORY_DAYS = ATTRIBUTION_WINDOW_DAYS * 2 + 1;
+    // Only ever needed: the window either side of the current intervention, plus the
+    // most recent days a NEW intervention's before-window would read. Trimming to that
+    // keeps each array a couple of windows long rather than growing for the life of
+    // the save.
+    //
+    // This used to be a flat cap of 2 * window + 1 ENTRIES. That evicted the
+    // after-window once more than ~11 samples had arrived since the intervention (and
+    // sooner when the cache refreshed several times in a day), so `afterMinutes` for
+    // an old intervention silently shrank to the last few days and then went null.
+    // Found by the #15 throughput tests.
+    function keep(sampleDay: number, today: number, anchor: number | null): boolean {
+        if (sampleDay >= today - ATTRIBUTION_WINDOW_DAYS - 1) return true;
+        return anchor !== null
+            && sampleDay >= anchor - ATTRIBUTION_WINDOW_DAYS
+            && sampleDay <= anchor + ATTRIBUTION_WINDOW_DAYS;
+    }
 
-    function observe(rideId: number, name: string, day: number, queueMinutes: number): void {
+    function trim<T extends { day: number }>(samples: T[], today: number, anchor: number | null): T[] {
+        // The anchor window can sit before a run of stale days, so this is a filter,
+        // not a pop-from-the-front. Arrays are a couple of windows long; only allocate
+        // when something actually goes.
+        for (let i = 0; i < samples.length; i++) {
+            if (!keep(samples[i].day, today, anchor)) {
+                return samples.filter(x => keep(x.day, today, anchor));
+            }
+        }
+        return samples;
+    }
+
+    function observe(rideId: number, name: string, day: number, queueMinutes: number,
+                     customers?: number, broken?: boolean): void {
         let record = records[rideId];
         if (record === undefined) {
-            record = { name, history: [], intervention: null, seen: true };
+            record = { name, daily: [], history: [], intervention: null, seen: true };
             records[rideId] = record;
+        }
+        const anchor = record.intervention !== null ? record.intervention.day : null;
+        if (customers !== undefined) {
+            const last = record.daily.length > 0 ? record.daily[record.daily.length - 1] : null;
+            if (last !== null && last.day === day) {
+                if (broken === true) last.broken = true;
+            } else {
+                record.daily.push({ day, customers, queueMinutes, broken: broken === true });
+                record.daily = trim(record.daily, day, anchor);
+            }
         }
         record.name = name;
         record.seen = true;
         record.history.push({ day, minutes: queueMinutes });
-        // Drop samples older than any window this record could still need. The
-        // intervention day (if any) anchors the window; without one, only the most
-        // recent MAX_HISTORY_DAYS matter.
-        const anchor = record.intervention !== null ? record.intervention.day : day;
-        const oldestNeeded = anchor - ATTRIBUTION_WINDOW_DAYS;
-        while (record.history.length > 0 && record.history[0].day < oldestNeeded
-            && record.history.length > 1) {
-            record.history.shift();
-        }
-        if (record.history.length > MAX_HISTORY_DAYS) {
-            record.history.shift();
-        }
+        record.history = trim(record.history, day, anchor);
     }
 
     function recordIntervention(rideId: number, day: number, kind: InterventionKind): void {
@@ -305,7 +379,8 @@ export function createInterventionTracker(): InterventionTracker {
         // moment the intervention is recorded - while those days are still guaranteed
         // to be in `history` - makes it a fact instead of a live recomputation.
         const before = windowMean(record.history, day - ATTRIBUTION_WINDOW_DAYS, day - 1);
-        record.intervention = { day, kind, before };
+        const throughputBefore = throughputWindow(record.daily, day - ATTRIBUTION_WINDOW_DAYS + 1, day);
+        record.intervention = { day, kind, before, throughputBefore };
     }
 
     function endPass(): void {
@@ -331,6 +406,30 @@ export function createInterventionTracker(): InterventionTracker {
         return n === 0 ? null : Math.round((sum / n) * 10) / 10;
     }
 
+    /**
+     * Guests served on day d = customers(d) - customers(d-1). Day d qualifies only if
+     * both readings exist on consecutive days, both were queued, neither was broken,
+     * and the counter did not go backwards (ride id reused, or a reset).
+     */
+    function throughputWindow(daily: DailyReading[], from: number, to: number): ThroughputWindow {
+        let sum = 0;
+        let n = 0;
+        for (let i = 1; i < daily.length; i++) {
+            const cur = daily[i];
+            const prev = daily[i - 1];
+            if (cur.day < from || cur.day > to) continue;
+            if (prev.day !== cur.day - 1) continue;
+            if (cur.broken || prev.broken) continue;
+            if (cur.queueMinutes < THROUGHPUT_QUEUE_MINUTES
+                || prev.queueMinutes < THROUGHPUT_QUEUE_MINUTES) continue;
+            const served = cur.customers - prev.customers;
+            if (served < 0) continue;
+            sum += served;
+            n++;
+        }
+        return { mean: n === 0 ? null : Math.round((sum / n) * 10) / 10, days: n };
+    }
+
     function summarize(day: number): RideAttribution[] {
         const out: RideAttribution[] = [];
         const keys = Object.keys(records);
@@ -341,6 +440,10 @@ export function createInterventionTracker(): InterventionTracker {
             if (iv === null) continue;
             const after = windowMean(record.history, iv.day + 1, Math.min(day, iv.day + ATTRIBUTION_WINDOW_DAYS));
             const delta = (iv.before !== null && after !== null) ? Math.round((after - iv.before) * 10) / 10 : null;
+            const tAfter = throughputWindow(record.daily, iv.day + 1, Math.min(day, iv.day + ATTRIBUTION_WINDOW_DAYS));
+            const tBefore = iv.throughputBefore;
+            const tPct = (tBefore.mean !== null && tBefore.mean > 0 && tAfter.mean !== null)
+                ? Math.round((tAfter.mean - tBefore.mean) / tBefore.mean * 100) : null;
             out.push({
                 rideId: id,
                 name: record.name,
@@ -349,6 +452,11 @@ export function createInterventionTracker(): InterventionTracker {
                 beforeMinutes: iv.before,
                 afterMinutes: after,
                 deltaMinutes: delta,
+                throughputBefore: tBefore.mean,
+                throughputAfter: tAfter.mean,
+                qualifyingDaysBefore: tBefore.days,
+                qualifyingDaysAfter: tAfter.days,
+                throughputDeltaPct: tPct,
             });
         }
         return out;

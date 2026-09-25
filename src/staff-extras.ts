@@ -35,6 +35,7 @@
 
 import { createDebugChannel, diagnosticsCheckbox } from "./debug";
 import { boolSetting } from "./settings";
+import { formatMoney } from "./money";
 import {
     selectEntertainerTargets, censusQueues, entertainerStaffingSignals,
     ENTERTAINER_THRESHOLDS, EntertainerTarget, RideQueueSignal, MAX_TARGETED_ENTERTAINERS,
@@ -483,7 +484,7 @@ registerPlugin({
                 statsLbl.text = "Rides " + cache.rideCount
                     + "  Ent. " + cache.entertainerCount + "/" + cache.targetCount
                     + "  Worst queue " + cache.worstQueueMinutes + "m"
-                    + "  £" + (cache.entertainerCount * ENTERTAINER_WAGE_PER_MONTH) + "/mo";
+                    + "  " + formatMoney(cache.entertainerCount * ENTERTAINER_WAGE_PER_MONTH) + "/mo";
             }
             const lv = pluginWindow.findWidget<ListViewWidget>("lvTargets");
             if (lv) {
@@ -524,7 +525,7 @@ registerPlugin({
                         type: "button",
                         x: 8, y: 154, width: 128, height: 16,
                         text: "Hire / Fire to Target",
-                        tooltip: "Hire or fire entertainers (GBP " + ENTERTAINER_WAGE_PER_MONTH
+                        tooltip: "Hire or fire entertainers (" + formatMoney(ENTERTAINER_WAGE_PER_MONTH)
                             + "/month each) to the adaptive target, and re-assign patrol zones.",
                         onClick: () => { requestHireToTarget(); requestAssignPatrols(); }
                     },
@@ -539,8 +540,8 @@ registerPlugin({
                         type: "checkbox", name: "chkAuto",
                         x: 8, y: 178, width: 264, height: 14,
                         text: "Auto-manage entertainers daily  (spends money)",
-                        tooltip: "Hires up to " + MAX_TARGETED_ENTERTAINERS + " entertainers at GBP "
-                            + ENTERTAINER_WAGE_PER_MONTH + "/month each and patrols them near "
+                        tooltip: "Hires up to " + MAX_TARGETED_ENTERTAINERS + " entertainers at "
+                            + formatMoney(ENTERTAINER_WAGE_PER_MONTH) + "/month each and patrols them near "
                             + "congested queues (3+ minute posted wait). Off by default.",
                         isChecked: getAutoManage(),
                         onChange: (checked: boolean) => {

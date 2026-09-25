@@ -57,6 +57,8 @@ interface ActivityRecord {
     days: number;
     /** Set each sweep so records for departed staff can be pruned. */
     seen: boolean;
+    /** Index of the last sweep in which this staff member gained work, or -1. */
+    lastWorkSweep: number;
 }
 
 export interface ActivitySnapshot {
@@ -91,6 +93,17 @@ export interface ActivityTracker {
      *        member is reported stuck in that case regardless of peer activity.
      */
     endSweep(hasWorkAvailable: boolean): ActivitySnapshot;
+    /**
+     * Share of the currently tracked staff that gained work in the last `days` sweeps,
+     * or null until `days` sweeps of work could have been observed (the first sweep
+     * after a load is a baseline only). Call after `endSweep`.
+     *
+     * Read-only: it does not feed `fleetUnderworked` or `stuck`. Added for #32, where
+     * the lifetime definition of "active" is only ever false in the days after a load.
+     * Staff hired inside the window with no job yet count as inactive, which is the
+     * point: an idle extra hire is exactly what an overstaffing signal should see.
+     */
+    activeFractionWithin(days: number): number | null;
     /** Forgets everything — use when the roster is deliberately reset. */
     reset(): void;
 }
@@ -99,6 +112,8 @@ export function createActivityTracker(minDays?: number): ActivityTracker {
     const threshold = minDays !== undefined ? minDays : DEFAULT_MIN_DAYS;
     let records: Record<number, ActivityRecord> = {};
     let workThisSweep = 0;
+    /** Completed sweeps. Also the index of the sweep currently being observed. */
+    let sweepCount = 0;
 
     return {
         observe(peepId: number, workTotal: number): void {
@@ -106,7 +121,7 @@ export function createActivityTracker(minDays?: number): ActivityTracker {
             if (existing === undefined) {
                 // First sighting: record the baseline without judging it. A newly hired
                 // handyman has swept nothing yet and is not stuck.
-                records[peepId] = { work: workTotal, lifetime: 0, days: 0, seen: true };
+                records[peepId] = { work: workTotal, lifetime: 0, days: 0, seen: true, lastWorkSweep: -1 };
                 return;
             }
             const gained = workTotal - existing.work;
@@ -114,12 +129,14 @@ export function createActivityTracker(minDays?: number): ActivityTracker {
                 workThisSweep += gained;
                 existing.lifetime += gained;
                 existing.work = workTotal;
+                existing.lastWorkSweep = sweepCount;
             } else if (gained < 0) {
                 // Counters are cumulative and never decrease, so a decrease means the
                 // peep id was recycled. Re-baseline rather than recording negative work.
                 existing.work = workTotal;
                 existing.lifetime = 0;
                 existing.days = 0;
+                existing.lastWorkSweep = -1;
             }
             existing.days++;
             existing.seen = true;
@@ -162,12 +179,25 @@ export function createActivityTracker(minDays?: number): ActivityTracker {
 
             const workDone = workThisSweep;
             workThisSweep = 0;
+            sweepCount++;
             return { stuck, tracked, active, workDone, fleetUnderworked };
+        },
+
+        activeFractionWithin(days: number): number | null {
+            if (sweepCount < days + 1) return null;
+            let tracked = 0;
+            let active = 0;
+            for (const key in records) {
+                tracked++;
+                if (records[key].lastWorkSweep >= sweepCount - days) active++;
+            }
+            return tracked > 0 ? active / tracked : null;
         },
 
         reset(): void {
             records = {};
             workThisSweep = 0;
+            sweepCount = 0;
         },
     };
 }

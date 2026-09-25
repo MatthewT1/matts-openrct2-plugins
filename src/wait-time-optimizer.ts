@@ -266,6 +266,12 @@ registerPlugin({
         // day count, and interventions need a day-granularity axis to window around -
         // so the plugin keeps its own, incremented once per "interval.day".
         let dayCounter = 0;
+        // Rides that broke down since the last cache pass (#15). A breakdown between two
+        // daily readings would otherwise hide inside a throughput day as a capacity drop.
+        let brokeSinceLastPass: Record<number, boolean> = {};
+        context.subscribe("ride.breakdown", (e: RideBreakdownArgs) => {
+            brokeSinceLastPass[e.rideId] = true;
+        });
 
         /** How many rides this pass carried a given verdict. */
         function countPressure(want: QueuePressure): number {
@@ -307,7 +313,8 @@ registerPlugin({
                 // verdict newly becomes "rising" - a ride that stays rising for several
                 // consecutive days must anchor to when it FIRST tripped, not keep
                 // sliding the window forward every day it remains flagged.
-                intervention.observe(r.id, r.name, dayCounter, qt);
+                intervention.observe(r.id, r.name, dayCounter, qt, r.totalCustomers,
+                    (r.breakdown as string) !== "none" || brokeSinceLastPass[r.id] === true);
                 if (pressure === "rising" && lastQueuePressure[r.id] !== "rising") {
                     intervention.recordIntervention(r.id, dayCounter, "w2-preemptive");
                 }
@@ -340,6 +347,7 @@ registerPlugin({
             lastQueuePressure = nextLastQueuePressure;
             queueTrend.endPass();
             intervention.endPass();
+            brokeSinceLastPass = {};
         }
 
         /**

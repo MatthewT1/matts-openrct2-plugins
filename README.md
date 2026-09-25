@@ -45,6 +45,11 @@ Handles handymen, litter, benches, bins and guest facilities.
   in one area have kept going without one across eight full passes over the park, so a
   crowd that happens to be passing through doesn't trigger a build.
 
+<img src="docs/images/plugin-built-amenities.png" alt="Toilet, benches and bins placed by Trash Manager along the path below the Woodchip coaster" width="480">
+
+*Everything here was placed by the plugin: the toilet, the benches and the bins along the
+path below the Woodchip coaster.*
+
 ### Mechanic Manager
 
 Handles mechanics, inspections and breakdowns.
