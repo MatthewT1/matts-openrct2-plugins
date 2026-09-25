@@ -1,6 +1,6 @@
 {
 	"name": "openrct2-plugins",
-	"version": "1.3.0",
+	"version": "1.4.0",
 	"description": "OpenRCT2 park management plugins: adaptive staffing, cleanliness, ride tuning, facilities, entertainers, marketing",
 	"private": true,
 	"type": "module",
