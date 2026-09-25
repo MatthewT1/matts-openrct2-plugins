@@ -7,6 +7,11 @@
  * per line. There is deliberately no "evaluate this code" command.
  *
  *   {"cmd":"hello"}                     -> {"type":"hello", ...state, plugins}
+ *   {"cmd":"settings","set":{...},"keys":{...}}
+ *                                       -> {"type":"settings", stored}
+ *       set:  { "<plugin name>": { "<key>": true|false } } written to that plugin's park
+ *             storage (booleans only; anything else is refused)
+ *       keys: { "<plugin name>": ["<key>", ...] } read back after writing
  *   {"cmd":"start","days":60,"speed":4} -> {"type":"day", ...snapshot} once at start and
  *                                          after every in-game day, then {"type":"done"}
  *                                          (the game is paused again when done)
@@ -99,6 +104,32 @@ registerPlugin({
             });
         }
 
+        function settings(set, keys) {
+            var p, k;
+            for (p in set || {}) {
+                for (k in set[p]) {
+                    if (typeof set[p][k] !== "boolean") {
+                        send({ type: "error", error: "setting " + p + "." + k + " is not a boolean" });
+                        return;
+                    }
+                }
+            }
+            for (p in set || {}) {
+                var w = context.getParkStorage(p);
+                for (k in set[p]) w.set(k, set[p][k]);
+            }
+            var stored = {};
+            for (p in keys || {}) {
+                var r = context.getParkStorage(p);
+                stored[p] = {};
+                for (var i = 0; i < keys[p].length; i++) {
+                    var v = r.get(String(keys[p][i]));
+                    stored[p][keys[p][i]] = v === undefined ? null : v;
+                }
+            }
+            send({ type: "settings", stored: stored });
+        }
+
         function start(days, speed) {
             if (daySub) daySub.dispose();
             daysWanted = days;
@@ -124,6 +155,7 @@ registerPlugin({
             var msg;
             try { msg = JSON.parse(line); } catch (e) { send({ type: "error", error: "bad json" }); return; }
             if (msg.cmd === "hello") hello();
+            else if (msg.cmd === "settings") settings(msg.set, msg.keys);
             else if (msg.cmd === "start") start(msg.days | 0, msg.speed | 0);
             else send({ type: "error", error: "unknown cmd " + msg.cmd });
         }

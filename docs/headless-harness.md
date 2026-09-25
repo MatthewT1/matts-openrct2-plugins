@@ -4,16 +4,23 @@ Runs a copy of a save with our plugins **on** and again with them **off**, fast-
 with no game window, and records the park every in-game day. Built for #46.
 
 ```bash
-node tools/headless/run.mjs --save "C:/Users/Matt/Documents/OpenRCT2/save/Thunder Rock.park" --days 60
+node tools/headless/run.mjs --save "C:/Users/Matt/Documents/OpenRCT2/save/Thunder Rock.park" --days 60 --settings all
 ```
+
+**Check the settings before reading the results.** Without `--settings`, the on arm uses
+whatever toggles the save had stored, or the code defaults if the save never ran the
+plugins. Most of the features that matter default **off**: auto sweep, auto benches and
+bins, amenity removal, auto shops, marketing, entertainers, emergency repair and operation
+tuning. A defaults run only tests staffing, mechanics and wait times. `summary.md` lists
+every toggle for the run.
 
 At speed 4 (the default) 60 days take about 105 s per arm, plus a few seconds of start-up.
 Output goes to `harness-runs/<time>-<save>/` (gitignored):
 
 | File | What's in it |
 |---|---|
-| `summary.md` | Start/end/change per arm, the on − off difference, and grouped `ERROR` lines from each game log |
-| `summary.json` | The same numbers, plus which plugin files were used and when they were last built |
+| `summary.md` | Start/end/change per arm, the on − off difference, the on arm's plugin settings, and grouped `ERROR` lines from each game log |
+| `summary.json` | The same numbers and settings, plus which plugin files were used and when they were last built |
 | `<arm>/days.csv` | One row per in-game day: rating, guests, happiness, cash, loan, park and company value, admissions, staff by type, litter, open rides |
 | `<arm>/game.log` | The game's console output for that arm |
 | `<arm>/userdata/` | The throwaway user-data folder the arm ran in |
@@ -27,7 +34,8 @@ Money in `summary.md` is in currency units. The CSV and JSON keep the game's raw
 |---|---|---|
 | `--save <file>` | required | The save to copy. The original is only read. |
 | `--days <n>` | 60 | In-game days to run after the start snapshot. |
-| `--speed <0-4>` | 4 | Game speed. 4 (hyper) is 8× normal. |
+| `--speed <1-4>` | 4 | Game speed. 1 is normal and 4 (hyper) is 8× normal. The game refuses 0. |
+| `--settings <preset or file>` | `save` | The on arm's plugin toggles. `save` leaves them as stored, `defaults` writes the code defaults, and `all` turns every toggle on. A JSON file such as `{"Trash Manager": {"autoAmenities": true}}` sets only the toggles it names. |
 | `--arms on,off` | both | Run just one arm with `--arms on` or `--arms off`. |
 | `--plugins a,b` | our six | Plugin file names for the on arm. Add third-party ones here if you want them included. |
 | `--plugin-dir <dir>` | `Documents/OpenRCT2/plugin` | Where the on arm's plugins are copied from, i.e. the last dev build. |
@@ -43,7 +51,10 @@ Money in `summary.md` is in currency units. The CSV and JSON keep the game's raw
    what runs, and the real `Documents/OpenRCT2` is never written to.
 2. It starts `openrct2.com host <save copy> --headless --user-data-path <folder>`.
 3. `tools/headless/harness-agent.js` is a dev-only plugin that listens on 127.0.0.1. It
-   takes a fixed set of JSON commands, with no way to run arbitrary code. `start` unpauses
+   takes a fixed set of JSON commands, with no way to run arbitrary code. On the on arm,
+   `settings` writes the `--settings` booleans into each plugin's park storage and reads
+   every toggle back. The toggle list is `tools/headless/settings.mjs`, and a test checks
+   it against the `boolSetting` calls in `src/`. `start` unpauses
    the game, sets the speed, and sends a snapshot at the start and after every
    `interval.day`. It pauses the game again when the days are done.
 4. The runner writes the CSV, stops the game, and moves to the next arm. Summary maths is
@@ -62,8 +73,9 @@ Money in `summary.md` is in currency units. The CSV and JSON keep the game's raw
   also makes determinism depend on those cooldowns falling on the same days, which they
   did in the runs above.
 - **The save's own state carries over.** If the save was paused, the agent unpauses it.
-  Plugin settings are read from the save's park storage, so each toggle is whatever it
-  was when the save was made.
+  Plugin settings live in the save's park storage, so with `--settings save` each toggle
+  is whatever it was when the save was made. Use `all` or a file to compare saves on the
+  same footing.
 - **Third-party plugins are left out by default.** Price Manager, Award Eligibility and
   others change cash and rating. Add them to `--plugins` to include them, but note that
   the off arm then only drops ours if you also run an arm with just those.
