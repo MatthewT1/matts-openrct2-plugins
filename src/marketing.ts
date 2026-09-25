@@ -410,23 +410,46 @@ export function createAttributionTracker(initial?: AttributionSnapshot): Attribu
     return { observe, recordStart, summarize, snapshot, reset };
 }
 
-// --- #74: auto-start only with headroom, and only while campaigns pay for themselves ----------
+// --- #74: auto-start only while guests are settled, and only while campaigns pay for themselves ---
 //
 // The #63 study (10 parks, 60 d) found auto-started campaigns bought guests the parks could not
 // hold comfortably (happiness worse in the 4 parks with the biggest guest gains, 'crowded'
 // thoughts up) and did not earn their cost back. These rules gate AUTO starts only; the
 // manual Start buttons are unchanged.
 
-/** Auto-start only while guests are below this share of the guest ceiling. */
-export const AUTO_HEADROOM_SHARE = 0.8;
 /** Days of income history needed before a batch can be judged (the "before" rate). */
 export const PAYBACK_BASELINE_DAYS = 7;
 /** After a batch that did not pay for itself, no auto starts for this many days. */
 export const PAYBACK_COOLDOWN_DAYS = 56;
+/** Days over which happiness and crowding trends are measured. */
+export const TREND_DAYS = 7;
+/** Happiness (0-255) still rising by more than this over TREND_DAYS: wait for it to settle. */
+export const HAPPINESS_SETTLE_RISE = 2;
+/** Share of in-park guests thinking 'crowded' at or above which auto starts wait. */
+export const CROWDED_SHARE_MAX = 0.03;
+/** Rise in the 'crowded' share over TREND_DAYS above which auto starts wait. */
+export const CROWDED_SHARE_RISE = 0.005;
 
-/** Room for more guests: below AUTO_HEADROOM_SHARE of the ceiling, even in difficult-guest parks. */
-export function hasHeadroom(signals: MarketingSignals): boolean {
-    return signals.guests < AUTO_HEADROOM_SHARE * effectiveGuestCeiling(signals);
+/** One day's guest mood: mean in-park happiness (0-255) and share of guests thinking 'crowded'. */
+export interface MoodSample { day: number; happiness: number; crowdedShare: number; }
+
+/**
+ * Why guest mood says auto-start should wait, or null. `history` is oldest first, one sample a
+ * day; `happinessAtLastStart` is the mean happiness on the day of the last auto start (null if none).
+ * #74: in the fast A/B one early campaign stalled happiness while it was still climbing (fresh
+ * guests pull the mean down), with no 'crowded' thoughts at all, so capacity alone is not enough.
+ */
+export function moodHold(history: MoodSample[], happinessAtLastStart: number | null): string | null {
+    if (history.length < TREND_DAYS + 1) return "measuring guest happiness first";
+    const now = history[history.length - 1], then = history[history.length - 1 - TREND_DAYS];
+    if (now.crowdedShare >= CROWDED_SHARE_MAX || now.crowdedShare - then.crowdedShare > CROWDED_SHARE_RISE) {
+        return "guests are feeling crowded";
+    }
+    if (now.happiness - then.happiness > HAPPINESS_SETTLE_RISE) return "guest happiness is still rising";
+    if (happinessAtLastStart !== null && now.happiness < happinessAtLastStart) {
+        return "guest happiness is below its level at the last start";
+    }
+    return null;
 }
 
 /** One day's cumulative park income (raw tenths), for the payback check. */
@@ -469,11 +492,11 @@ export function judgeBatch(batch: AutoBatch, day: number, incomeNow: number): { 
  * blocking.
  */
 export function autoStartHold(
-    signals: MarketingSignals, day: number, pending: AutoBatch | null, cooldownUntil: number, hasBaseline: boolean,
+    day: number, pending: AutoBatch | null, cooldownUntil: number, hasBaseline: boolean, mood: string | null,
 ): string | null {
     if (pending !== null) return "waiting to judge the last campaigns";
     if (day < cooldownUntil) return "the last campaigns did not pay for themselves";
-    if (!hasHeadroom(signals)) return "park near guest capacity";
+    if (mood !== null) return mood;
     if (!hasBaseline) return "measuring income first";
     return null;
 }

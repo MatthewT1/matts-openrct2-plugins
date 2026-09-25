@@ -4,7 +4,7 @@ import {
     WEEKLY_COST, BASE_PROBABILITY, MIN_WEEKS, MAX_WEEKS,
     expectedGuestsPerWeek, costPerGuest, rankCampaigns, createAttributionTracker,
     ATTRIBUTION_WINDOW_DAYS,
-    hasHeadroom, dailyIncomeRate, judgeBatch, autoStartHold, PAYBACK_COOLDOWN_DAYS,
+    moodHold, dailyIncomeRate, judgeBatch, autoStartHold, PAYBACK_COOLDOWN_DAYS,
 } from "./build/marketing.mjs";
 
 let pass = 0, fail = 0;
@@ -271,15 +271,22 @@ function baseSignals(overrides = {}) {
     ok(t.summarize(1).length === 0, "no snapshot -> starts empty, same as before this feature existed");
 }
 
-// --- #74: headroom + payback gate for auto starts --------------------------------
+// --- #74: mood + payback gate for auto starts --------------------------------
 
 {
-    ok(hasHeadroom(baseSignals({ guests: 790, suggestedGuestMaximum: 1000 })), "79% of capacity has headroom");
-    ok(!hasHeadroom(baseSignals({ guests: 800, suggestedGuestMaximum: 1000 })), "80% of capacity has none");
-    ok(!hasHeadroom(baseSignals({ guests: 900, suggestedGuestMaximum: 1000, difficultGuestGeneration: true })),
-        "difficult guest generation doesn't lift the headroom rule");
-    ok(hasHeadroom(baseSignals({ guests: 900, suggestedGuestMaximum: 1000, guestCountObjective: 2000 })),
-        "a guest objective raises the ceiling");
+    const moods = (h, c = 0) => h.map((x, i) => ({ day: i, happiness: x, crowdedShare: Array.isArray(c) ? c[i] : c }));
+    const flat = moods([200, 200, 200, 200, 200, 200, 200, 201]);
+    ok(moodHold(flat.slice(1), null) !== null, "7 samples is not 7 days of mood history");
+    ok(moodHold(flat, null) === null, "settled, uncrowded -> no mood hold");
+    ok(moodHold(moods([200, 200, 200, 200, 200, 200, 200, 203]), null) !== null, "rose 3 in 7 d -> still rising");
+    ok(moodHold(moods([200, 200, 200, 200, 200, 200, 200, 202]), null) === null, "rose 2 in 7 d -> settled");
+    ok(moodHold(flat, 202) !== null, "below happiness at the last start holds");
+    ok(moodHold(flat, 201) === null, "equal to happiness at the last start is fine");
+    ok(moodHold(moods([200, 200, 200, 200, 200, 200, 200, 200], 0.03), null) !== null, "3% crowded holds");
+    ok(moodHold(moods([200, 200, 200, 200, 200, 200, 200, 200], [0, 0, 0, 0, 0, 0, 0, 0.006]), null) !== null,
+        "crowded share rising by 0.6 points holds");
+    ok(moodHold(moods([200, 200, 200, 200, 200, 200, 200, 200], [0.01, 0, 0, 0, 0, 0, 0, 0.015]), null) === null,
+        "crowded share up 0.5 points and under 3% is fine");
 
     const hist = [0, 1, 2, 3, 4, 5, 6, 7].map((d) => ({ day: d, income: d * 100 }));
     ok(dailyIncomeRate(hist.slice(0, 7), 7) === null, "7 samples is not 7 days of history");
@@ -291,13 +298,12 @@ function baseSignals(overrides = {}) {
     ok(paid.paid && paid.extra === 1000, "extra income equal to cost pays");
     ok(!judgeBatch(batch, 24, 5000 + 1400 + 999).paid, "one short does not pay");
 
-    const sig = baseSignals({ guests: 100, suggestedGuestMaximum: 1000 });
-    ok(autoStartHold(sig, 30, null, 0, true) === null, "headroom, baseline, no pending -> go");
-    ok(autoStartHold(sig, 30, batch, 0, true) !== null, "pending batch holds");
-    ok(autoStartHold(sig, 30, null, 31, true) !== null, "cooldown holds");
-    ok(autoStartHold(sig, 31, null, 31, true) === null, "cooldown ends on its day");
-    ok(autoStartHold(sig, 30, null, 0, false) !== null, "no income baseline holds");
-    ok(autoStartHold(baseSignals({ guests: 950, suggestedGuestMaximum: 1000 }), 30, null, 0, true) !== null, "no headroom holds");
+    ok(autoStartHold(30, null, 0, true, null) === null, "baseline, no pending, mood ok -> go");
+    ok(autoStartHold(30, batch, 0, true, null) !== null, "pending batch holds");
+    ok(autoStartHold(30, null, 31, true, null) !== null, "cooldown holds");
+    ok(autoStartHold(31, null, 31, true, null) === null, "cooldown ends on its day");
+    ok(autoStartHold(30, null, 0, false, null) !== null, "no income baseline holds");
+    ok(autoStartHold(30, null, 0, true, "crowded") === "crowded", "mood hold passes through");
     ok(PAYBACK_COOLDOWN_DAYS === 56, "cooldown is 8 weeks");
 }
 

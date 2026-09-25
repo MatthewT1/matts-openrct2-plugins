@@ -21,7 +21,8 @@ import {
     ALL_CAMPAIGN_TYPES, CAMPAIGN_NAMES, CAMPAIGN_FOOD_OR_DRINK_FREE, CampaignType,
     MIN_WEEKS, MAX_WEEKS, WEEKLY_COST, rankCampaigns, createAttributionTracker,
     CampaignRankingResult, MarketingSignals, AttributionTracker, AttributionSnapshot,
-    AutoBatch, IncomeSample, PAYBACK_BASELINE_DAYS, PAYBACK_COOLDOWN_DAYS, autoStartHold, dailyIncomeRate, judgeBatch,
+    AutoBatch, IncomeSample, MoodSample, PAYBACK_BASELINE_DAYS, PAYBACK_COOLDOWN_DAYS, TREND_DAYS,
+    autoStartHold, dailyIncomeRate, judgeBatch, moodHold,
 } from "./marketing";
 import { spendGate } from "./cash-gate";
 
@@ -104,6 +105,24 @@ registerPlugin({
         let pendingBatch: AutoBatch | null = storage.get<AutoBatch>("autoBatch") ?? null;
         let cooldownUntil = storage.get<number>("autoCooldownUntil") ?? 0;
         let lastHold: string | null = null;
+        const mood: MoodSample[] = storage.get<MoodSample[]>("mood") ?? [];
+        let happinessAtLastStart = storage.get<number>("happinessAtLastStart") ?? null;
+
+        /** #74: today's mean in-park happiness and 'crowded' share, for the auto-start mood gate. */
+        function updateMood(): void {
+            const guests = map.getAllEntities("guest");
+            let inPark = 0, happy = 0, crowded = 0;
+            for (const g of guests) {
+                if (!g.isInPark) continue;
+                inPark++;
+                happy += g.happiness;
+                for (const t of g.thoughts) if (t.type === "crowded") { crowded++; break; }
+            }
+            if (inPark === 0) return;
+            mood.push({ day: dayCounter, happiness: happy / inPark, crowdedShare: crowded / inPark });
+            if (mood.length > TREND_DAYS + 1) mood.shift();
+            storage.set("mood", mood);
+        }
 
         function monthNow(type: ExpenditureType): { cur: number; prev: number } {
             const arr = park.getMonthlyExpenditure(type);
@@ -322,7 +341,7 @@ registerPlugin({
          * candidate's lump sum could still exceed the surplus above that floor, so
          * both limits are tracked explicitly rather than assumed compatible.
          */
-        function autoStartCampaigns(ranked: CampaignRankingResult["ranked"], signals: MarketingSignals): void {
+        function autoStartCampaigns(ranked: CampaignRankingResult["ranked"]): void {
             lastHold = null;
             if (!isAutoManage()) return;
             // #44: players cannot market in a no-money park (no Finances window), so neither do we.
@@ -331,9 +350,10 @@ registerPlugin({
                 return;
             }
 
-            // #74: only with headroom, one batch at a time, and not after a batch that didn't pay.
+            // #74: only while guests are settled, one batch at a time, and not after a batch that didn't pay.
             const rate = income === null ? null : dailyIncomeRate(income.history, PAYBACK_BASELINE_DAYS);
-            lastHold = ranked.length === 0 ? null : autoStartHold(signals, dayCounter, pendingBatch, cooldownUntil, rate !== null);
+            lastHold = ranked.length === 0 ? null
+                : autoStartHold(dayCounter, pendingBatch, cooldownUntil, rate !== null, moodHold(mood, happinessAtLastStart));
             if (lastHold !== null) {
                 dbg.count("autoHeld");
                 return;
@@ -369,6 +389,8 @@ registerPlugin({
             if (batchCost > 0 && income !== null && rate !== null) {
                 pendingBatch = { startDay: dayCounter, cost: batchCost, incomeAtStart: income.cum, dailyIncomeBefore: rate, days: weeksToStart * 7 };
                 storage.set("autoBatch", pendingBatch);
+                happinessAtLastStart = mood.length > 0 ? mood[mood.length - 1].happiness : null;
+                storage.set("happinessAtLastStart", happinessAtLastStart);
             }
         }
 
@@ -536,7 +558,7 @@ registerPlugin({
                         tooltip: "Starts campaigns from the ranked list above, best value first, up to "
                             + formatMoney(AUTO_CASH_BUDGET_PER_PASS / 10) + " committed per day and never below the "
                             + formatMoney(MARKETING_MIN_CASH / 10) + " cash reserve. Never starts a second campaign of a "
-                            + "type already running. Starts one campaign at a time, only while guests are below 80% of the park's capacity"
+                            + "type already running. Starts one campaign at a time, only once guest happiness has settled, is not below its level at the last start, and guests are not feeling crowded"
                             + "; when it ends it checks the extra income against the cost, and after one "
                             + "that did not pay for itself it waits " + PAYBACK_COOLDOWN_DAYS + " days. Off by default - this spends real money on its own.",
                         isChecked: isAutoManage(),
@@ -558,6 +580,7 @@ registerPlugin({
             attribution.observe(dayCounter, park.guests);
             persistAttribution();
             updateIncome();
+            updateMood();
             judgePending();
 
             lastTracked = upkeepCampaigns(loadTracked());
@@ -567,7 +590,7 @@ registerPlugin({
             lastFoodOrDrinkStalls = rideScan.foodOrDrinkStalls;
             const signals = buildSignals(rideScan, lastTracked);
             lastRanking = dbg.time("day.rankCampaigns", () => rankCampaigns(signals));
-            dbg.time("day.autoStart", () => autoStartCampaigns(lastRanking.ranked, signals));
+            dbg.time("day.autoStart", () => autoStartCampaigns(lastRanking.ranked));
             refreshWindow();
             dbg.flushStats(parkContext(rideScan));
         });
