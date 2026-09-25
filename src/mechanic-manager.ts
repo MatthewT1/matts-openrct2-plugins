@@ -44,7 +44,7 @@ registerPlugin({
         const storage: Configuration = context.getParkStorage();
         const settings = {
             autoManage: boolSetting(storage, "autoManage", true),
-            emergencyRepair: boolSetting(storage, "emergencyRepair", false),
+            emergencyRepair: boolSetting(storage, "emergencyRepair", true),
             adaptiveMechanics: boolSetting(storage, "adaptiveMechanics", true),
         };
 
@@ -748,7 +748,7 @@ registerPlugin({
                         type: "checkbox", name: "chkEmergencyRepair",
                         x: 8, y: 314, width: 264, height: 14,
                         text: "Emergency repair stuck rides  (cheat)",
-                        tooltip: "Clears the breakdown on any ride still broken after " + EMERGENCY_REPAIR_DAYS + " days. This is a CHEAT: no mechanic travels and no reliability is restored, the ride simply stops being broken. It exists for rides no mechanic can physically reach, which is a long-standing pathfinding problem in the game itself. Off by default.",
+                        tooltip: "Clears the breakdown on any ride still broken after " + EMERGENCY_REPAIR_DAYS + " days. This is a CHEAT: no mechanic travels and no reliability is restored, the ride simply stops being broken. It exists for rides no mechanic can physically reach, which is a long-standing pathfinding problem in the game itself. On by default (#51).",
                         isChecked: isEmergencyRepair(),
                         onChange: (checked: boolean) => { settings.emergencyRepair.set(checked); }
                     },
