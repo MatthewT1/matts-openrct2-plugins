@@ -50,6 +50,7 @@ openrct2 plugin/
 │   ├── staff-extras.ts         # entertainers (security measured zero demand, closed)
 │   ├── path-connector.ts
 │   ├── debug.ts                # shared opt-in telemetry channel
+│   ├── money.ts                # money text in the player's currency (#31)
 │   ├── hotspots.ts             # litter clustering (pure, unit-tested)
 │   ├── staff-activity.ts       # idle/stuck staff detection (pure, unit-tested)
 │   ├── staffing.ts             # closed-loop staffing controller (pure, unit-tested)
@@ -129,6 +130,19 @@ node ./node_modules/nodemon/bin/nodemon.js --watch ./src --ext js,ts --exec "nod
 > OpenRCT2 only reloads plugins **on park load**, so exit to the title screen and
 > reload the park to pick up a new build — unless `enable_hot_reloading` is set under
 > `[plugin]` in `config.ini`.
+
+### OpenRCT2 source (`gamesrc/`)
+
+`docs/api-reference.md` and code comments cite file:line in the OpenRCT2 source. `gamesrc/`
+is gitignored, so clone it at the same commit or the line numbers drift:
+
+```bash
+git clone https://github.com/OpenRCT2/OpenRCT2 gamesrc/OpenRCT2
+```
+
+```bash
+git -C gamesrc/OpenRCT2 checkout 6fb525e906
+```
 
 ### TypeScript config
 
