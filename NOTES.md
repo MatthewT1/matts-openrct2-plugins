@@ -19,6 +19,7 @@ game's plugin folder.
 | [docs/scale-audit.md](docs/scale-audit.md) | Read-only audit of how each controller behaves across park sizes and regimes. |
 | [docs/HISTORY.md](docs/HISTORY.md) | Session-by-session development timeline (reconstructed). |
 | [GitHub Issues](https://github.com/MatthewT1/matts-openrct2-plugins/issues) | Current fix/optimisation backlog, labelled by priority (P1–P3) and whether it needs the game. |
+| [docs/headless-harness.md](docs/headless-harness.md) | Headless plugins-on vs plugins-off runs: how to run, output files, determinism and real-time-cooldown caveats (#46). |
 | [docs/handyman-scale-fix.md](docs/handyman-scale-fix.md) | Completed fix (all 4 phases verified 2026-09-20) for the adaptive handyman controller under-hiring as a park scales up (guests 3x, handymen dropped). |
 
 **Start here if you are:**
@@ -26,6 +27,7 @@ game's plugin folder.
 - changing plugin behaviour → [research.md](docs/research.md), then [roadmap.md](docs/roadmap.md)
 - touching anything that runs periodically → [performance.md](docs/performance.md)
 - unsure what an API property means or returns → [api-reference.md](docs/api-reference.md)
+- measuring whether the plugins help a park → [headless-harness.md](docs/headless-harness.md)
 - chasing a stutter or a bug → [performance.md § debug channel](docs/performance.md#debug-channel)
 
 ---
@@ -66,11 +68,15 @@ openrct2 plugin/
 │   ├── facilities.ts           # facility placement planner (pure, unit-tested)
 │   ├── queues.ts               # queue trend + per-ride intervention attribution (pure)
 │   └── entertainer-targeting.ts # entertainer ride selection + patrol boxes (pure)
-├── tests/                      # 505 tests over the pure modules
+├── tests/                      # 523 tests over the pure modules + harness summary
 │   ├── run.mjs                 # compiles src/*.ts, runs every *.test.mjs
 │   └── *.test.mjs
 ├── tools/
-│   └── log-sink.mjs            # TCP sink for the debug channel
+│   ├── log-sink.mjs            # TCP sink for the debug channel
+│   └── headless/               # headless on/off test harness (#46)
+│       ├── run.mjs             # runner: builds user-data per arm, drives the game, writes CSV + summary
+│       ├── harness-agent.js    # dev-only plugin, fixed commands over 127.0.0.1; never deployed
+│       └── summary.mjs         # pure summary maths (unit-tested)
 ├── docs/                       # see table above
 ├── gamesrc/OpenRCT2/           # full OpenRCT2 source clone (read-only reference)
 │   └── distribution/scripting/openrct2.d.ts   <- authoritative type definitions
@@ -98,8 +104,13 @@ node ./node_modules/typescript/bin/tsc --noEmit -p tsconfig.json
 ```
 
 ```bash
-# Run the test suite (505 tests over the pure logic modules)
+# Run the test suite (523 tests over the pure logic modules)
 node tests/run.mjs
+```
+
+```bash
+# Headless plugins-on vs plugins-off run (~4 min for 60 days); see docs/headless-harness.md
+node tools/headless/run.mjs --save "C:/Users/Matt/Documents/OpenRCT2/save/Thunder Rock.park" --days 60
 ```
 
 > **The decision logic lives in pure modules on purpose.** `hotspots`, `staff-activity`,
