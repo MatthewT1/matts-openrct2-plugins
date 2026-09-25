@@ -93,5 +93,65 @@ function run(t, ids, days, work, hasWork = true) {
   ok(same, "snapshots identical whether or not activeFractionWithin is called");
 }
 
+// --- #32 phase 2: fleetUnderworkedWithin (the mechanic release signal)
+{
+  const t = createActivityTracker(20);
+  // Nobody ever works: the window says underworked, but not before it has warmed up.
+  run(t, [1, 2, 3], 14, () => 0);
+  ok(t.fleetUnderworkedWithin(14) === false, "warm-up gate: no release signal before 14 days are observable");
+  run(t, [1, 2, 3], 1, () => 0);
+  ok(t.fleetUnderworkedWithin(14) === true, "15th sweep: window valid, 0 of 3 active -> underworked");
+}
+{
+  const t = createActivityTracker(20);
+  // Exactly half active is NOT underworked (strict < 0.5, same as the lifetime flag).
+  run(t, [1, 2], 15, (id, d) => id === 1 ? d : 0);
+  ok(t.fleetUnderworkedWithin(14) === false, "1 of 2 active = 0.5 is not underworked");
+}
+{
+  // The +2 overstaff case: 5 working mechanics, then two idle hires.
+  const t = createActivityTracker(20);
+  const work = (id, d) => id <= 5 ? Math.floor(d / 10) : 0;   // a job every 10 days
+  run(t, [1, 2, 3, 4, 5], 20, work);
+  ok(t.fleetUnderworkedWithin(14) === false, "5 of 5 active before the extra hires");
+  run(t, [1, 2, 3, 4, 5, 6, 7], 1, (id, d) => work(id, d + 20));
+  ok(t.fleetUnderworkedWithin(14) === false, "5 of 7 active: two idle extras alone do not trip it");
+  ok(Math.abs(t.activeFractionWithin(14) - 5 / 7) < 1e-9, "fraction 5/7 with two idle extras");
+}
+{
+  // Lifetime flag false, window flag true: the #32 bug, now acted on.
+  const t = createActivityTracker(20);
+  const snaps = run(t, [1, 2, 3], 30, (id, d) => d < 5 ? d : 5);
+  ok(snaps[29].fleetUnderworked === false, "lifetime: everyone worked once, never underworked");
+  ok(t.fleetUnderworkedWithin(14) === true, "window: nobody worked in 14 days, underworked");
+}
+
+// --- releaseOrder: idle first, then least recently active, ties in input order
+{
+  const t = createActivityTracker(20);
+  // id 1 worked on sweep 2, ids 2 and 4 on sweep 8, id 3 never.
+  run(t, [1, 2, 3, 4], 10, (id, d) =>
+    id === 1 ? (d >= 2 ? 1 : 0) : id === 3 ? 0 : (d >= 8 ? 1 : 0));
+  const order = t.releaseOrder([2, 1, 4, 3]);
+  ok(JSON.stringify(order) === "[3,1,2,4]", "never-worked, then oldest job, ties keep input order; got " + JSON.stringify(order));
+  ok(JSON.stringify(t.releaseOrder([9, 2])) === "[9,2]", "an untracked id (just hired) sorts first");
+  const input = [4, 3];
+  t.releaseOrder(input);
+  ok(JSON.stringify(input) === "[4,3]", "input array is not mutated");
+}
+{
+  // Releasing idle-first stops at the right fleet.
+  const t = createActivityTracker(20);
+  const work = (id, d) => id <= 3 ? Math.floor(d / 5) : 0;     // 1-3 busy, 4-6 idle
+  run(t, [1, 2, 3, 4, 5, 6], 20, work);
+  ok(t.fleetUnderworkedWithin(14) === false, "3 of 6 = 0.5: not underworked");
+  run(t, [1, 2, 3, 4, 5, 6, 7], 1, (id, d) => work(id, d + 20));
+  ok(t.fleetUnderworkedWithin(14) === true, "3 of 7 after one more idle hire: underworked");
+  const fired = t.releaseOrder([1, 2, 3, 4, 5, 6, 7])[0];
+  ok(fired >= 4, "the released mechanic is an idle one, got " + fired);
+  run(t, [1, 2, 3, 4, 5, 6, 7].filter(id => id !== fired), 1, (id, d) => work(id, d + 21));
+  ok(t.fleetUnderworkedWithin(14) === false, "after releasing an idle one the signal clears");
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail) process.exitCode = 1;

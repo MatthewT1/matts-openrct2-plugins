@@ -162,7 +162,7 @@ fast-forwarding.
 | `handymenStuck` / `mechanicsStuck` | Staff idle for several days while work existed. |
 | `patrolActionsManual` vs `patrolActionsDaily` | Button-triggered bulk clear vs daily delta sync. Kept separate because a button press otherwise looks identical to a bookkeeping bug. |
 | `breakdowns` | Actual `ride.breakdown` events. |
-| `fleetUnderworked` / `mechanicFleetUnderworked` | Days most of the fleet had nothing to do. Drives adaptive staffing. |
+| `fleetUnderworked` / `mechanicFleetUnderworked` | Days most of the fleet had nothing to do (handymen: ever; mechanics: in the last 14 days, #32). Drives adaptive staffing. `mechanicFleetUnderworkedLifetime` logs the old mechanic definition for comparison. |
 | `capacityBoundRides` | Rides stuck queueing despite recommended settings already applied. |
 
 Each `stats` record also carries a `park` object with guest count, staff counts, path

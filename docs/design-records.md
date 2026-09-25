@@ -235,6 +235,30 @@ floor — so it inherits the same worst case: identical to current behaviour.
 **Hold until the rewritten handyman controller is validated in the field.** MS copies its
 design; if that still misbehaves, fix it once rather than twice.
 
+### M6 — Rolling-window release signal for mechanics (#32)
+
+**Status:** built, in-game test pending (Session 6) · **Basis:** measured · **Cost:** ~0ms
+
+The lifetime definition of "active" (has this mechanic *ever* done a job?) only fired in
+the days after a load: once every mechanic had fixed one thing, the fleet was "working"
+forever, so the controller could never release. A mechanic does about **one job every
+15 days** (0.062-0.073 jobs/mechanic/day across five runs), so the window has to be long.
+
+Mechanics now release on "fewer than half did a job in the last **N = 14** days", with
+no signal until 14 days have been observed after a load. Handymen keep the lifetime flag.
+
+- **Why 14:** phase 1 logged N = 7/10/14/21 in shadow over 90 steady days at a fleet of 5
+  that was holding the park. Signal true on 62% / 42% / **16%** / 1% of days. The rule
+  set in advance was the smallest N true on at most 20% of days.
+- **Release order:** the controller fires the mechanic idle longest, not the first in
+  entity order. Firing an active one would lower the active fraction and invite another
+  release.
+- **Limit:** the controller never goes above the formula target. On Thunder Rock the
+  formula is 5 and the fleet sits at 5, so this signal only matters for probing *below*
+  the formula.
+
+Plan, data and exit criterion: [#32](https://github.com/MatthewT1/matts-openrct2-plugins/issues/32).
+
 ### Cost reporting
 
 **Status:** done (2026-09-20) · **Basis:** source-verified · **Cost:** ~0ms

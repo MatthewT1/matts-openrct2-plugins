@@ -104,6 +104,20 @@ export interface ActivityTracker {
      * point: an idle extra hire is exactly what an overstaffing signal should see.
      */
     activeFractionWithin(days: number): number | null;
+    /**
+     * Rolling-window version of `fleetUnderworked`: fewer than half the tracked staff
+     * gained work in the last `days` sweeps. False while the window is still warming
+     * up after a load, so a fresh tracker can never shed staff on no evidence.
+     * Mechanics act on this (#32, N = 14); handymen stay on the lifetime flag.
+     */
+    fleetUnderworkedWithin(days: number): boolean;
+    /**
+     * The given staff ids ordered for release: never-worked first, then least recently
+     * worked. Unknown ids sort first. Firing an active member instead would lower the
+     * active fraction and invite another release, a ratchet the window signal would
+     * otherwise feed. Returns a new array; the tie order is the input order.
+     */
+    releaseOrder(ids: number[]): number[];
     /** Forgets everything — use when the roster is deliberately reset. */
     reset(): void;
 }
@@ -114,6 +128,17 @@ export function createActivityTracker(minDays?: number): ActivityTracker {
     let workThisSweep = 0;
     /** Completed sweeps. Also the index of the sweep currently being observed. */
     let sweepCount = 0;
+
+    function activeFractionWithin(days: number): number | null {
+        if (sweepCount < days + 1) return null;
+        let tracked = 0;
+        let active = 0;
+        for (const key in records) {
+            tracked++;
+            if (records[key].lastWorkSweep >= sweepCount - days) active++;
+        }
+        return tracked > 0 ? active / tracked : null;
+    }
 
     return {
         observe(peepId: number, workTotal: number): void {
@@ -183,15 +208,21 @@ export function createActivityTracker(minDays?: number): ActivityTracker {
             return { stuck, tracked, active, workDone, fleetUnderworked };
         },
 
-        activeFractionWithin(days: number): number | null {
-            if (sweepCount < days + 1) return null;
-            let tracked = 0;
-            let active = 0;
-            for (const key in records) {
-                tracked++;
-                if (records[key].lastWorkSweep >= sweepCount - days) active++;
-            }
-            return tracked > 0 ? active / tracked : null;
+        activeFractionWithin: activeFractionWithin,
+
+        fleetUnderworkedWithin(days: number): boolean {
+            const f = activeFractionWithin(days);
+            return f !== null && f < PEER_ACTIVE_FRACTION;
+        },
+
+        releaseOrder(ids: number[]): number[] {
+            const last = (id: number): number =>
+                records[id] !== undefined ? records[id].lastWorkSweep : -1;
+            // Decorate with the input index so ties keep their order on any engine.
+            return ids
+                .map((id, i) => ({ id: id, i: i, last: last(id) }))
+                .sort((a, b) => a.last - b.last || a.i - b.i)
+                .map(e => e.id);
         },
 
         reset(): void {
