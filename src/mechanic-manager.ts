@@ -121,6 +121,10 @@ registerPlugin({
         // far better "was there work to do" signal than any derived ride property.
         let breakdownsToday = 0;
         let lastFleetUnderworked = false;
+        // #32 phase 1 (shadow): rolling-window active fraction for candidate windows,
+        // logged only. The controller still uses the lifetime `fleetUnderworked`.
+        const SHADOW_WINDOW_DAYS = [7, 10, 14, 21];
+        let shadowActiveFraction: Record<string, number | null> = {};
 
         // --- Data helpers ---
 
@@ -523,6 +527,12 @@ registerPlugin({
             lastFleetUnderworked = snap.fleetUnderworked;
             dbg.count("mechanicWorkDone", snap.workDone);
             if (snap.fleetUnderworked) dbg.count("mechanicFleetUnderworked");
+            shadowActiveFraction = {};
+            for (let i = 0; i < SHADOW_WINDOW_DAYS.length; i++) {
+                const n = SHADOW_WINDOW_DAYS[i];
+                const f = activity.activeFractionWithin(n);
+                shadowActiveFraction["n" + n] = f === null ? null : Math.round(f * 100) / 100;
+            }
 
             if (snap.stuck.length === 0) {
                 lastStuckReport = 0;
@@ -564,6 +574,7 @@ registerPlugin({
                 stuckBroken: brokenAtLeast(EMERGENCY_REPAIR_DAYS),
                 unattendedBreakdowns: brokenAtLeast(UNATTENDED_DAYS),
                 longestBrokenDays: longestBrokenDays(),
+                activeFraction: shadowActiveFraction,
             };
             breakdownsToday = 0;
             return ctx;
