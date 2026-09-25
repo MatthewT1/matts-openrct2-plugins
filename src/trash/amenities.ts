@@ -9,6 +9,7 @@ import { planAmenities, AmenityDemand, AmenityKind, AmenitySite } from "../ameni
 import { DebugChannel } from "../debug";
 import { MapScan } from "./map-scan";
 import { TrashSettings } from "./shared";
+import { spendGate } from "../cash-gate";
 
 export function createAmenityManager(
     storage: Configuration, settings: TrashSettings, dbg: DebugChannel, scan: MapScan,
@@ -441,10 +442,13 @@ export function createAmenityManager(
     function manageAmenities(): void {
         if (!isAutoAmenities()) return;
 
-        if (park.cash < AMENITY_MIN_CASH) {
+        // #44: a no-money park is never charged, so the floor is skipped there (counted).
+        const gate = spendGate(park.cash, AMENITY_MIN_CASH, park.getFlag("noMoney"), "build");
+        if (gate === "lowCash") {
             dbg.count("amenitySkippedLowCash");
             return;
         }
+        if (gate === "noMoneyPark") dbg.count("amenityNoMoneyPark");
 
         const demands = collectDemands();
         if (demands.length === 0) return;

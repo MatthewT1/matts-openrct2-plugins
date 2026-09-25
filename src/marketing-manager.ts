@@ -22,6 +22,7 @@ import {
     MIN_WEEKS, MAX_WEEKS, WEEKLY_COST, rankCampaigns, createAttributionTracker,
     CampaignRankingResult, MarketingSignals, AttributionTracker, AttributionSnapshot,
 } from "./marketing";
+import { spendGate } from "./cash-gate";
 
 registerPlugin({
     name: "Marketing Manager",
@@ -274,6 +275,11 @@ registerPlugin({
          */
         function autoStartCampaigns(ranked: CampaignRankingResult["ranked"]): void {
             if (!isAutoManage()) return;
+            // #44: players cannot market in a no-money park (no Finances window), so neither do we.
+            if (spendGate(park.cash, MARKETING_MIN_CASH, park.getFlag("noMoney"), "marketing") === "unavailable") {
+                dbg.count("autoSkippedNoMoneyPark");
+                return;
+            }
 
             let budgetLeft = AUTO_CASH_BUDGET_PER_PASS;
             let cashLeft = park.cash - MARKETING_MIN_CASH;

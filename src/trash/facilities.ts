@@ -6,6 +6,7 @@
 
 import { isDebugEnabled, DebugChannel } from "../debug";
 import { TrashSettings } from "./shared";
+import { spendGate } from "../cash-gate";
 import {
     createNeedAccumulator, createSampleRotation, findGaps, describeGap,
     CLUSTER_MIN_GUESTS, NeedKind, NeedCounts, NeedGap, Facility,
@@ -644,10 +645,13 @@ export function createFacilityManager(settings: TrashSettings, dbg: DebugChannel
             facilityBuilding = false;
         }
 
-        if (park.cash < FACILITY_MIN_CASH) {
+        // #44: a no-money park is never charged, so the floor is skipped there (counted).
+        const gate = spendGate(park.cash, FACILITY_MIN_CASH, park.getFlag("noMoney"), "build");
+        if (gate === "lowCash") {
             dbg.count("facilitySkippedLowCash");
             return;
         }
+        if (gate === "noMoneyPark") dbg.count("facilityNoMoneyPark");
 
         const confirmed = facilityTracker.pending().filter(function (g): boolean {
             return g.sweeps >= DEFAULT_FACILITY_OPTIONS.confirmSweeps;
