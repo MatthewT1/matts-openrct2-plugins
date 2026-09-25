@@ -50,6 +50,10 @@ Handles handymen, litter, benches, bins and guest facilities.
 *Everything here was placed by the plugin: the toilet, the benches and the bins along the
 path below the Woodchip coaster.*
 
+<img src="docs/images/plugin-built-stall-elevated.png" alt="A plugin-built food stall on a raised wooden walkway, next to a dinosaur statue, with guests carrying umbrellas in the rain" width="400">
+
+*A food stall the plugin built on a raised walkway. It is placed at the height of the path it serves.*
+
 ### Mechanic Manager
 
 Handles mechanics, inspections and breakdowns.
