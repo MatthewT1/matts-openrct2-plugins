@@ -1,5 +1,5 @@
 import { createQueueTrendTracker, FLOOR_MINUTES, RISE_OBSERVATIONS,
-    createInterventionTracker, ATTRIBUTION_WINDOW_DAYS } from "./build/queues.mjs";
+    createInterventionTracker, ATTRIBUTION_WINDOW_DAYS, THROUGHPUT_QUEUE_MINUTES } from "./build/queues.mjs";
 let pass=0, fail=0; const ok=(c,m)=>{ c?pass++:(fail++,console.log("FAIL:",m)); };
 const WARN = 5;
 
@@ -193,6 +193,126 @@ ok(ATTRIBUTION_WINDOW_DAYS === 5, "shipped attribution window");
     it.recordIntervention(1, 1, "w2-preemptive");
     it.reset();
     ok(it.summarize(1).length === 0, "reset drops all state");
+}
+
+// ================= #15: throughput over queued days =================
+// Feed one reading per day. spec(day) -> {q, c, b} (queue minutes, cumulative customers, broken).
+function feed(it, from, to, spec) {
+    for (let d = from; d <= to; d++) {
+        const r = spec(d);
+        it.observe(1, "Ride A", d, r.q, r.c, r.b);
+        it.endPass();
+    }
+}
+
+// --- steady ride, then capacity doubles after the intervention
+{
+    const it = createInterventionTracker();
+    feed(it, 0, 10, d => ({ q: 4, c: d * 100 }));          // 100/day
+    it.recordIntervention(1, 10, "ops-set");
+    feed(it, 11, 15, d => ({ q: 4, c: 1000 + (d - 10) * 200 }));  // 200/day
+    const r = it.summarize(15)[0];
+    ok(r.throughputBefore === 100 && r.qualifyingDaysBefore === ATTRIBUTION_WINDOW_DAYS,
+        "before = 100/day over 5 queued days, got " + r.throughputBefore + " / " + r.qualifyingDaysBefore);
+    ok(r.throughputAfter === 200 && r.qualifyingDaysAfter === ATTRIBUTION_WINDOW_DAYS,
+        "after = 200/day over 5 queued days, got " + r.throughputAfter + " / " + r.qualifyingDaysAfter);
+    ok(r.throughputDeltaPct === 100, "delta +100%, got " + r.throughputDeltaPct);
+}
+
+// --- guest count changes do not matter: a ride whose queue grows but capacity is flat reads 0%
+{
+    const it = createInterventionTracker();
+    feed(it, 0, 10, d => ({ q: 2 + d, c: d * 100 }));
+    it.recordIntervention(1, 10, "w2-preemptive");
+    feed(it, 11, 15, d => ({ q: 2 + d * 2, c: d * 100 }));
+    const r = it.summarize(15)[0];
+    ok(r.deltaMinutes > 0 && r.throughputDeltaPct === 0,
+        "queue minutes rose but throughput is flat: 0%, got " + r.throughputDeltaPct + " (queue delta " + r.deltaMinutes + ")");
+}
+
+// --- unqueued days are excluded: they measure demand, not capacity
+{
+    const it = createInterventionTracker();
+    // days 6..10: queued on 6, 8, 9, 10; day 7 below the threshold
+    feed(it, 0, 10, d => ({ q: d === 7 ? THROUGHPUT_QUEUE_MINUTES - 0.5 : 3, c: d === 7 ? 700 - 90 : d * 100 }));
+    it.recordIntervention(1, 10, "ops-set");
+    const r = it.summarize(10)[0];
+    // Day 7 (6->7) and day 8 (7->8) both touch the unqueued reading; 6, 9, 10 qualify.
+    ok(r.qualifyingDaysBefore === 3, "days touching an unqueued reading are dropped, got " + r.qualifyingDaysBefore);
+    ok(r.throughputBefore === 100, "remaining days average 100, got " + r.throughputBefore);
+    ok(r.throughputAfter === null && r.throughputDeltaPct === null, "no after data yet -> nulls");
+}
+
+// --- breakdowns are excluded, including one flagged by a later same-day reading
+{
+    const it = createInterventionTracker();
+    feed(it, 0, 10, d => ({ q: 3, c: d * 100 }));
+    it.recordIntervention(1, 10, "ops-set");
+    feed(it, 11, 12, d => ({ q: 3, c: 1000 + (d - 10) * 150 }));
+    // Second read on day 12 (e.g. the window opened) reports a breakdown: sticky for day 12.
+    it.observe(1, "Ride A", 12, 3, 99999, true); it.endPass();
+    feed(it, 13, 15, d => ({ q: 3, c: 1000 + (d - 10) * 150 }));
+    const r = it.summarize(15)[0];
+    ok(r.qualifyingDaysAfter === 3, "days 12 and 13 touch the broken reading, 11/14/15 qualify, got " + r.qualifyingDaysAfter);
+    ok(r.throughputAfter === 150, "a later same-day reading does not replace the customer count, got " + r.throughputAfter);
+}
+
+// --- a missing day breaks the chain rather than spanning two days as one
+{
+    const it = createInterventionTracker();
+    for (const d of [5, 6, 8, 9, 10]) { it.observe(1, "Ride A", d, 3, d * 100); it.endPass(); }
+    it.recordIntervention(1, 10, "ops-set");
+    const r = it.summarize(10)[0];
+    ok(r.qualifyingDaysBefore === 3 && r.throughputBefore === 100,
+        "6, 9, 10 qualify; 8 (from 6) does not count double, got " + r.qualifyingDaysBefore + " / " + r.throughputBefore);
+}
+
+// --- counter going backwards (ride id reused) is skipped, not read as negative
+{
+    const it = createInterventionTracker();
+    feed(it, 0, 10, d => ({ q: 3, c: d <= 8 ? d * 100 : (d - 8) * 100 }));
+    it.recordIntervention(1, 10, "ops-set");
+    const r = it.summarize(10)[0];
+    ok(r.qualifyingDaysBefore === 4 && r.throughputBefore === 100, "the drop day is skipped, got " + r.qualifyingDaysBefore + " / " + r.throughputBefore);
+}
+
+// --- callers without customers keep the old behaviour
+{
+    const it = createInterventionTracker();
+    for (let d = 0; d <= 10; d++) { it.observe(1, "Ride A", d, 3); it.endPass(); }
+    it.recordIntervention(1, 10, "ops-set");
+    const r = it.summarize(10)[0];
+    ok(r.throughputBefore === null && r.qualifyingDaysBefore === 0 && r.beforeMinutes === 3,
+        "no customers -> throughput null, queue fields unchanged");
+}
+
+// --- history trimming keeps the full after-window long after the intervention
+{
+    const it = createInterventionTracker();
+    feed(it, 0, 10, d => ({ q: 3, c: d * 100 }));
+    it.recordIntervention(1, 10, "ops-set");
+    feed(it, 11, 40, d => ({ q: 3, c: 1000 + (d - 10) * 120 }));
+    const r = it.summarize(40)[0];
+    ok(r.throughputAfter === 120 && r.qualifyingDaysAfter === ATTRIBUTION_WINDOW_DAYS,
+        "after-window survives 30 more days of readings, got " + r.throughputAfter + " / " + r.qualifyingDaysAfter);
+    ok(r.throughputBefore === 100, "before stays frozen, got " + r.throughputBefore);
+}
+
+// --- memory stays bounded: a ride with an old intervention does not keep every day since
+{
+    const it = createInterventionTracker();
+    feed(it, 0, 10, d => ({ q: 3, c: d * 100 }));
+    it.recordIntervention(1, 10, "ops-set");
+    feed(it, 11, 400, d => ({ q: 3, c: d * 100 }));
+    // Several same-day reads (window open etc.) must not grow it either.
+    for (let k = 0; k < 20; k++) { it.observe(1, "Ride A", 400, 3, 40000); it.endPass(); }
+    const r = it.summarize(400)[0];
+    ok(r.qualifyingDaysAfter === ATTRIBUTION_WINDOW_DAYS, "still reports the full after-window at day 400");
+    // Fresh intervention on day 400 still sees its own before-window.
+    it.recordIntervention(1, 400, "ops-set");
+    const r2 = it.summarize(400)[0];
+    ok(r2.qualifyingDaysBefore === ATTRIBUTION_WINDOW_DAYS && r2.throughputBefore === 100,
+        "a new intervention after 390 days gets a full before-window, got " + r2.qualifyingDaysBefore);
 }
 
 console.log(`${pass} passed, ${fail} failed`);
