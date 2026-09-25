@@ -8,6 +8,7 @@
  *
  *   {"cmd":"hello"}                     -> {"type":"hello", ...state, plugins}
  *   {"cmd":"settings","set":{...},"keys":{...},"debug":bool}
+ *   {"cmd":"nomoney"}                   -> {"type":"nomoney", noMoney}   (#44: game cheat, both arms)
  *                                       -> {"type":"settings", stored}
  *       set:  { "<plugin name>": { "<key>": true|false } } written to that plugin's park
  *             storage (booleans only; anything else is refused)
@@ -100,6 +101,7 @@ registerPlugin({
                 speed: context.gameSpeed,
                 date: date.year + "-" + date.month + "-" + date.day,
                 parkName: park.name,
+                noMoney: park.getFlag("noMoney"),
                 plugins: names
             });
         }
@@ -154,10 +156,20 @@ registerPlugin({
             });
         }
 
+        // Turns the park into a no-money park with the game's own cheat (CheatType::noMoney
+        // = 15, Cheats.h), as a player's "no money" scenario would be. Cash is left as saved.
+        function noMoney() {
+            context.executeAction("cheatset", { type: 15, param1: 1, param2: 0 }, function (r) {
+                if (r.error) send({ type: "error", error: "cheatset noMoney: " + r.errorMessage });
+                else send({ type: "nomoney", noMoney: park.getFlag("noMoney") });
+            });
+        }
+
         function handle(line) {
             var msg;
             try { msg = JSON.parse(line); } catch (e) { send({ type: "error", error: "bad json" }); return; }
             if (msg.cmd === "hello") hello();
+            else if (msg.cmd === "nomoney") noMoney();
             else if (msg.cmd === "settings") settings(msg.set, msg.keys, msg.debug);
             else if (msg.cmd === "start") start(msg.days | 0, msg.speed | 0);
             else send({ type: "error", error: "unknown cmd " + msg.cmd });

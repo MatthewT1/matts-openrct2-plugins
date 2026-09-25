@@ -43,6 +43,7 @@ function parseArgs(argv) {
         agentPort: 47820,
         settings: "save",
         debug: false,
+        noMoney: false,
     };
     for (let i = 2; i < argv.length; i++) {
         const k = argv[i], v = argv[i + 1];
@@ -62,6 +63,8 @@ function parseArgs(argv) {
             // Turns on the plugins' Diagnostics channel (on arm). Start the log sink first:
             // node tools/log-sink.mjs (127.0.0.1:7777 -> tools/rct-debug.log).
             case "--debug": a.debug = true; break;
+            // #44: make the park a no-money park (game cheat) on BOTH arms before day 0.
+            case "--no-money": a.noMoney = true; break;
             case "-h": case "--help":
                 console.log(readFileSync(fileURLToPath(import.meta.url), "utf8").split("*/")[0]);
                 process.exit(0);
@@ -203,6 +206,13 @@ async function runArm(a, arm) {
         hello = await next(10000);
         console.log(`[${arm}] ${hello.parkName} ${hello.date}, plugins: ${hello.plugins.join(", ")}`);
 
+        if (a.noMoney) {
+            sock.write(JSON.stringify({ cmd: "nomoney" }) + "\n");
+            const msg = await next(10000);
+            if (msg.type !== "nomoney" || msg.noMoney !== true) throw new Error(`no-money setup failed: ${JSON.stringify(msg)}`);
+            console.log(`[${arm}] park set to no-money (cheat)`);
+        }
+
         // Park storage is saved with the park, so the off arm (no plugins) needs no settings.
         if (arm === "on") {
             sock.write(JSON.stringify({ cmd: "settings", set: a.settingsWrite, keys: settingsKeys(), debug: a.debug }) + "\n");
@@ -276,7 +286,7 @@ async function main() {
     }
     writeFileSync(join(a.out, "summary.md"), report.join("\n"));
     writeFileSync(join(a.out, "summary.json"), JSON.stringify({
-        args: { save: a.save, days: a.days, speed: a.speed, arms: a.arms, plugins: a.plugins, settings: a.settings, debug: a.debug },
+        args: { save: a.save, days: a.days, speed: a.speed, arms: a.arms, plugins: a.plugins, settings: a.settings, debug: a.debug, noMoney: a.noMoney },
         settings: results.on?.settings ?? null,
         arms: Object.fromEntries(a.arms.map((arm) => [arm, {
             start: results[arm].hello, seconds: results[arm].seconds, pluginFiles: results[arm].provenance,
