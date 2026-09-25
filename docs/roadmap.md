@@ -75,8 +75,9 @@ touched. Natural fit for the existing machinery:
   productivity-counter pattern used for handymen and mechanics should extend to them.
 - **Security** has a measurable demand signal already being collected: the `vandalism`
   thought category, plus `isAdditionBroken` on footpaths, which the trash tile scan
-  already counts as `brokenBins`. Measured so far: **zero broken bins, ever** — so as with
-  NEEDS, check whether the park has this problem before building for it.
+  already counts as `brokenBins`. Measured so far: **at most one broken bin** (Session 5,
+  see the watch list below) — so as with NEEDS, check whether the park has this problem
+  before building for it.
 - **Entertainers** are harder. Their benefit is slowing guest happiness decay in queues,
   and the project has established that OpenRCT2 guests leave at 15 minutes **regardless**
   of entertainers ([#5753](https://github.com/OpenRCT2/OpenRCT2/issues/5753)), so the
@@ -87,8 +88,9 @@ touched. Natural fit for the existing machinery:
 Same discipline as everywhere else here: instrument first, confirm a problem exists, then
 build.
 
-> **Still measuring zero (checked again 2026-09-20).** `brokenBins` has been 0 in every
-> record across every session, and `vandalism` has never once appeared in the top four
+> **Still measuring (near) zero (checked again 2026-09-24).** `brokenBins` was 0 in every
+> record through 2026-09-20; since then one 2,503-guest run held a single broken bin for
+> 116 records (Session 5, [#16](https://github.com/MatthewT1/matts-openrct2-plugins/issues/16)). And `vandalism` has never once appeared in the top four
 > thought categories. On the evidence available, this park does not have a security
 > problem, and building a security controller would be building for an assumed problem —
 > the exact mistake [M2](design-records.md#m2--small-patrol-zones-for-mechanics) cost a session to.
