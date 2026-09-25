@@ -499,6 +499,58 @@ every early application.
 
 ---
 
+### WQ — Do W2 and OPS shorten queues? (measurement, stopped)
+
+**Status:** stopped, inconclusive (2026-09-24, [#15](https://github.com/MatthewT1/matts-openrct2-plugins/issues/15)) · **Basis:** measured · **Cost:** ~0ms (telemetry only)
+
+**Question.** W2 and OPS each log a per-ride before/after (`queueAttribution`). Do the
+changes actually shorten queues?
+
+**Attempt 1: queue minutes.** Existing logs, 4 park loads plus Session 4. Read at day +5
+(see the eviction bug below): W2 queues were **+0.8 min** afterwards (99 of 118 up), and OPS
+showed **no change** (median 0, n = 181). That can't be read as W2 making queues worse:
+W2 only fires on queues that are already rising, guest counts grew in every run, and
+nothing records untouched rides as a control.
+
+**Attempt 2: throughput on queued days (method B).** Guest count never holds still, so
+the metric was changed to guests served per day (`ride.totalCustomers`, incremented once
+per rider in `Guest::onExitRide`, `Guest.cpp:1752`). That measure is capped by the ride's
+capacity while a queue exists. A day counted only if the ride was queued (≥ 1 min), not
+broken, at both readings bounding it. One ~110-day run on Thunder Rock (Session 5):
+
+| | n | Pooled throughput change | Queue before → after |
+|---|---|---|---|
+| OPS lengthen | 22 | −38% | 1.4 → 1.3 min |
+| OPS shorten | 3 | −21% | 3.4 → 3.8 min |
+| W2 pre-emptive | 4 total, 3 usable | 0% | — |
+
+**Why it was stopped rather than extended:**
+- **The counts are too small.** An in-game day is ~14 s real, so a ride serves a median
+  of 2.4 guests per day. Per-intervention percentages swing wildly (0.2 → 3.4/day =
+  +1,600%); only pooled totals are usable.
+- **W2 is too rare to measure here:** 4 interventions in ~110 days, so the planned 30
+  would take 800+ days.
+- **A 1-minute queue doesn't mean the ride is at capacity,** so on the rides OPS acts on
+  most, "throughput while queued" partly measures demand. A stricter cut (≥ 3 min)
+  leaves almost no cases on this park.
+
+**What was learned anyway:**
+- **OPS mostly lengthens.** `LOW_QUEUE_MINUTES = 1` is inclusive (`ops.ts:75`), so rides
+  with 1-1.5 min queues count as "empty" and get longer cycles. That cost them ~38% of
+  their throughput. The queue barely moved, so the harm was small, but "costs nothing"
+  (`ops.ts:361`) is not true once a queue exists.
+- **Found and fixed on the way:** the attribution history was capped at 2 × window + 1
+  *entries*, which evicted each intervention's after-window ~11 samples later, so older
+  rows reported a truncated or null `afterMinutes` (PR #35).
+
+**No claim is made that W2 or OPS shorten queues.** Both stay as they are. W2's
+reasoning (arrival rate ignores queue length, so a rising queue diverges) still holds;
+it just can't be confirmed by measurement on this park. The broader question of what
+the ideal ride settings are, from community practice and the source, is left for
+[#38](https://github.com/MatthewT1/matts-openrct2-plugins/issues/38). The throughput fields stay in the telemetry for that work.
+
+---
+
 ## Ideas not yet scoped
 
 ### NEEDS — Guest-need clustering, then automatic facility placement
