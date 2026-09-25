@@ -58,7 +58,8 @@ Handles mechanics, inspections and breakdowns.
 
 - **Mechanic staffing.** Works the same way as the handyman controller. The main signal is a
   ride that has been broken for two days or more: one that breaks and gets fixed the same
-  day means the current mechanics are coping.
+  day means the current mechanics are coping. A mechanic is let go only when fewer than half
+  the fleet has done a job in the last 14 days, and the one idle longest goes first.
 - **Inspection intervals.** Re-applies the inspection interval every day. Opening a
   ride's construction window quietly resets it, and most players never notice.
 - **Patrol zones.** Clears mechanic patrol zones so any mechanic can reach any ride.
