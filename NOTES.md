@@ -68,7 +68,7 @@ openrct2 plugin/
 │   ├── facilities.ts           # facility placement planner (pure, unit-tested)
 │   ├── queues.ts               # queue trend + per-ride intervention attribution (pure)
 │   └── entertainer-targeting.ts # entertainer ride selection + patrol boxes (pure)
-├── tests/                      # 538 tests over the pure modules + harness summary and settings
+├── tests/                      # unit tests over the pure modules + harness summary and settings
 │   ├── run.mjs                 # compiles src/*.ts, runs every *.test.mjs
 │   └── *.test.mjs
 ├── tools/
@@ -104,7 +104,7 @@ node ./node_modules/typescript/bin/tsc --noEmit -p tsconfig.json
 ```
 
 ```bash
-# Run the test suite (538 tests over the pure logic modules)
+# Run the test suite (prints the pass count; tests cover the pure logic modules)
 node tests/run.mjs
 ```
 
@@ -116,7 +116,7 @@ node tools/headless/run.mjs --save "C:/Users/Matt/Documents/OpenRCT2/save/Thunde
 > **The decision logic lives in pure modules on purpose.** `hotspots`, `staff-activity`,
 > `staffing`, `vomit`, `amenities`, `needs`, `thoughts`, `ops`, `facilities` and `queues`
 > touch no OpenRCT2 globals, so they compile and run under plain node with no game required. Everything
-> that touches `map`, `context` or `park` stays in the four plugin entry points and is
+> that touches `map`, `context` or `park` stays in the plugin entry points and is
 > verified in-game via the telemetry channel instead.
 >
 > Several real bugs were caught by these tests — a staffing controller that deadlocked, a
@@ -213,7 +213,7 @@ can auto-sweep.
   because a cluster is a snapshot of where guests were standing and crowds move.
   Capped at 8 per kind, one build per pass, £20,000 cash floor, and it **never
   demolishes anything**. See
-  [roadmap.md § NEEDS](docs/design-records.md#needs--guest-need-clustering-then-automatic-facility-placement).
+  [design-records.md § NEEDS](docs/design-records.md#needs--guest-need-clustering-then-automatic-facility-placement).
   - Only builds what research has unlocked, via `park.research.inventedItems`.
   - The rotation a 1x1 stall wants is undocumented, so all four are probed with silent
     `queryAction` calls and the winner is counted in telemetry.
@@ -240,7 +240,7 @@ Recommends and auto-applies ride min/max wait times.
   so arrival rate is independent of queue length and a backed-up ride diverges rather than
   settling. `queues.ts` flags a ride after 2 consecutive rising days above 3 minutes; any
   fall resets it. Deliberately trend-based rather than a lower threshold — see
-  [roadmap.md § W2](docs/design-records.md#w2--more-aggressive-emergency-override).
+  [design-records.md § W2](docs/design-records.md#w2--more-aggressive-emergency-override).
 - **Ride operation tuning** (off by default): shortens the cycle on rides with long queues
   and lengthens it on empty ones, via `operationOption` (maze time limit, laps, rotations,
   speed). The value cannot be read back, so the controller probes each ride's legal range
@@ -276,7 +276,7 @@ Monitors ride reliability, auto-hires/fires mechanics, manages inspection interv
   construction windows reset them.
 - Clears all patrol zones. This was suspected of suppressing inspections; **measurement
   disproved it** — mechanics perform ~100% of the available work. Do not reopen without
-  reading [roadmap.md § M2](docs/design-records.md#m2--small-patrol-zones-for-mechanics) first.
+  reading [design-records.md § M2](docs/design-records.md#m2--small-patrol-zones-for-mechanics) first.
 
 ### path-connector.ts
 

@@ -206,7 +206,7 @@ It wasn't written from guesswork about how the game works. Two things kept it ho
   [design records](docs/design-records.md) point to a measurement, and a few ideas were
   dropped because the data showed they wouldn't help.
 
-The decision logic is also covered by 396 unit tests, several of which exist because they
+The decision logic is also covered by unit tests (`node tests/run.mjs` prints the count), several of which exist because they
 caught a real bug first.
 
 ## License
