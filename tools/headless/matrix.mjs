@@ -10,8 +10,8 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 const MODE = process.argv[2];
 const flag = (name) => { const i = process.argv.indexOf(name); return i > 0 ? process.argv[i + 1] : undefined; };
-const SETTINGS = flag("--settings") ?? "save", POST = process.argv.includes("--post");
-if (MODE !== "broad" && MODE !== "speed") { console.error("usage: node matrix.mjs broad|speed [--settings ...] [--post]"); process.exit(1); }
+const SETTINGS = flag("--settings") ?? "save", POST = process.argv.includes("--post"), DEBUG = process.argv.includes("--debug");
+if (MODE !== "broad" && MODE !== "speed") { console.error("usage: node matrix.mjs broad|speed [--settings ...] [--post] [--debug]"); process.exit(1); }
 const SEED = 49, N = MODE === "broad" ? 5 : 1, SPEEDS = MODE === "broad" ? [4] : [1, 4], DAYS = MODE === "broad" ? 60 : 14;
 const repo = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const saveDir = "C:/Users/Matt/Documents/OpenRCT2/save";
@@ -28,7 +28,7 @@ for (const save of picks) {
     for (const speed of SPEEDS) {
         const out = join(outRoot, save.replace(/[^\w.-]+/g, "_"), `speed${speed}`);
         const t0 = Date.now();
-        const r = spawnSync(process.execPath, ["tools/headless/run.mjs", "--save", join(saveDir, save), "--days", String(DAYS), "--speed", String(speed), "--settings", SETTINGS, "--out", out], { cwd: repo, encoding: "utf8", timeout: 45 * 60 * 1000 });
+        const r = spawnSync(process.execPath, ["tools/headless/run.mjs", "--save", join(saveDir, save), "--days", String(DAYS), "--speed", String(speed), "--settings", SETTINGS, "--out", out, ...(DEBUG ? ["--debug"] : [])], { cwd: repo, encoding: "utf8", timeout: 45 * 60 * 1000 });
         const mins = ((Date.now() - t0) / 60000).toFixed(1);
         console.log(save, speed, "exit", r.status, mins, "min");
         let body;

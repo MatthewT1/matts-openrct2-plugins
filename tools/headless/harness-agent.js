@@ -7,7 +7,7 @@
  * per line. There is deliberately no "evaluate this code" command.
  *
  *   {"cmd":"hello"}                     -> {"type":"hello", ...state, plugins}
- *   {"cmd":"settings","set":{...},"keys":{...}}
+ *   {"cmd":"settings","set":{...},"keys":{...},"debug":bool}
  *                                       -> {"type":"settings", stored}
  *       set:  { "<plugin name>": { "<key>": true|false } } written to that plugin's park
  *             storage (booleans only; anything else is refused)
@@ -104,8 +104,11 @@ registerPlugin({
             });
         }
 
-        function settings(set, keys) {
+        function settings(set, keys, debug) {
             var p, k;
+            // Diagnostics is a shared (not park) flag; every arm's user-data is a throwaway
+            // copy, so it is written explicitly each run rather than inherited.
+            context.sharedStorage.set("openrct2-plugins.debug", debug === true);
             for (p in set || {}) {
                 for (k in set[p]) {
                     if (typeof set[p][k] !== "boolean") {
@@ -155,7 +158,7 @@ registerPlugin({
             var msg;
             try { msg = JSON.parse(line); } catch (e) { send({ type: "error", error: "bad json" }); return; }
             if (msg.cmd === "hello") hello();
-            else if (msg.cmd === "settings") settings(msg.set, msg.keys);
+            else if (msg.cmd === "settings") settings(msg.set, msg.keys, msg.debug);
             else if (msg.cmd === "start") start(msg.days | 0, msg.speed | 0);
             else send({ type: "error", error: "unknown cmd " + msg.cmd });
         }

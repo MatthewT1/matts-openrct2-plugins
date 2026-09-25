@@ -44,6 +44,7 @@ import {
 import { createStaffingController, StaffingDecision } from "./staffing";
 import { createStaffHirer } from "./staff-hiring";
 import { createDeferredActions } from "./deferred";
+import { createCooldown, TICKS_PER_DAY } from "./cooldown";
 
 registerPlugin({
     name: "Staff Extras",
@@ -292,7 +293,7 @@ registerPlugin({
         }
 
         /**
-         * Real seconds between cache refreshes.
+         * Game time between cache refreshes (was real seconds until #48).
          *
          * **Measured 2026-09-20: this pass cost 206ms every in-game day** on a park with
          * only 11 rides and 4 entertainers, while the mechanic manager's structurally
@@ -308,17 +309,19 @@ registerPlugin({
          * Only the queue census is cached. The roster itself is read live every day
          * (#54): hiring from a list up to 15 real seconds old re-hired the whole deficit
          * every in-game day at speed 4. The live read measured 0ms (performance.md).
+         *
+         * Game time (#48): 15 real seconds refreshed every 2 days at speed 1 but every ~9
+         * at speed 4. Two days keeps speed 1 as it was. The census measured 2ms (harness
+         * --debug, Dynamite Dunes); the 2 s floor is under 2 speed-4 days (~3.3 s).
          */
-        const CACHE_COOLDOWN_MS = 15_000;
-        let lastCacheRefresh = 0;
+        const cacheCooldown = createCooldown(2 * TICKS_PER_DAY, 2_000);
 
         function updateCache(force: boolean): void {
-            const now = Date.now();
-            if (!force && now - lastCacheRefresh < CACHE_COOLDOWN_MS) {
+            if (force) cacheCooldown.reset();
+            if (!cacheCooldown.ready(date.ticksElapsed, Date.now())) {
                 dbg.count("cacheReused");
                 return;
             }
-            lastCacheRefresh = now;
 
             // Sub-timings: the aggregate said 206ms but not WHICH call. Every phase here
             // is individually cheap on paper, which is precisely why it needs measuring
