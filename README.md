@@ -15,10 +15,10 @@ If the park is clean with 20 handymen, the plugin won't hire 40 because a formul
 
 | Plugin | In one line | Spends money by default? |
 |---|---|---|
-| [Trash Manager](#trash-manager) | Keeps paths clean and guests comfortable | No |
+| [Trash Manager](#trash-manager) | Keeps paths clean and guests comfortable | Yes: benches, bins and stalls where needed (#51) |
 | [Mechanic Manager](#mechanic-manager) | Keeps rides running | No |
 | [Wait Time Optimizer](#wait-time-optimizer) | Keeps queues from getting out of hand | No |
-| [Staff Extras](#staff-extras) | Puts entertainers where queues need them | No (off until you turn it on) |
+| [Staff Extras](#staff-extras) | Puts entertainers where queues need them | Yes: entertainer wages (#51) |
 | [Marketing Manager](#marketing-manager) | Shows which campaigns are worth the money | No (off until you turn it on) |
 | [Path Connector](#path-connector) | Draws a footpath between two tiles | Only for paths you choose to build |
 
@@ -38,10 +38,10 @@ Handles handymen, litter, benches, bins and guest facilities.
   plugin works out which ride is making guests sick and whether that ride needs benches
   near its exit. Guests sitting on a bench recover from nausea, so benches prevent most of
   that mess before it happens.
-- **Benches and bins** *(optional)*. Places benches at nauseating ride exits and vomit
+- **Benches and bins** *(on by default, can be switched off)*. Places benches at nauseating ride exits and vomit
   hotspots, bins near food stalls, and a light spread of both across the rest of the path
   network.
-- **Toilets, first aid and food stalls** *(optional)*. Builds a facility only when guests
+- **Toilets, first aid and food stalls** *(on by default, can be switched off)*. Builds a facility only when guests
   in one area have kept going without one across eight full passes over the park, so a
   crowd that happens to be passing through doesn't trigger a build.
 
@@ -63,7 +63,7 @@ Handles mechanics, inspections and breakdowns.
 - **Inspection intervals.** Re-applies the inspection interval every day. Opening a
   ride's construction window quietly resets it, and most players never notice.
 - **Patrol zones.** Clears mechanic patrol zones so any mechanic can reach any ride.
-- **Emergency repair** *(optional, and a cheat)*. Clears the breakdown on a ride that has
+- **Emergency repair** *(on by default, and a cheat)*. Clears the breakdown on a ride that has
   been broken for three days or more. It's there for rides the game's pathfinding can't get
   a mechanic to. It restores no reliability, and the three-day wait keeps it from replacing
   mechanics altogether.
@@ -88,7 +88,7 @@ Handles ride wait settings and queue length.
 
 ### Staff Extras
 
-Handles entertainers. Off until you turn it on, since entertainers cost wages.
+Handles entertainers. On by default since [#51](https://github.com/MatthewT1/matts-openrct2-plugins/issues/51); switch it off in the window if you'd rather not pay their wages.
 
 <img src="docs/images/staff-extras.png" alt="Staff Extras window" width="300">
 
@@ -122,10 +122,12 @@ runs in the background.
 
 ## What the plugins won't do
 
-- **Spend money without your say-so.** Anything that builds something, hires entertainers
-  or runs campaigns is off until you tick it.
+- **Spend money you can't switch off.** Benches, bins, stalls and entertainers are on by
+  default because testing showed they pay off in a cleaner park
+  ([#51](https://github.com/MatthewT1/matts-openrct2-plugins/issues/51)); each has its own
+  toggle. Campaigns and ride operation tuning stay off until you tick them.
 - **Demolish anything.** Facility building only ever adds.
-- **Remove your things.** The optional bench and bin clean-up only touches items the plugin
+- **Remove your things.** The bench and bin clean-up only touches items the plugin
   placed itself. Anything you placed by hand is left alone.
 - **Slow the game down.** Every periodic job has been timed on a 1,000-guest park. Most
   take 3 ms or less, and the heaviest (a full map scan, at most once every 30 seconds)

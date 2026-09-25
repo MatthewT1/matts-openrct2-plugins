@@ -9,10 +9,9 @@ node tools/headless/run.mjs --save "C:/Users/Matt/Documents/OpenRCT2/save/Thunde
 
 **Check the settings before reading the results.** Without `--settings`, the on arm uses
 whatever toggles the save had stored, or the code defaults if the save never ran the
-plugins. Most of the features that matter default **off**: auto sweep, auto benches and
-bins, amenity removal, auto shops, marketing, entertainers, emergency repair and operation
-tuning. A defaults run only tests staffing, mechanics and wait times. `summary.md` lists
-every toggle for the run.
+plugins. Since #51, auto sweep, auto benches and bins, amenity removal, auto shops,
+entertainers and emergency repair default **on**; marketing and operation tuning default
+**off**, so a defaults run doesn't test them. `summary.md` lists every toggle for the run.
 
 At speed 4 (the default) 60 days take about 105 s per arm, plus a few seconds of start-up.
 Output goes to `harness-runs/<time>-<save>/` (gitignored):

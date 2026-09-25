@@ -1,6 +1,6 @@
 # User Guide — OpenRCT2 Management Plugins
 
-This is a suite of six plugins that take over the repetitive parts of running a park — staffing, cleanliness, ride tuning, facility placement, entertainers, and marketing — so you can spend your time designing rides and the park itself instead of babysitting numbers. Every plugin is independent (use one, use all six, doesn't matter) and every feature that spends money or changes the park is off by default; you opt in per toggle. None of it does anything you couldn't do yourself by hand — it just does it continuously, from measured park data, instead of you having to notice and act on it.
+This is a suite of six plugins that take over the repetitive parts of running a park — staffing, cleanliness, ride tuning, facility placement, entertainers, and marketing — so you can spend your time designing rides and the park itself instead of babysitting numbers. Every plugin is independent (use one, use all six, doesn't matter) and every toggle can be switched off. The cleanliness, entertainer and stuck-ride features are on by default, because a 10-park test showed they make parks cleaner at a small cost ([#51](https://github.com/MatthewT1/matts-openrct2-plugins/issues/51)). Marketing and ride operation tuning stay off until you opt in. None of it does anything you couldn't do yourself by hand — it just does it continuously, from measured park data, instead of you having to notice and act on it.
 
 **Trash Manager** — Keeps the park clean and comfortable. Adjusts handyman headcount to match how dirty the park actually is, places benches and bins where they're measurably needed (benches specifically stop guests from vomiting in the first place), and can build toilets, food stalls and first-aid rooms where guests keep going without.
 
@@ -23,21 +23,21 @@ The rest of this guide covers every toggle across the five automated plugins in 
 | Toggle (as it appears in the UI) | Plugin | Default | Spends money? | What it does |
 |---|---|---|---|---|
 | Auto-hire / fire handymen | Trash Manager | **ON** | No | Adjusts handyman count to keep the park clean; adapts the formula's recommendation downward while the park stays clean, hires back if litter starts costing rating |
-| Auto-sweep all litter each day | Trash Manager | **OFF** | No | Removes every piece of litter at the end of each in-game day; automates what you would do manually with the Sweep All button |
+| Auto-sweep all litter each day | Trash Manager | **ON** | No | Removes every piece of litter at the end of each in-game day; automates what you would do manually with the Sweep All button |
 | Adaptive staffing (learn the right number) | Trash Manager | **ON** | No | Works with auto-hire to reduce overstaffing on a small/stable park; also enforces a rising minimum tied to guest count so headcount can't get stuck low as the park grows |
-| Auto-place benches & bins where needed | Trash Manager | **OFF** | **Yes** | Places benches near nauseating ride exits and vomit hotspots (benches stop guests vomiting), and bins near food/drink stalls; off by default because it costs money |
-| ...and remove ones no longer needed | Trash Manager | **OFF** | No | Works with auto-place to remove benches and bins that are no longer serving a purpose; **only ever removes amenities this plugin placed itself**; anything you placed by hand is never touched |
-| Auto-build toilets, first aid & food stalls | Trash Manager | **OFF** | **Yes** | Watches where guests have unmet needs and builds facilities once a gap persists across many samples; costs real money and **never demolishes anything**; off by default |
+| Auto-place benches & bins where needed | Trash Manager | **ON** | **Yes** | Places benches near nauseating ride exits and vomit hotspots (benches stop guests vomiting), and bins near food/drink stalls; costs money |
+| ...and remove ones no longer needed | Trash Manager | **ON** | No | Works with auto-place to remove benches and bins that are no longer serving a purpose; **only ever removes amenities this plugin placed itself**; anything you placed by hand is never touched |
+| Auto-build toilets, first aid & food stalls | Trash Manager | **ON** | **Yes** | Watches where guests have unmet needs and builds facilities once a gap persists across many samples; costs real money and **never demolishes anything** |
 | Max handymen cap | Trash Manager | (spinner) | No | Hard upper limit on auto-hired handymen (manual hires are unaffected); allows you to cap the formula's recommendation |
 | Diagnostics: stream timings to log sink | Trash Manager | **OFF** | No | Streams telemetry to a local log sink on 127.0.0.1:7777 for performance analysis; costs nothing when off |
 | Auto-manage daily (intervals + hiring + zones) | Mechanic Manager | **ON** | No | Re-applies inspection intervals daily (opening a ride's construction window silently resets them) and clears mechanic patrol zones, which lets mechanics reach **any** ride — OpenRCT2 dispatches the nearest mechanic to each breakdown automatically, and a patrol zone blocks that |
 | Adaptive staffing (learn the right number) | Mechanic Manager | **ON** | No | Adjusts mechanic count downward while no rides are breaking down, hires back immediately if breakdowns go unattended |
-| Emergency repair stuck rides (cheat) | Mechanic Manager | **OFF** | No | **This is a cheat**: clears the breakdown on any ride broken for 3+ days with no mechanic able to fix it (a pathfinding problem in the game itself); adds zero reliability and no mechanic travels; off by default |
+| Emergency repair stuck rides (cheat) | Mechanic Manager | **ON** | No | **This is a cheat**: clears the breakdown on any ride broken for 3+ days with no mechanic able to fix it (a pathfinding problem in the game itself); adds zero reliability and no mechanic travels |
 | Diagnostics: stream timings to log sink | Mechanic Manager | **OFF** | No | Streams telemetry to a local log sink on 127.0.0.1:7777 for performance analysis; costs nothing when off |
 | Auto-adjust wait times daily | Wait Time Optimizer | **ON** | No | Automatically applies recommended min/max wait times to all open rides each in-game day |
 | Tune ride operation settings (laps / rotations / speed) | Wait Time Optimizer | **OFF** | No | Shortens ride cycles on rides with long queues (5+ min), lengthens them on quiet ones (1 min or less); not yet shown to shorten queues overall ([#15](https://github.com/MatthewT1/matts-openrct2-plugins/issues/15)); **discards the ride's excitement/intensity/nausea ratings until it runs again**, so moves one step at a time; off by default |
 | Diagnostics: stream timings to log sink | Wait Time Optimizer | **OFF** | No | Streams telemetry to a local log sink on 127.0.0.1:7777 for performance analysis; costs nothing when off |
-| Auto-manage entertainers daily (spends money) | Staff Extras | **OFF** | **Yes** | Hires and positions entertainers near queues close to the 15-minute walk-out point (entertainers cut guests' time-in-queue and raise happiness); tracks which entertainers it hired and only ever fires those — one you placed by hand, in whatever costume, is never touched |
+| Auto-manage entertainers daily (spends money) | Staff Extras | **ON** | **Yes** | Hires and positions entertainers near queues close to the 15-minute walk-out point (entertainers cut guests' time-in-queue and raise happiness); tracks which entertainers it hired and only ever fires those — one you placed by hand, in whatever costume, is never touched |
 | Diagnostics: stream timings to log sink | Staff Extras | **OFF** | No | Streams telemetry to a local log sink on 127.0.0.1:7777 for performance analysis; costs nothing when off |
 | Start (per campaign row) | Marketing Manager | manual | **Yes** | Starts that specific campaign for the chosen duration; disabled when the campaign isn't currently eligible (see below) or is already running |
 | Duration for next start (spinner) | Marketing Manager | 2 weeks | No | Sets how many weeks the *next* campaign you start (manually or automatically) runs, from 2 to 12 |
@@ -48,21 +48,25 @@ The rest of this guide covers every toggle across the five automated plugins in 
 
 ## Important Callouts
 
+### Toggles That Are On By Default (And What They Cost)
+
+These were off by default until [#51](https://github.com/MatthewT1/matts-openrct2-plugins/issues/51). In a 10-park headless test ([#63](https://github.com/MatthewT1/matts-openrct2-plugins/issues/63)) they made parks clearly cleaner (less litter and vomit, more 'very clean' thoughts) and did not hurt happiness, for about 500 less cash per 60 days (benches, bins, stalls and entertainer wages). Switch any of them off in the plugin's window; the choice is saved with the park.
+
+**Auto-sweep all litter each day** — Removes every piece of litter at the end of each day, including small recent pieces that don't cost rating yet. On a fully staffed park this can make some handymen redundant; adaptive staffing then hires fewer.
+
+**Auto-place benches & bins where needed** (and **remove ones no longer needed**) — Costs money to build. Benches are cheap and stop guests vomiting near nauseating rides; bins catch litter near stalls. Removal only touches amenities this plugin placed.
+
+**Auto-build toilets, first aid & food stalls** — Costs real money (£225–£300 per facility). The algorithm is conservative and waits until a gap persists across many samples. It never demolishes anything.
+
+**Emergency repair stuck rides** — Labelled a cheat because it is one: it clears the breakdown on a ride no mechanic can reach (a long-standing pathfinding bug), with zero mechanic travel and zero reliability restored. It only acts on rides stuck broken for days with no mechanic able to fix them.
+
+**Auto-manage entertainers** — Each entertainer costs a monthly wage like any other staff. Entertainers go to queues close to the walk-out point.
+
 ### Toggles That Are Off By Default (And Why)
-
-**Auto-sweep all litter each day** — Sweeping removes every piece of litter, including the small recent pieces that don't cost rating yet. On a fully staffed park, auto-sweep can make the handymen redundant and waste wages. It is off by default so you can choose whether you want fully manual control, full automation, or adaptive staffing (the middle ground).
-
-**Auto-place benches & bins where needed** — This costs money to build amenities. Benches are relatively cheap and prevent vomiting (worth it on a nauseating-ride heavy park), but bins only catch trash and vomit is usually the dominant problem. Off by default so you pay only for what you want.
-
-**Auto-build toilets, first aid & food stalls** — This costs real money (£225–£300 per facility) and the algorithm is conservative to avoid over-building. It is off by default because building facilities is a deliberate park-design choice.
 
 **Tune ride operation settings** — Changing operation settings (cycle time, laps, rotations) **discards the ride's excitement/intensity/nausea ratings until the ride runs again**. This can temporarily blind your park to high-intensity rides while tuning progresses, so it is off by default. The wait-time tuning (min/max queues) does not have this cost and runs by default.
 
-**Emergency repair stuck rides** — This is labelled a cheat because it genuinely is one. A ride broken for 8 days while you hire mechanics is probably unreachable by pathfinding (a long-standing game bug). Emergency repair clears the breakdown with zero mechanic travel and zero reliability restored. Off by default, and only for the narrow case of stuck unreachable rides.
-
-**Auto-manage entertainers** — Hiring and positioning entertainers costs a monthly wage per entertainer, same as any other staff type. Off by default so you decide whether the queue-happiness benefit is worth the payroll.
-
-**Auto-start eligible campaigns (Marketing Manager)** — This spends real money starting advertising/voucher campaigns on your park's behalf, potentially several at once. Off by default; the ranked list and manual Start buttons let you see and approve every campaign before it costs anything.
+**Auto-start eligible campaigns (Marketing Manager)** — This spends real money starting advertising/voucher campaigns on your park's behalf, potentially several at once. In the #63 test it bought guests the parks couldn't hold comfortably and didn't earn its cost back within 60 days ([#74](https://github.com/MatthewT1/matts-openrct2-plugins/issues/74)). Off by default; the ranked list and manual Start buttons let you see and approve every campaign before it costs anything.
 
 ### Benches Stop Vomiting
 
