@@ -263,13 +263,13 @@ export interface CampaignRankingResult {
  */
 export function rankCampaigns(signals: MarketingSignals): CampaignRankingResult {
     if (signals.forbidden) {
-        return { ranked: [], blockedReason: "marketing campaigns are forbidden by the local authority" };
+        return { ranked: [], blockedReason: "forbidden by the local authority" };
     }
     if (signals.cash < signals.cashFloor) {
-        return { ranked: [], blockedReason: "cash below the reserve floor" };
+        return { ranked: [], blockedReason: "cash below reserve floor" };
     }
     if (isCrowded(signals)) {
-        return { ranked: [], blockedReason: "park is at or above its guest capacity" };
+        return { ranked: [], blockedReason: "park at guest capacity" };
     }
 
     const ranked: CampaignRecommendation[] = [];

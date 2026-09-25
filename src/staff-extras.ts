@@ -479,10 +479,11 @@ registerPlugin({
             if (!pluginWindow) return;
             const statsLbl = pluginWindow.findWidget<LabelWidget>("lblStats");
             if (statsLbl) {
-                statsLbl.text = "Rides: " + cache.rideCount
-                    + "   Entertainers: " + cache.entertainerCount + " / " + cache.targetCount
-                    + "   Worst queue: " + cache.worstQueueMinutes + "m"
-                    + "   (" + (cache.entertainerCount * ENTERTAINER_WAGE_PER_MONTH) + "/mo)";
+                // Kept short: the longer wording lost the wage figure off the edge (#24).
+                statsLbl.text = "Rides " + cache.rideCount
+                    + "  Ent. " + cache.entertainerCount + "/" + cache.targetCount
+                    + "  Worst queue " + cache.worstQueueMinutes + "m"
+                    + "  £" + (cache.entertainerCount * ENTERTAINER_WAGE_PER_MONTH) + "/mo";
             }
             const lv = pluginWindow.findWidget<ListViewWidget>("lvTargets");
             if (lv) {
@@ -506,8 +507,8 @@ registerPlugin({
                     {
                         type: "label", name: "lblStats",
                         x: 8, y: 28, width: 264, height: 14,
-                        text: "Rides: " + cache.rideCount + "   Entertainers: " + cache.entertainerCount
-                            + " / " + cache.targetCount
+                        text: "Rides " + cache.rideCount + "  Ent. " + cache.entertainerCount
+                            + "/" + cache.targetCount
                     },
                     { type: "groupbox", x: 4, y: 44, width: 272, height: 92, text: "Queues Wanting an Entertainer" },
                     {

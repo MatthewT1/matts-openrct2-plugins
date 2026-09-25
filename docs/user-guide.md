@@ -41,7 +41,7 @@ The rest of this guide covers every toggle across the five automated plugins in 
 | Diagnostics: stream timings to log sink | Staff Extras | **OFF** | No | Streams telemetry to a local log sink on 127.0.0.1:7777 for performance analysis; costs nothing when off |
 | Start (per campaign row) | Marketing Manager | manual | **Yes** | Starts that specific campaign for the chosen duration; disabled when the campaign isn't currently eligible (see below) or is already running |
 | Duration for next start (spinner) | Marketing Manager | 2 weeks | No | Sets how many weeks the *next* campaign you start (manually or automatically) runs, from 2 to 12 |
-| Auto-manage: start eligible campaigns automatically | Marketing Manager | **OFF** | **Yes** | Starts campaigns automatically from the ranked list, best value-per-guest first, up to a daily spending budget and never below a cash reserve; never starts a second campaign of a type already running |
+| Auto-start eligible campaigns | Marketing Manager | **OFF** | **Yes** | Starts campaigns automatically from the ranked list, best value-per-guest first, up to a daily spending budget and never below a cash reserve; never starts a second campaign of a type already running |
 | Diagnostics: stream timings to log sink | Marketing Manager | **OFF** | No | Streams telemetry to a local log sink on 127.0.0.1:7777 for performance analysis; costs nothing when off |
 
 ---
@@ -62,7 +62,7 @@ The rest of this guide covers every toggle across the five automated plugins in 
 
 **Auto-manage entertainers** — Hiring and positioning entertainers costs a monthly wage per entertainer, same as any other staff type. Off by default so you decide whether the queue-happiness benefit is worth the payroll.
 
-**Auto-manage campaigns (Marketing Manager)** — This spends real money starting advertising/voucher campaigns on your park's behalf, potentially several at once. Off by default; the ranked list and manual Start buttons let you see and approve every campaign before it costs anything.
+**Auto-start eligible campaigns (Marketing Manager)** — This spends real money starting advertising/voucher campaigns on your park's behalf, potentially several at once. Off by default; the ranked list and manual Start buttons let you see and approve every campaign before it costs anything.
 
 ### Benches Stop Vomiting
 

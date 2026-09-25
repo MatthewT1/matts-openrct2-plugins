@@ -656,7 +656,7 @@ registerPlugin({
                             + " / " + cache.targetCount + " recommended"
                     },
                     // Reliability watch list
-                    { type: "groupbox", x: 4, y: 44, width: 272, height: 92, text: "Rides Needing Attention  (high downtime / low reliability)" },
+                    { type: "groupbox", x: 4, y: 44, width: 272, height: 92, text: "Rides Needing Attention" },
                     {
                         type: "listview", name: "lvReliability",
                         x: 8, y: 58, width: 264, height: 70,
