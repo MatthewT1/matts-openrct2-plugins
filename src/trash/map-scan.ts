@@ -8,6 +8,7 @@
 import { createHotspotAccumulator } from "../hotspots";
 import { getHandymen, isOldLitter, TileCoord, BoundingRect, TileCache } from "./shared";
 import { DebugChannel } from "../debug";
+import { createCooldown, TILE_SCAN_TICKS } from "../cooldown";
 
 export type MapScan = ReturnType<typeof createMapScan>;
 
@@ -34,10 +35,12 @@ export function createMapScan(dbg: DebugChannel) {
         pathBounds: { x1: 1, y1: 1, x2: 127, y2: 127 },
     };
 
-    // The tile scan is O(map_size²) — throttle to at most once per 30 real seconds so
-    // fast-forwarding the game doesn't cause repeated freezes each simulated day.
-    const TILE_SCAN_COOLDOWN_MS = 30_000;
-    let lastTileScanTime = 0; // 0 forces a scan on the very first day
+    // The tile scan is O(map_size²). It is throttled in game time (#48) so it runs on the
+    // same days at every speed: the old 30 real-second cooldown meant a scan every 3 days
+    // at speed 1 but every ~18 at speed 4. Three days keeps speed 1 as it was. Measured
+    // 9-14ms per scan (Dynamite Dunes, harness --debug), so the 2 s real-time floor only
+    // matters if game time runs faster than speed 4 (3 days there is ~5 s).
+    const tileScanCooldown = createCooldown(TILE_SCAN_TICKS, 2_000); // first call scans
 
     // Litter is bucketed into 8x8-tile cells during the scan we already run, so
     // "240 pieces of litter" becomes "38 of them are all at (42, 88)". 8 tiles is
@@ -75,12 +78,10 @@ export function createMapScan(dbg: DebugChannel) {
     // -------------------------------------------------------------------------
 
     // O(map_size²) tile walk: counts path/owned tiles, bins, bounding boxes.
-    // Rate-limited via TILE_SCAN_COOLDOWN_MS — safe to call every day, won't
-    // actually re-scan until the cooldown has elapsed in real time.
+    // Rate-limited via tileScanCooldown — safe to call every day, won't
+    // actually re-scan until three in-game days have passed.
     function updateTileCache(): void {
-        const now = Date.now();
-        if (now - lastTileScanTime < TILE_SCAN_COOLDOWN_MS) return;
-        lastTileScanTime = now;
+        if (!tileScanCooldown.ready(date.ticksElapsed, Date.now())) return;
         dbg.count("tileScan");
 
         const size = map.size;
@@ -229,6 +230,6 @@ export function createMapScan(dbg: DebugChannel) {
         reportHotspots,
         getCoverageTiles(): TileCoord[] { return coverageTiles; },
         /** Makes the next updateTileCache run regardless of the cooldown. */
-        forceTileScan(): void { lastTileScanTime = 0; },
+        forceTileScan(): void { tileScanCooldown.reset(); },
     };
 }

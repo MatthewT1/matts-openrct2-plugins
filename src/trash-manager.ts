@@ -198,7 +198,7 @@ function trashManagerMain(): void {
 
     /**
      * Daily: update entity cache (cheap); tile cache is rate-limited internally.
-     * Expensive tile scan runs at most once per TILE_SCAN_COOLDOWN_MS real seconds.
+     * Expensive tile scan runs at most once per three in-game days (tileScanCooldown).
      */
     context.subscribe("interval.day", function(): void {
         dbg.time("day.tileCache", updateTileCache); // no-op if cooldown hasn't elapsed
