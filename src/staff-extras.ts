@@ -39,6 +39,7 @@ import { formatMoney } from "./money";
 import {
     selectEntertainerTargets, censusQueues, entertainerStaffingSignals,
     ENTERTAINER_THRESHOLDS, EntertainerTarget, RideQueueSignal, MAX_TARGETED_ENTERTAINERS,
+    planEntertainerRoster,
 } from "./entertainer-targeting";
 import { createStaffingController, StaffingDecision } from "./staffing";
 import { createStaffHirer } from "./staff-hiring";
@@ -299,16 +300,19 @@ registerPlugin({
          * does not need refreshing every in-game day: queue pressure moves over days, and
          * at fast-forward an in-game day is a fraction of a second. So the cost is bounded
          * here regardless of what turns out to be behind it.
+         *
+         * Only the queue census is cached. The roster itself is read live every day
+         * (#54): hiring from a list up to 15 real seconds old re-hired the whole deficit
+         * every in-game day at speed 4. The live read measured 0ms (performance.md).
          */
         const CACHE_COOLDOWN_MS = 15_000;
         let lastCacheRefresh = 0;
-        let cachedEntertainers: Entertainer[] = [];
 
-        function updateCache(force: boolean): Entertainer[] {
+        function updateCache(force: boolean): void {
             const now = Date.now();
             if (!force && now - lastCacheRefresh < CACHE_COOLDOWN_MS) {
                 dbg.count("cacheReused");
-                return cachedEntertainers;
+                return;
             }
             lastCacheRefresh = now;
 
@@ -317,7 +321,6 @@ registerPlugin({
             // rather than reasoning about.
             const signals = dbg.time("cache.queueSignals", collectQueueSignals);
             const entertainers = dbg.time("cache.entertainers", getEntertainers);
-            cachedEntertainers = entertainers;
             const census = censusQueues(signals);
 
             cache.rideCount = signals.length;
@@ -327,19 +330,24 @@ registerPlugin({
             cache.worstQueueMinutes = census.worstMinutes;
             cache.targets = selectEntertainerTargets(signals,
                 Math.max(cache.entertainerCount, census.eligibleCount));
-
-            return entertainers;
         }
 
         // --- Game state mutations (only from interval hooks) ---
 
         function hireToTarget(entertainers: Entertainer[], target: number): boolean {
             const owned = pruneOwned(entertainers);
-            const diff = target - entertainers.length;
+            const liveIds: number[] = [];
+            for (let i = 0; i < entertainers.length; i++) {
+                const id = entertainers[i].id;
+                if (id !== null) liveIds.push(id);
+            }
+            // `entertainers` must be the live roster (#54); the plan clamps to the cap
+            // and only ever names entertainers this plugin hired for firing.
+            const plan = planEntertainerRoster(target, liveIds, owned);
 
-            if (diff > 0) {
+            if (plan.hire > 0) {
                 withCostume(function (costume: number): void {
-                    for (let i = 0; i < diff; i++) {
+                    for (let i = 0; i < plan.hire; i++) {
                         hirer.hire(function (peepId: number): void {
                             // Counted HERE, on confirmed success, not optimistically
                             // before the action runs. The previous version reported
@@ -358,38 +366,21 @@ registerPlugin({
                 return true;
             }
 
-            if (diff < 0) {
-                // Fire ONLY entertainers this plugin hired. A hand-placed one is never a
-                // candidate, however overstaffed the park looks.
-                const ours: Entertainer[] = [];
-                for (let i = 0; i < entertainers.length; i++) {
-                    const id = entertainers[i].id;
-                    if (id !== null && owned[String(id)]) ours.push(entertainers[i]);
-                }
+            // Fire ONLY entertainers this plugin hired. A hand-placed one is never a
+            // candidate, however overstaffed the park looks; the rest of the surplus is
+            // reported rather than silently left, so "why is it still overstaffed?" has
+            // an answer in the log.
+            if (plan.protectedCount > 0) dbg.count("entertainersProtected", plan.protectedCount);
+            if (plan.fireIds.length === 0) return false;
 
-                const wanted = -diff;
-                const canFire = wanted < ours.length ? wanted : ours.length;
-                if (canFire < wanted) {
-                    // The rest of the surplus is the player's own staff. Report it rather
-                    // than silently doing nothing, so "why is it still overstaffed?" has
-                    // an answer in the log.
-                    dbg.count("entertainersProtected", wanted - canFire);
-                }
-                if (canFire === 0) return false;
-
-                const remaining = loadOwned();
-                for (let i = 0; i < canFire; i++) {
-                    const id = ours[i].id;
-                    if (id === null) continue;
-                    hirer.fire(id);
-                    delete remaining[String(id)];
-                }
-                saveOwned(remaining);
-                dbg.count("entertainersFired", canFire);
-                return true;
+            const remaining = loadOwned();
+            for (let i = 0; i < plan.fireIds.length; i++) {
+                hirer.fire(plan.fireIds[i]);
+                delete remaining[String(plan.fireIds[i])];
             }
-
-            return false;
+            saveOwned(remaining);
+            dbg.count("entertainersFired", plan.fireIds.length);
+            return true;
         }
 
         /**
@@ -450,7 +441,10 @@ registerPlugin({
             // thing this plugin does, and a switched-off plugin must cost nothing —
             // it was previously paying the full 206ms every day regardless.
             if (!getAutoManage()) { dbg.flushStats(parkContext()); return; }
-            const entertainers = dbg.time("day.updateCache", () => updateCache(false));
+            dbg.time("day.updateCache", () => updateCache(false));
+            // Live roster every day (#54); the cache above is only the queue census.
+            const entertainers = getEntertainers();
+            cache.entertainerCount = entertainers.length;
 
             const census = { urgentCount: cache.urgentQueues, eligibleCount: cache.eligibleQueues, worstMinutes: cache.worstQueueMinutes };
             const signals = entertainerStaffingSignals(census, park.rating);
@@ -467,9 +461,9 @@ registerPlugin({
                 console.log("[Staff Extras] Adaptive entertainer target now " + decision.target + ": " + decision.reason + ".");
             }
 
-            const rosterChanged = cache.entertainerCount !== decision.target
-                && hireToTarget(entertainers, decision.target);
+            const rosterChanged = hireToTarget(entertainers, decision.target);
             const liveEntertainers = rosterChanged ? getEntertainers() : entertainers;
+            cache.entertainerCount = liveEntertainers.length;
             dbg.time("day.assignPatrols", () => assignPatrols(liveEntertainers, cache.targets));
             dbg.flushStats(parkContext());
         });
