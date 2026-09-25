@@ -237,7 +237,7 @@ design; if that still misbehaves, fix it once rather than twice.
 
 ### M6 — Rolling-window release signal for mechanics (#32)
 
-**Status:** built, in-game test pending (Session 6) · **Basis:** measured · **Cost:** ~0ms
+**Status:** done (Session 6, 2026-09-24): accepted as slow and safe · **Basis:** measured · **Cost:** ~0ms
 
 The lifetime definition of "active" (has this mechanic *ever* done a job?) only fired in
 the days after a load: once every mechanic had fixed one thing, the fleet was "working"
@@ -256,6 +256,21 @@ no signal until 14 days have been observed after a load. Handymen keep the lifet
 - **Limit:** the controller never goes above the formula target. On Thunder Rock the
   formula is 5 and the fleet sits at 5, so this signal only matters for probing *below*
   the formula.
+
+**Overstaff test (+2 above a formula of 5, 80 days, test-only build):** one extra was
+released, on day 77. The exit criterion set in advance wanted both released by day 54, so
+the test **missed** that criterion. The safety criteria held: unattended-breakdown days
+13% (limit 14%), longest broken 8 days (limit 9), no regression re-hires, no ratchet. The
+extras were not idle, because they took jobs (up to 6 of 7 active). So the signal was true
+on only 21 of 66 days, in short streaks, and ride breakdowns kept resetting the settle
+window. The plan's estimate predicted this: the signal fires when
+M > J·N/ln 2 ≈ 6.3 at 0.31 jobs/day.
+
+**Decision:** the user accepted it as **slow and safe**, relaxing criterion 1 after the
+fact. That is recorded here plainly, because it breaks the rule of honouring the pre-set
+exit. Expect roughly one release per ~60 days of overstaffing. The old lifetime flag
+never released at all. Do not shorten N to speed this up without new data: N = 10 was
+true on 42% of days at a right-sized fleet.
 
 Plan, data and exit criterion: [#32](https://github.com/MatthewT1/matts-openrct2-plugins/issues/32).
 
