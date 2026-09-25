@@ -409,3 +409,94 @@ export function createAttributionTracker(initial?: AttributionSnapshot): Attribu
 
     return { observe, recordStart, summarize, snapshot, reset };
 }
+
+// --- #74: auto-start only while guests are settled, and only while campaigns pay for themselves ---
+//
+// The #63 study (10 parks, 60 d) found auto-started campaigns bought guests the parks could not
+// hold comfortably (happiness worse in the 4 parks with the biggest guest gains, 'crowded'
+// thoughts up) and did not earn their cost back. These rules gate AUTO starts only; the
+// manual Start buttons are unchanged.
+
+/** Days of income history needed before a batch can be judged (the "before" rate). */
+export const PAYBACK_BASELINE_DAYS = 7;
+/** After a batch that did not pay for itself, no auto starts for this many days. */
+export const PAYBACK_COOLDOWN_DAYS = 56;
+/** Days over which happiness and crowding trends are measured. */
+export const TREND_DAYS = 7;
+/** Happiness (0-255) still rising by more than this over TREND_DAYS: wait for it to settle. */
+export const HAPPINESS_SETTLE_RISE = 2;
+/** Share of in-park guests thinking 'crowded' at or above which auto starts wait. */
+export const CROWDED_SHARE_MAX = 0.03;
+/** Rise in the 'crowded' share over TREND_DAYS above which auto starts wait. */
+export const CROWDED_SHARE_RISE = 0.005;
+
+/** One day's guest mood: mean in-park happiness (0-255) and share of guests thinking 'crowded'. */
+export interface MoodSample { day: number; happiness: number; crowdedShare: number; }
+
+/**
+ * Why guest mood says auto-start should wait, or null. `history` is oldest first, one sample a
+ * day; `happinessAtLastStart` is the mean happiness on the day of the last auto start (null if none).
+ * #74: in the fast A/B one early campaign stalled happiness while it was still climbing (fresh
+ * guests pull the mean down), with no 'crowded' thoughts at all, so capacity alone is not enough.
+ */
+export function moodHold(history: MoodSample[], happinessAtLastStart: number | null): string | null {
+    if (history.length < TREND_DAYS + 1) return "measuring guest happiness first";
+    const now = history[history.length - 1], then = history[history.length - 1 - TREND_DAYS];
+    if (now.crowdedShare >= CROWDED_SHARE_MAX || now.crowdedShare - then.crowdedShare > CROWDED_SHARE_RISE) {
+        return "guests are feeling crowded";
+    }
+    if (now.happiness - then.happiness > HAPPINESS_SETTLE_RISE) return "guest happiness is still rising";
+    if (happinessAtLastStart !== null && now.happiness < happinessAtLastStart) {
+        return "guest happiness is below its level at the last start";
+    }
+    return null;
+}
+
+/** One day's cumulative park income (raw tenths), for the payback check. */
+export interface IncomeSample { day: number; income: number; }
+
+/** Mean daily income over the last `days` days of history, or null with too little history. */
+export function dailyIncomeRate(history: IncomeSample[], days: number): number | null {
+    if (history.length < days + 1) return null;
+    const a = history[history.length - 1 - days], b = history[history.length - 1];
+    return (b.income - a.income) / (b.day - a.day);
+}
+
+/** A batch of campaigns auto-started on one day, judged once the longest has run. */
+export interface AutoBatch {
+    startDay: number;
+    /** Lump-sum cost of the batch, raw tenths. */
+    cost: number;
+    /** Cumulative income on the start day. */
+    incomeAtStart: number;
+    /** Mean daily income over the PAYBACK_BASELINE_DAYS before the start. */
+    dailyIncomeBefore: number;
+    /** Days the batch runs (weeks x 7). */
+    days: number;
+}
+
+/**
+ * Income above the pre-campaign rate over the batch's run, and whether it covered the cost.
+ * Null until the batch has run its full length.
+ */
+export function judgeBatch(batch: AutoBatch, day: number, incomeNow: number): { extra: number; paid: boolean } | null {
+    const elapsed = day - batch.startDay;
+    if (elapsed < batch.days) return null;
+    const extra = incomeNow - batch.incomeAtStart - batch.dailyIncomeBefore * elapsed;
+    return { extra, paid: extra >= batch.cost };
+}
+
+/**
+ * Why auto-start should wait today, or null to go ahead. `pending` is the last batch while it
+ * is still running or unjudged; `cooldownUntil` is the day after which a failed batch stops
+ * blocking.
+ */
+export function autoStartHold(
+    day: number, pending: AutoBatch | null, cooldownUntil: number, hasBaseline: boolean, mood: string | null,
+): string | null {
+    if (pending !== null) return "waiting to judge the last campaigns";
+    if (day < cooldownUntil) return "the last campaigns did not pay for themselves";
+    if (mood !== null) return mood;
+    if (!hasBaseline) return "measuring income first";
+    return null;
+}
