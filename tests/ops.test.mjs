@@ -1,4 +1,4 @@
-import { createOpsController, CONFIRM_OBSERVATIONS, HIGH_QUEUE_MINUTES, LOW_QUEUE_MINUTES } from "./build/ops.mjs";
+import { createOpsController, shortenFloor, CONFIRM_OBSERVATIONS, HIGH_QUEUE_MINUTES, LOW_QUEUE_MINUTES } from "./build/ops.mjs";
 let pass=0, fail=0; const ok=(c,m)=>{ c?pass++:(fail++,console.log("FAIL:",m)); };
 const R=(id,q,rt=60,intensity=400)=>({rideId:id,name:"R"+id,queueTime:q,rideTime:rt,intensity});
 // Real call pattern: update() first (controller learns the ride + emits a probe),
@@ -56,15 +56,13 @@ ok(flapSets===0,"alternating pressure never acts, got "+flapSets);
 const c5=createOpsController(16); seedMax(c5,5,16);
 let s1=null; for(let i=0;i<8 && !s1;i++) s1=c5.update([R(5,HIGH_QUEUE_MINUTES+9)]).filter(a=>a.kind==="set")[0];
 ok(!!s1,"high-queue produced a set");
-// Calibration is DIRECTIONAL. With no known current value and a queue, the right answer
-// is the shortest cycle the ride type allows - maximum throughput - not the midpoint.
-// The midpoint is direction-blind and can LENGTHEN a congested ride, cutting throughput
-// on exactly the ride that needed more of it (measured 2026-09-20).
-ok(s1.value===1, "congested ride with unknown current calibrates to the MINIMUM, got "+s1.value);
+// #67 attempt 2: with no known current value, assume the build default (1*3+16)/4 = 4
+// and step ONE below it, not straight to the minimum (a jump to the extreme).
+ok(s1.value===3, "congested ride with unknown current goes one step below the build default, got "+s1.value);
 c5.noteSet(5, s1.value);
 // Already at the floor, so there is nothing further to do in that direction.
 let s2=null; for(let i=0;i<8 && !s2;i++) s2=c5.update([R(5,HIGH_QUEUE_MINUTES+9)]).filter(a=>a.kind==="set")[0];
-ok(!s2, "no further action once a congested ride is at its minimum");
+ok(!s2, "no further action once a congested ride is at its shortening floor");
 
 // From a known value above the floor it steps down by exactly one, never jumping.
 const c5b=createOpsController(16); seedMax(c5b,15,16); c5b.noteSet(15, 9);
@@ -337,6 +335,25 @@ ok(st73.min < st73.max, "the ride remains tunable: " + st73.min + " < " + st73.m
   ok(eq(operationRange(20), [1, 64]), "maze 1-64");
   ok(operationRange(29) === null && isKnownRideType(29), "dummy slot 29: known, untunable");
   ok(!isKnownRideType(500) && operationRange(500) === null, "out of table: unknown");
+}
+
+// --- #67 attempt 2: never shorten past one step below the build default -------
+// Swinging ship {7,25}: build default (21+25)/4 = 11, so floor 10.
+ok(shortenFloor(7, 25) === 10, "swinging ship floor is 10, got " + shortenFloor(7, 25));
+ok(shortenFloor(1, 7) === 1, "coaster laps {1,7}: default 2, floor 1, got " + shortenFloor(1, 7));
+ok(shortenFloor(5, 5) === 5, "single-value range stays put, got " + shortenFloor(5, 5));
+{
+  const c = createOpsController(32); seedMax(c, 80, 25); c.noteSet(80, 14);
+  const vals = [];
+  for (let i = 0; i < 200; i++) for (const a of c.update([R(80, HIGH_QUEUE_MINUTES + 9)])) if (a.kind === "set") { vals.push(a.value); c.noteSet(80, a.value); }
+  // Assumed min 1: default (3+25)/4 = 7, floor 6. From 14 it steps 13,12,...,6 and stops.
+  ok(vals[vals.length - 1] === 6 && vals.every((v, k) => k === 0 ? v === 13 : v === vals[k - 1] - 1), "steps down one at a time to the floor 6, got " + vals.join(","));
+}
+{
+  // A refusal with no baseline is a FLOOR refusal (every set moves down since #67).
+  const c = createOpsController(32); seedMax(c, 81, 25);
+  c.noteSetRejected(81, 6);
+  ok(c.describe(81).max === 25 && c.describe(81).min === 7, "no-baseline refusal raises the floor only, got " + c.describe(81).min + "-" + c.describe(81).max);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`); if (fail) process.exitCode = 1;

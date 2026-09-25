@@ -183,6 +183,15 @@ function classify(queueTime: number): QueuePressure {
     return "normal";
 }
 
+/**
+ * Lowest value this controller will ever set (#67): one step below the build default
+ * `(min * 3 + max) / 4` (RideCreateAction.cpp:199), never below the legal minimum.
+ */
+export function shortenFloor(min: number, max: number): number {
+    const buildDefault = Math.floor((min * 3 + max) / 4);
+    return clamp(buildDefault - 1, min, max);
+}
+
 function clamp(value: number, min: number, max: number): number {
     if (value < min) return min;
     if (value > max) return max;
@@ -326,15 +335,19 @@ export function createOpsController(probeCeiling: number, knownRange?: KnownOpsR
             let target: number;
             let reason: string;
 
+            // #67 attempt 2: shorten by at most ONE step below the ride's build default.
+            // Attempt 1 sent a congested ride with no known baseline straight to
+            // `record.min` (for example 1 lap), a jump to the extreme that cut excitement
+            // and ride value; ops-only still lowered happiness and rating.
+            const floor = shortenFloor(record.min, max);
             if (record.current === null) {
-                // No known baseline: go straight to the minimum, the shortest cycle the
-                // ride type allows and so its maximum throughput. (A direction-blind
-                // midpoint used to LENGTHEN congested rides; measured 2026-09-20.)
-                target = record.min;
+                // No known baseline: assume the build default (RideCreateAction.cpp:199)
+                // and take one step below it.
+                target = floor;
                 reason = "sustained queue pressure with an unknown current setting; " +
-                    "calibrating to the shortest cycle for maximum throughput";
+                    "one step below the build default";
             } else {
-                target = clamp(record.current - 1, record.min, max);
+                target = clamp(record.current - 1, floor, max);
                 reason = "sustained queue pressure (score " + record.streak +
                     "); shortening the cycle to raise throughput";
             }
@@ -402,7 +415,8 @@ export function createOpsController(probeCeiling: number, knownRange?: KnownOpsR
         // then pinned to `min`. The ride's whole range collapsed to [1, 1] and it could
         // never be tuned again. Measured: `opsSetRejected` rose from 2 to **30** against
         // only 5 successful sets.
-        if (value <= record.min || (record.current !== null && value < record.current)) {
+        // Since #67 every set moves DOWN, so a refusal with no baseline is a floor refusal too.
+        if (record.current === null || value <= record.min || value < record.current) {
             // Refused while stepping down, or refused at the assumed floor: the real
             // floor is higher than we thought.
             //
@@ -415,7 +429,7 @@ export function createOpsController(probeCeiling: number, knownRange?: KnownOpsR
             record.min = value + 1;
             if (record.max !== null && record.min > record.max) record.min = record.max;
         } else {
-            // Refused while stepping up (or with no baseline): the ceiling is lower.
+            // Refused while stepping up: the ceiling is lower.
             const ceiling = value - 1;
             record.max = record.max === null ? ceiling : Math.min(record.max, ceiling);
             if (record.max < record.min) record.max = record.min;
