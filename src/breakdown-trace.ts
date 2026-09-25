@@ -57,6 +57,11 @@ export interface TraceSample {
     nearestId: number;
     /** Mechanics within 2 tiles of the exit. */
     atRide: number;
+    /**
+     * Mechanics showing a staffFix* animation, at any distance. The repair happens at the
+     * broken vehicle or the station start/end, which can be well over 2 tiles from the
+     * exit, so this is not filtered by distance (it may include a repair elsewhere).
+     */
     fixing: number;
     answering: number;
 }
@@ -77,7 +82,11 @@ export interface BreakdownTrace {
     ticksToFixed: number;
     /** First tick a mechanic stood within 2 tiles of the exit, or -1. */
     ticksToArrive: number;
-    /** First tick a mechanic near the exit showed a fix animation, or -1. */
+    /**
+     * First tick the fixer showed a staffFix* animation, at any distance, or -1. It was
+     * always -1 while it only looked within 2 tiles of the exit: the repair is done at
+     * the vehicle or the station start/end (Staff.cpp:2183-2473).
+     */
     ticksToFixAnim: number;
     mechanics: number;
     /** Nearest mechanic at the first sample, in tiles. */
@@ -113,7 +122,8 @@ interface Active {
     brokenAt: number;
     lastSeenBroken: number;
     arriveAt: number;
-    fixAnimAt: number;
+    /** Per mechanic: first tick showing a fix animation. */
+    fixAnimAt: Record<number, number>;
     mechanics: number;
     startNearest: number;
     startDistances: Record<number, number>;
@@ -187,7 +197,7 @@ export function createBreakdownTracer(): BreakdownTracer {
             ticksToBroken: a.brokenAt,
             ticksToFixed: a.lastSeenBroken,
             ticksToArrive: a.arriveAt,
-            ticksToFixAnim: a.fixAnimAt,
+            ticksToFixAnim: fixedBy !== -1 && a.fixAnimAt[fixedBy] !== undefined ? a.fixAnimAt[fixedBy] : -1,
             mechanics: a.mechanics,
             startNearest: a.startNearest,
             fixedBy: fixedBy,
@@ -208,7 +218,7 @@ export function createBreakdownTracer(): BreakdownTracer {
             if (traces[rideId] !== undefined) return;
             traces[rideId] = {
                 rideId, reason, startTick: tick, name: "",
-                brokenAt: -1, lastSeenBroken: 0, arriveAt: -1, fixAnimAt: -1,
+                brokenAt: -1, lastSeenBroken: 0, arriveAt: -1, fixAnimAt: {},
                 mechanics: -1, startNearest: -1,
                 startDistances: {}, startFixed: {}, startInspected: 0,
                 walked: {}, last: {}, arrivedAt: {}, samples: [],
@@ -266,9 +276,10 @@ export function createBreakdownTracer(): BreakdownTracer {
                     const m = mechanics[i];
                     const d = tilesTo(m, r.exit);
                     if (nearest === -1 || d < nearest) { nearest = d; nearestId = m.id; }
-                    if (d <= 2) {
-                        atRide++;
-                        if (isFixAnim(m.animation)) fixing++;
+                    if (d <= 2) atRide++;
+                    if (isFixAnim(m.animation)) {
+                        fixing++;
+                        if (a.fixAnimAt[m.id] === undefined) a.fixAnimAt[m.id] = t;
                     }
                     // Walk tracking starts at the broken flag, when the game dispatches
                     // (Ride.cpp:1420), and stops for each mechanic once they reach the ride.
@@ -284,7 +295,6 @@ export function createBreakdownTracer(): BreakdownTracer {
                 }
                 if (first) a.startNearest = nearest;
                 if (atRide > 0 && a.arriveAt === -1) a.arriveAt = t;
-                if (fixing > 0 && a.fixAnimAt === -1) a.fixAnimAt = t;
                 if (a.samples.length < MAX_SAMPLES) {
                     a.samples.push({ t, broken: broken ? 1 : 0, nearest, nearestId, atRide, fixing, answering });
                 }
