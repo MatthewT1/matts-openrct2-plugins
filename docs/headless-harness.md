@@ -4,7 +4,7 @@ Runs a copy of a save with our plugins **on** and again with them **off**, fast-
 with no game window, and records the park every in-game day. Built for #46.
 
 ```bash
-node tools/headless/run.mjs --save "C:/Users/Matt/Documents/OpenRCT2/save/Thunder Rock.park" --days 60 --settings all
+node tools/headless/run.mjs --save "<OpenRCT2 user dir>/save/YourPark.park" --days 60 --settings all
 ```
 
 **Check the settings before reading the results.** Without `--settings`, the on arm uses
