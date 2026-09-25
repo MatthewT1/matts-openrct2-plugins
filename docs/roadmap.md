@@ -146,21 +146,31 @@ sample-rotation fix (19 sweeps published), the OPS direction fix (`opsSetRejecte
 
 Nothing here is required. In rough order of value:
 
-1. **Facility placement quality.** It works; the open question is now whether it places
-   things *well*. Watch `siteRejectQueuePath` — if a spot keeps confirming while that
-   counter climbs and nothing is built, the cluster is inside a queue. Queueing guests
-   get hungry and are densely packed, so they look like strong demand, but they cannot
-   step out to use anything. The fix then is to stop sampling queueing guests into need
-   clusters at all. No evidence of this yet.
+1. **Facility placement quality.** Answered in Session 5
+   ([#14](https://github.com/MatthewT1/matts-openrct2-plugins/issues/14)): queue tiles were
+   0.3-4.4% of rejected sites across 4 park loads, every search still accepted sites, and
+   14 facilities were built. Queueing guests are still sampled as demand
+   (`src/trash/facilities.ts`), which is harmless on that evidence. Reopen only if a gap
+   confirms (8 sweeps), then builds nothing while `siteRejectQueuePath` is the top reason.
 
-2. **The queue attribution question.** `queueAttribution` rows now record per-ride
-   before/after for every W2 and OPS intervention. That data has never been read, because
-   the parks changed underneath every attempt. It is the one open empirical question.
-3. **Sickness.** `needs.sick` has been climbing while `verySick` stays at 1, and guests
-   only seek first aid at nausea 200. If `verySick` rises, first-aid building becomes
-   worth enabling.
-4. **Security.** `brokenBins` is still 0 in every record ever taken. Instrumented and
-   checkable the moment that changes.
+2. **The queue attribution question.** `queueAttribution` rows record per-ride
+   before/after for every W2 and OPS intervention. First read in Session 5
+   ([#15](https://github.com/MatthewT1/matts-openrct2-plugins/issues/15)): OPS median 0,
+   W2 queues longer afterwards in 35 of 44, but confounded (W2 fires on rising queues,
+   guest counts always changing, no control group). Methodology under discussion there.
+
+**Telemetry watch list** (moved from
+[#16](https://github.com/MatthewT1/matts-openrct2-plugins/issues/16); no action unless a
+trigger fires):
+
+3. **Sickness.** Trigger: `needs.verySick` trending *up* within a run, not just rising with
+   guest count. Then enable first-aid auto-build. Guests only seek first aid at nausea 200,
+   so `needs.sick` is not the trigger. Last checked Session 5: peak 1.3% of sampled guests
+   (7 of 529), no trend in any of 5 runs.
+4. **Security.** Trigger: `brokenBins` above 1, or broken bins recurring across runs. Then
+   reconsider security guards. Last checked Session 5: 0 in 1,410 of 1,526 records; one
+   2,503-guest run held exactly 1 broken bin for 116 records. One vandalised bin does not
+   pay for guard wages.
 5. **Pricing.** Consistently the largest guest complaint and deliberately out of scope —
    a separate price-manager plugin is the right home.
 
