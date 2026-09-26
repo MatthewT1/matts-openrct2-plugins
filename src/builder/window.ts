@@ -17,10 +17,12 @@ export interface BuilderWindowDeps {
     /** Queue TVs placed since the park was loaded. */
     queueTvCount(): number;
     extras: ExtrasBudget;
+    repairedCount(): number;
+    brokenCount(): number;
 }
 
 export function createBuilderWindow(deps: BuilderWindowDeps) {
-    const { settings, placedCount, facilityCounts, queueTvCount, extras } = deps;
+    const { settings, placedCount, facilityCounts, queueTvCount, extras, repairedCount, brokenCount } = deps;
 
     let win: Window | null           = null;
     let refreshHandle: number | null = null;
@@ -32,9 +34,9 @@ export function createBuilderWindow(deps: BuilderWindowDeps) {
             classification: "auto-builder",
             title: "Auto-Builder v" + __PLUGIN_VERSION__,
             width: 300,
-            height: 214,
+            height: 246,
             widgets: [
-                { type: "groupbox", x: 6, y: 16, width: 288, height: 110, text: "Automation  (runs each in-game day)" },
+                { type: "groupbox", x: 6, y: 16, width: 288, height: 128, text: "Automation  (runs each in-game day)" },
                 {
                     type: "checkbox", name: "chkAmenities",
                     x: 14, y: 30, width: 276, height: 14,
@@ -75,12 +77,21 @@ export function createBuilderWindow(deps: BuilderWindowDeps) {
                     isChecked: settings.autoQueueTvs.get(),
                     onChange: function(v: boolean): void { settings.autoQueueTvs.set(v); },
                 },
+                {
+                    type: "checkbox", name: "chkRepairs",
+                    x: 14, y: 120, width: 276, height: 14,
+                    text: "Repair broken benches, bins & lamps",
+                    tooltip: "Vandals break benches, bins and lamps, and nothing in the game repairs them (handymen skip broken bins). Each day re-places a share of the broken ones (about a quarter the first day, a fifth after), nearest the entrance first, paid from the same monthly budget as queue TVs. Only ever repairs items that are already there. On by default (#115).",
+                    isChecked: settings.autoRepairs.get(),
+                    onChange: function(v: boolean): void { settings.autoRepairs.set(v); },
+                },
 
-                { type: "groupbox", x: 6, y: 132, width: 288, height: 58, text: "Status" },
-                { type: "label", name: "lblPlaced",     x: 14, y: 146, width: 276, height: 14, text: "" },
-                { type: "label", name: "lblFacilities", x: 14, y: 160, width: 276, height: 14, text: "" },
-                { type: "label", name: "lblQueueTvs",   x: 14, y: 174, width: 276, height: 14, text: "" },
-                diagnosticsCheckbox(14, 196, 276),
+                { type: "groupbox", x: 6, y: 150, width: 288, height: 72, text: "Status" },
+                { type: "label", name: "lblPlaced",     x: 14, y: 164, width: 276, height: 14, text: "" },
+                { type: "label", name: "lblFacilities", x: 14, y: 178, width: 276, height: 14, text: "" },
+                { type: "label", name: "lblQueueTvs",   x: 14, y: 192, width: 276, height: 14, text: "" },
+                { type: "label", name: "lblRepairs",    x: 14, y: 206, width: 276, height: 14, text: "" },
+                diagnosticsCheckbox(14, 228, 276),
             ],
             onClose: function(): void {
                 win = null;
@@ -108,6 +119,8 @@ export function createBuilderWindow(deps: BuilderWindowDeps) {
             "Queue TVs: " + queueTvCount() + " placed, "
             + (extras.open() ? "free (no-money park)"
                 : formatMoney(extras.spent() / 10) + " of " + formatMoney(extras.allowance() / 10) + " this month");
+        win.findWidget<LabelWidget>("lblRepairs").text =
+            "Repaired " + repairedCount() + ", " + brokenCount() + " still broken";
     }
 
     return {

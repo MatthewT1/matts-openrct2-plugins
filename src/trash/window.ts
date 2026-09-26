@@ -209,11 +209,11 @@ export function createTrashWindow(deps: TrashWindowDeps) {
         win.findWidget<LabelWidget>("lblFormula").text =
             "Formula " + needed + (saving > 0 ? ", saving " + formatMoney(saving) + "/mo" : "");
         win.findWidget<LabelWidget>("lblBins").text     =
-            "Bins: " + cache.fullBins + " full, " + cache.brokenBins + " broken  (guests: " + cache.guests + ")";
+            "Bins full: " + cache.fullBins + ", path items broken: " + cache.brokenBins + "  (guests: " + cache.guests + ")";
         win.findWidget<LabelWidget>("lblTiles").text    =
             "Path tiles: " + cache.pathTiles + "  /  owned land: " + cache.ownedTiles;
         win.findWidget<LabelWidget>("lblStatus").text   =
-            cache.brokenBins > 0 ? "[!] Broken bins detected -- vandalism cascade risk!" : "";
+            cache.brokenBins > 0 ? "[!] Broken benches/bins/lamps -- vandalism" : "";
     }
 
     return {

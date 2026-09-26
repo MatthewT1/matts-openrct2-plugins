@@ -274,7 +274,7 @@ function trashManagerMain(): void {
         }
         if (cache.brokenBins > 0) {
             console.log("[Trash Manager] " + cache.brokenBins +
-                " broken bin(s) detected — vandalism cascade risk.");
+                " broken path item(s) (benches/bins/lamps) detected — vandalism cascade risk.");
         }
     });
 
