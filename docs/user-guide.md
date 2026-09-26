@@ -80,7 +80,7 @@ If the **Auto-place benches & bins** toggle is on, the plugin names which ride i
 
 ### Facility Building Never Demolishes
 
-The **Auto-build** toggle will place toilets, first aid, and food/drink stalls where guests have persistent unmet needs. It will never demolish a facility, including ones you built by hand. If you build a toilet on one side of the park and the plugin places one on the other (because both sides had gaps), both stay.
+The **Auto-build** toggle will place toilets, first aid, and food/drink stalls where guests have persistent unmet needs. It will never demolish a facility, including ones you built by hand. If you build a toilet on one side of the park and the plugin places one on the other (because both sides had gaps), both stay. For a food or drink stall it picks the unlocked stall type the park has fewest of, so new stalls keep cycling through the menu (burger, pizza, chicken...) instead of repeating one.
 
 Unmet needs must persist across multiple sweeps of the whole guest roster before a facility is built — this prevents chasing temporary clusters of guests that move in the next moment. A gap far from the nearest facility that keeps reappearing is a real problem worth solving; a temporary crowd is not.
 

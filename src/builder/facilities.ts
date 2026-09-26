@@ -13,7 +13,7 @@ import {
     CLUSTER_MIN_GUESTS, NeedKind, NeedCounts, NeedGap, Facility,
 } from "../needs";
 import {
-    createFacilityTracker, planFacilities, describePlan, DEFAULT_FACILITY_OPTIONS,
+    createFacilityTracker, planFacilities, describePlan, pickFacilityVariant, DEFAULT_FACILITY_OPTIONS,
     FacilityPlan, FacilitySite, ConfirmedGap, GapObservation,
 } from "../facilities";
 import { createThoughtAccumulator, describeThoughts, ThoughtTally } from "../thoughts";
@@ -365,20 +365,22 @@ export function createFacilityManager(settings: BuilderSettings, dbg: DebugChann
     const FACILITY_DIR_DY = [0, 1, 0, -1];
 
     /**
-     * Object indices already built for a given ride type, read live from `map.rides`.
+     * How many of each object index is built for a given ride type, read live from `map.rides`.
      *
      * Not persisted: a ride's object never changes while it exists, and a demolished
      * one should stop counting toward variety immediately, so deriving this fresh from
      * the current ride list is both simpler and correct without any of the stale-id
      * bookkeeping the staff roster needed.
      */
-    function builtFacilityObjects(rideType: number): Record<number, true> {
-        const used: Record<number, true> = {};
+    function builtFacilityCounts(rideType: number): Record<number, number> {
+        const counts: Record<number, number> = {};
         const rides = map.rides;
         for (let i = 0; i < rides.length; i++) {
-            if (rides[i].type === rideType) used[rides[i].object.index] = true;
+            if (rides[i].type !== rideType) continue;
+            const index = rides[i].object.index;
+            counts[index] = (counts[index] || 0) + 1;
         }
-        return used;
+        return counts;
     }
 
     /**
@@ -391,25 +393,23 @@ export function createFacilityManager(settings: BuilderSettings, dbg: DebugChann
      * the fallback is only reached when there is no research state to respect.
      *
      * Among several unlocked objects of the same ride type (e.g. Burger Bar, Pizza
-     * Stall and Fried Chicken Stall are all RIDE_TYPE_FOOD_STALL), prefers one not
-     * already present in the park. RCT2's "Best/Worst Park Food" award is decided by
-     * the count of distinct food stall TYPES (5+ distinct types avoids it outright),
-     * so always picking whichever object happens to sort first would build the same
-     * stall over and over and actively work against that award. Falls back to the
-     * first invented match once every unlocked variant is already built.
+     * Stall and Fried Chicken Stall are all RIDE_TYPE_FOOD_STALL), picks the one with
+     * the fewest already built, ties in research order (pickFacilityVariant). Unbuilt
+     * variants come first, which helps the Best Food award (unique items,
+     * Award.cpp:300-343); after that, new stalls keep cycling instead of repeating the
+     * first variant (#102).
      */
     function unlockedFacilityObject(rideType: number): number {
         const invented = park.research.inventedItems;
-        const alreadyBuilt = builtFacilityObjects(rideType);
-        let firstMatch = -1;
+        const counts = builtFacilityCounts(rideType);
+        const candidates: number[] = [];
         for (let i = 0; i < invented.length; i++) {
             const item = invented[i];
             if (item.type !== "ride") continue;
             if (item.rideType !== rideType) continue;
-            if (firstMatch < 0) firstMatch = item.object;
-            if (!alreadyBuilt[item.object]) return item.object;
+            candidates.push(item.object);
         }
-        if (firstMatch >= 0) return firstMatch;
+        if (candidates.length > 0) return pickFacilityVariant(candidates, counts);
 
         // Research state exists but holds nothing of this type: it is genuinely locked.
         if (invented.length > 0 || park.research.uninventedItems.length > 0) return -1;
@@ -418,16 +418,13 @@ export function createFacilityManager(settings: BuilderSettings, dbg: DebugChann
         for (let i = 0; i < objects.length; i++) {
             const types = objects[i].rideType;
             for (let t = 0; t < types.length; t++) {
-                if (types[t] === rideType && !alreadyBuilt[objects[i].index]) return objects[i].index;
+                if (types[t] === rideType) {
+                    candidates.push(objects[i].index);
+                    break;
+                }
             }
         }
-        for (let i = 0; i < objects.length; i++) {
-            const types = objects[i].rideType;
-            for (let t = 0; t < types.length; t++) {
-                if (types[t] === rideType) return objects[i].index;
-            }
-        }
-        return -1;
+        return pickFacilityVariant(candidates, counts);
     }
 
     /**
