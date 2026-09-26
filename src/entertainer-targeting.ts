@@ -68,8 +68,19 @@ export const QUEUE_FLOOR_MINUTES = 3;
 /** Queues at or above this are the same "in real trouble" bar the rest of the project uses. */
 export const QUEUE_URGENT_MINUTES = 5;
 
-/** Never station more than this many entertainers via patrol zones — bounds the wage bill. */
+/** Never station more than this many entertainers at queues — bounds the wage bill. */
 export const MAX_TARGETED_ENTERTAINERS = 4;
+
+/**
+ * Extra stations away from queues (#68): the park entrance and food courts, where
+ * community practice puts one (#62). A walking guest who meets an entertainer gets +4
+ * target happiness (Staff.cpp:915-928). On top of the queue cap, so stations never take
+ * an entertainer away from a long queue.
+ */
+export const MAX_STATION_ENTERTAINERS = 3;
+
+/** The whole plugin-hired roster cap: queues plus stations. */
+export const MAX_ENTERTAINERS = MAX_TARGETED_ENTERTAINERS + MAX_STATION_ENTERTAINERS;
 
 /**
  * Half-width of the patrol rectangle around a station, in tiles. 4 tiles (128 units) on
@@ -152,7 +163,7 @@ export interface EntertainerRosterPlan {
  * `liveIds` must be read the same tick the plan is applied. The old code sized hires
  * from a list cached for 15 real seconds; at speed 4 that is ~7 in-game days, and every
  * one of those days hired the whole deficit again (Dynamite Dunes: 22 entertainers
- * against a cap of 4). The target is clamped to `MAX_TARGETED_ENTERTAINERS` so no
+ * against a cap of 4). The target is clamped to `MAX_ENTERTAINERS` (#68) so no
  * caller can ask for more than the cap, and firing only ever picks ids in `owned`.
  */
 export function planEntertainerRoster(
@@ -160,7 +171,7 @@ export function planEntertainerRoster(
     liveIds: number[],
     owned: Record<string, true>,
 ): EntertainerRosterPlan {
-    const capped = Math.max(0, Math.min(target, MAX_TARGETED_ENTERTAINERS));
+    const capped = Math.max(0, Math.min(target, MAX_ENTERTAINERS));
     const diff = capped - liveIds.length;
     if (diff >= 0) return { hire: diff, fireIds: [], protectedCount: 0 };
 
@@ -288,4 +299,26 @@ export function costumeCandidates(
     const out = named.slice();
     for (let i = 0; i <= maxIndex; i++) if (!skip[i]) out.push(i);
     return out;
+}
+
+/** A non-queue spot worth an entertainer (#68), in game units (tile * 32). */
+export interface StationSignal {
+    name: string;
+    x: number;
+    y: number;
+}
+
+/**
+ * Patrol targets for the stations, entrance first, at most `MAX_STATION_ENTERTAINERS`.
+ * They go AFTER the queue targets in the list the roster is assigned from, so if the
+ * roster is short it is a station that goes without, not a long queue.
+ */
+export function selectStationTargets(stations: StationSignal[]): EntertainerTarget[] {
+    const radius = PATROL_RADIUS_TILES * TILE_SIZE;
+    return stations.slice(0, MAX_STATION_ENTERTAINERS).map((s) => ({
+        rideId: -1,
+        name: s.name,
+        queueMinutes: 0,
+        patrol: { x1: s.x - radius, y1: s.y - radius, x2: s.x + radius, y2: s.y + radius },
+    }));
 }

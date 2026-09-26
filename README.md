@@ -111,7 +111,8 @@ Handles entertainers. On by default since [#51](https://github.com/MatthewT1/mat
 <img src="docs/images/staff-extras.png" alt="Staff Extras window" width="300">
 
 Hires entertainers and places them at queues that are close to the point where guests walk
-out, because that's where an entertainer makes the most difference. It only ever fires
+out, because that's where an entertainer makes the most difference, plus one at the park
+entrance and one at each food court (#68). It only ever fires
 entertainers it hired itself, so the ones you placed by a themed ride stay put.
 
 Once the park has 20 or more staff and no security guard, it also hires one guard. The Best

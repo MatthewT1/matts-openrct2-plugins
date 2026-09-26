@@ -10,7 +10,7 @@ This is a suite of seven plugins that take over the repetitive parts of running 
 
 **Wait Time Optimizer** — Keeps queues from spiraling. Recommends and applies ride wait-time settings, flags rides that are capacity-bound (need more trains, not tuning) versus genuinely mistuned, and steps in before a queue crosses the point where guests start walking away.
 
-**Staff Extras** — Entertainers. Positions them at queues that are close to that same walk-out point, since an entertainer measurably buys guests more patience. (Guests only walk out after ~15 minutes **and** when their happiness is low, 65 of 255 or less; an entertainer both resets the queue timer by 200 and raises happiness.)
+**Staff Extras** — Entertainers. Positions them at queues that are close to that same walk-out point, since an entertainer measurably buys guests more patience, and keeps one at the park entrance and at each food court. (Guests only walk out after ~15 minutes **and** when their happiness is low, 65 of 255 or less; an entertainer both resets the queue timer by 200 and raises happiness.)
 
 **Marketing Manager** — Advertising and voucher campaigns. Ranks every campaign type by actual value for your park's current pricing (some campaigns are quietly far worse value than others) and can start them for you, tracking whether they're actually bringing in guests.
 
@@ -42,7 +42,7 @@ The rest of this guide covers every toggle across the five automated plugins in 
 | Auto-adjust wait times daily | Wait Time Optimizer | **ON** | No | Automatically applies recommended min/max wait times to all open rides each in-game day |
 | Tune ride operation settings (laps / rotations / speed) | Wait Time Optimizer | **OFF** | No | Shortens ride cycles on rides with long queues (5+ min), lengthens them on quiet ones (1 min or less); not yet shown to shorten queues overall ([#15](https://github.com/MatthewT1/matts-openrct2-plugins/issues/15)); **discards the ride's excitement/intensity/nausea ratings until it runs again**, so moves one step at a time; off by default |
 | Diagnostics: stream timings to log sink | Wait Time Optimizer | **OFF** | No | Streams telemetry to a local log sink on 127.0.0.1:7777 for performance analysis; costs nothing when off |
-| Auto-manage entertainers daily (spends money) | Staff Extras | **ON** | **Yes** | Hires and positions entertainers near queues close to the walk-out point (~15 min in the queue **and** happiness 65/255 or less) (entertainers cut guests' time-in-queue and raise happiness); tracks which entertainers it hired and only ever fires those — one you placed by hand, in whatever costume, is never touched |
+| Auto-manage entertainers daily (spends money) | Staff Extras | **ON** | **Yes** | Hires and positions entertainers near queues close to the walk-out point (~15 min in the queue **and** happiness 65/255 or less) (entertainers cut guests' time-in-queue and raise happiness); also keeps one at the park entrance and one at each food court (up to 3 extra, on top of the 4 for queues); tracks which entertainers it hired and only ever fires those — one you placed by hand, in whatever costume, is never touched |
 | Hire 1 security guard for Best Staff award | Staff Extras | **ON** | **Yes** | Once the park has 20+ staff and no security guard, hires exactly one (£60/month). The Best Staff award (+25% new guests while held) needs every staff type, and nothing else hires security (#92) |
 | Diagnostics: stream timings to log sink | Staff Extras | **OFF** | No | Streams telemetry to a local log sink on 127.0.0.1:7777 for performance analysis; costs nothing when off |
 | Start (per campaign row) | Marketing Manager | manual | **Yes** | Starts that specific campaign for the chosen duration; disabled when the campaign isn't currently eligible (see below) or is already running |
@@ -70,7 +70,7 @@ These were off by default until [#51](https://github.com/MatthewT1/matts-openrct
 
 **Emergency repair stuck rides** — Labelled a cheat because it is one: it clears the breakdown on a ride no mechanic can reach (a long-standing pathfinding bug), with zero mechanic travel and zero reliability restored. It only acts on rides stuck broken for days with no mechanic able to fix them.
 
-**Auto-manage entertainers** — Each entertainer costs a monthly wage like any other staff. Entertainers go to queues close to the walk-out point.
+**Auto-manage entertainers** — Each entertainer costs a monthly wage like any other staff (£60/month). Entertainers go to queues close to the walk-out point first; up to 3 more stand at the park entrance and at food courts (2+ food/drink stalls together), where walking guests who meet them get happier. Queues always come first: if the roster is short, a station goes without, never a long queue.
 
 ### Toggles That Are Off By Default (And Why)
 
@@ -193,6 +193,7 @@ If you enable **Diagnostics** and run the log sink, the file `tools/rct-debug.lo
 #### Staff Extras (Entertainers)
 
 - Entertainers are hired and positioned near queues nearing the walk-out point (~15 minutes **and** low happiness), not spread evenly across the park
+- One more stands near the park entrance, and one at each food court (up to 3 extra in all)
 - Hired entertainers all use the same costume — the first one the game accepts for this park, auto-discovered on first hire (slot 0 specifically does *not* work for entertainers, unlike every other staff type, so this can't be hardcoded and varies by park); if you want a specific themed costume near a ride, place that entertainer by hand — the plugin will never touch or replace it
 
 #### Marketing Manager
