@@ -207,12 +207,13 @@ can auto-sweep.
   reports the distance to the nearest matching facility. Measured at **~1ms** for a
   250-guest window on a 927-guest park. Runs when either Diagnostics *or* auto-build is
   on; costs nothing with both off.
-- **Automatic facility building** (off by default): builds toilets, first aid rooms and
-  food/drink stalls where guests have a **persistent, measured** unmet need. A gap must
-  survive **8 separate sweeps** of the whole park before it can authorise construction,
-  because a cluster is a snapshot of where guests were standing and crowds move.
-  Capped at 8 per kind, one build per pass, £20,000 cash floor, and it **never
-  demolishes anything**. See
+- **Automatic facility building** (on by default since #51): builds toilets, first aid
+  rooms and food/drink stalls where guests have a **persistent, measured** unmet need. A
+  gap must survive **5 separate sweeps** of the whole park before it can authorise
+  construction, because a cluster is a snapshot of where guests were standing and crowds
+  move. Since #80 one sweep reads every guest (up to 2,000) once a day, and a gap gains
+  at most one streak point per sweep. Capped at 8 per kind, one build per pass, £2,000
+  cash floor (skipped in no-money parks), and it **never demolishes anything**. See
   [design-records.md § NEEDS](docs/design-records.md#needs--guest-need-clustering-then-automatic-facility-placement).
   - Only builds what research has unlocked, via `park.research.inventedItems`.
   - The rotation a 1x1 stall wants is undocumented, so all four are probed with silent
