@@ -44,7 +44,14 @@ export function createFacilityManager(settings: TrashSettings, dbg: DebugChannel
     // came later at speed 4. Half a game day keeps it daily at every speed; the 1 s floor
     // is under one speed-4 day (~1.7 s) so it only binds past speed 4. Max measured 9ms.
     const NEED_SAMPLE_FLOOR_MS       = 1_000;
-    const NEED_SAMPLE_WINDOW      = 400;   // guests read per pass
+    const NEED_SAMPLE_WINDOW      = 400;   // guests read per pass, at least
+    // #80: the window grows with the park so one pass reads everyone, making a sweep
+    // one in-game day on every park. At a fixed 400 a 1,200-guest park took 3 days per
+    // sweep, so `confirmSweeps` = 5 meant ~15 days and gaps drifted away first: 1 build
+    // in 10 thirty-day harness runs. Reading everyone measured 16ms max per day on a
+    // 1,200-guest park (the fixed 400 window already peaked at 13ms). The cap keeps a
+    // very large park near 30ms; above it sweeps fall back to taking several days.
+    const NEED_SAMPLE_WINDOW_MAX  = 2_000;
     const NEED_CELL_TILES         = 8;     // clustering grid, matches the litter grid
     // Shared with the facility planner via needs.ts, so the two cannot disagree about
     // what counts as a cluster. They did, and it created an unactionable dead band.
@@ -238,7 +245,8 @@ export function createFacilityManager(settings: TrashSettings, dbg: DebugChannel
         // Sample this pass's window, then act on whether it finished a sweep. The
         // rotation decides that from the pass that just ran rather than from the next
         // one, which is what makes it correct on a park whose guest count is changing.
-        const window = needRotation.next(guests.length);
+        const size = Math.min(Math.max(guests.length, NEED_SAMPLE_WINDOW), NEED_SAMPLE_WINDOW_MAX);
+        const window = needRotation.next(guests.length, size);
         for (let i = window.start; i < window.end; i++) {
             const g = guests[i];
             // Skip guests that are not standing on the map.

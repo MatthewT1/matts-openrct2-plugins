@@ -323,8 +323,19 @@ export function createFacilityTracker(options: FacilityOptions): FacilityTracker
             // new one. Exact-coordinate keying shredded the signal — see `mergeRadius`.
             let entry = nearbyEntry(g);
             if (entry === undefined) {
-                entry = { kind: g.kind, x: g.x, y: g.y, guests: g.guests, distance: g.distance, streak: 0, seen: true };
+                entry = { kind: g.kind, x: g.x, y: g.y, guests: g.guests, distance: g.distance, streak: 0, seen: false };
                 tracked[keyOf(g.kind, g.x, g.y)] = entry;
+            }
+            // #80: at most ONE streak point per sweep. Several clusters inside the merge
+            // radius used to add one each, so a gap reached `confirmSweeps` in two or
+            // three sweeps (measured: streak 9 -> 24 over three daily sweeps).
+            if (entry.seen) {
+                // Second sighting this sweep: keep the stronger of the two readings.
+                if (g.guests > entry.guests) {
+                    entry.guests = g.guests;
+                    entry.distance = g.distance;
+                }
+                continue;
             }
             // Always carry the freshest measurements forward; the streak is the memory,
             // the numbers should describe the park as it is now.
