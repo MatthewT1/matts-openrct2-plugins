@@ -94,23 +94,22 @@ openrct2 plugin/
 
 ## Build
 
-`npm` is broken on this machine (nvm-windows v1.1.7 bug, missing `@npmcli/config`), so
-all commands call the binaries directly through node. Fix is to update nvm-windows.
-Node in use: **v22.23.2**.
+Node in use: **v22.23.2** (npm 10.9.8). npm works again since nvm-windows was updated (#13);
+the direct `node ./node_modules/...` calls still work if npm ever breaks.
 
 ```bash
 # Dev build - compiles and deploys to OpenRCT2\plugin\ in one step
-node ./node_modules/rollup/dist/bin/rollup --config rollup.config.js
+npm run build:dev
 ```
 
 ```bash
 # Type-check only
-node ./node_modules/typescript/bin/tsc --noEmit -p tsconfig.json
+npm run typecheck
 ```
 
 ```bash
 # Run the test suite (prints the pass count; tests cover the pure logic modules)
-node tests/run.mjs
+npm test
 ```
 
 ```bash
@@ -130,12 +129,12 @@ node tools/headless/run.mjs --save "<OpenRCT2 user dir>/save/YourPark.park" --da
 
 ```bash
 # Production build (outputs to ./dist/)
-node ./node_modules/rollup/dist/bin/rollup --config rollup.config.js --environment BUILD:production
+npm run build
 ```
 
 ```bash
 # Watch mode
-node ./node_modules/nodemon/bin/nodemon.js --watch ./src --ext js,ts --exec "node ./node_modules/rollup/dist/bin/rollup --config rollup.config.js"
+npm start
 ```
 
 > **After every `.ts` edit, rebuild.** The dev build resolves the Documents folder at
@@ -348,7 +347,8 @@ several sessions ([NEEDS](docs/design-records.md#needs--guest-need-clustering-th
 ## Environment
 
 - **OS:** Windows 11 Pro
-- **Node:** v22.23.2 via nvm-windows (symlink at `%USERPROFILE%\nodejs`)
-- **npm:** broken — use the direct node calls above
+- **Node:** v22.23.2 via nvm-windows (updated 2026-09-25; installed under `%LOCALAPPDATA%Author Software
+vm`, active version in its `.nodejs` folder)
+- **npm:** 10.9.8, working again (#13)
 - **Plugin folder:** `%USERPROFILE%\Documents\OpenRCT2\plugin\`
 - **Debug log:** `tools/rct-debug.log` (gitignored)
