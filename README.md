@@ -7,7 +7,7 @@ few jobs the game leaves entirely to you.
 Every decision is based on what's actually happening in your park, not on a fixed ratio.
 If the park is clean with 20 handymen, the plugin won't hire 40 because a formula says so.
 
-[Download the latest release](../../releases/latest) · [User guide](docs/user-guide.md) · [MIT license](LICENSE)
+[Download the latest release](../../releases/latest) Â· [User guide](docs/user-guide.md) Â· [MIT license](LICENSE)
 
 ---
 
@@ -58,7 +58,11 @@ Places benches and bins and builds guest facilities. Split out of Trash Manager 
 - **Queue TVs** *(on by default, can be switched off)*. Once the TV is researched, puts a TV
   on every 2nd empty queue tile of every ride, front first: long-waiting guests only stop
   losing happiness on a tile with a TV. Paid from a monthly extras budget (5% of the cash
-  above �1,000, set at the start of each month) (#104, #116).
+  above £1,000, set at the start of each month) (#104, #116).
+- **Repairs** *(on by default, can be switched off)*. Vandals break benches, bins and lamps and
+  nothing in the game repairs them. Each day re-places about a fifth of the broken ones
+  (a quarter on the first day), nearest the entrance first, from the same monthly budget.
+  Only items already there (#115).
 
 <img src="docs/images/plugin-built-amenities.png" alt="Toilet, benches and bins placed by Auto-Builder along the path below the Woodchip coaster" width="480">
 

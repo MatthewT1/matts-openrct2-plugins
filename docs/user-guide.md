@@ -1,22 +1,22 @@
-# User Guide — OpenRCT2 Management Plugins
+# User Guide â€” OpenRCT2 Management Plugins
 
-This is a suite of seven plugins that take over the repetitive parts of running a park — staffing, cleanliness, ride tuning, facility placement, entertainers, and marketing — so you can spend your time designing rides and the park itself instead of babysitting numbers. Every plugin is independent (use one, use all seven, doesn't matter) and every toggle can be switched off. The cleanliness, entertainer and stuck-ride features are on by default, because a 10-park test showed they make parks cleaner at a small cost ([#51](https://github.com/MatthewT1/matts-openrct2-plugins/issues/51)). Marketing and ride operation tuning stay off until you opt in. None of it does anything you couldn't do yourself by hand — it just does it continuously, from measured park data, instead of you having to notice and act on it.
+This is a suite of seven plugins that take over the repetitive parts of running a park â€” staffing, cleanliness, ride tuning, facility placement, entertainers, and marketing â€” so you can spend your time designing rides and the park itself instead of babysitting numbers. Every plugin is independent (use one, use all seven, doesn't matter) and every toggle can be switched off. The cleanliness, entertainer and stuck-ride features are on by default, because a 10-park test showed they make parks cleaner at a small cost ([#51](https://github.com/MatthewT1/matts-openrct2-plugins/issues/51)). Marketing and ride operation tuning stay off until you opt in. None of it does anything you couldn't do yourself by hand â€” it just does it continuously, from measured park data, instead of you having to notice and act on it.
 
-**Trash Manager** — Keeps the park clean. Adjusts handyman headcount to match how dirty the park actually is and sweeps litter each day.
+**Trash Manager** â€” Keeps the park clean. Adjusts handyman headcount to match how dirty the park actually is and sweeps litter each day.
 
-**Auto-Builder** — Places benches and bins where they're measurably needed (benches specifically stop guests from vomiting in the first place), and builds toilets, food stalls and first-aid rooms where guests keep going without, plus information kiosks at the entrance, the back of the park and wherever guests get lost, an umbrella stall by the entrance for rainy days, and TVs on long queues. These toggles were in Trash Manager before 1.5 (#84); a save keeps the choices it had there.
+**Auto-Builder** â€” Places benches and bins where they're measurably needed (benches specifically stop guests from vomiting in the first place), and builds toilets, food stalls and first-aid rooms where guests keep going without, plus information kiosks at the entrance, the back of the park and wherever guests get lost, an umbrella stall by the entrance for rainy days, and TVs on long queues. These toggles were in Trash Manager before 1.5 (#84); a save keeps the choices it had there.
 
-**Mechanic Manager** — Keeps rides running. Adjusts mechanic headcount to match real breakdowns, keeps inspection intervals from silently resetting, and clears patrol zones so mechanics can reach any ride. A separate cheat toggle exists for the rare ride no mechanic can physically path to.
+**Mechanic Manager** â€” Keeps rides running. Adjusts mechanic headcount to match real breakdowns, keeps inspection intervals from silently resetting, and clears patrol zones so mechanics can reach any ride. A separate cheat toggle exists for the rare ride no mechanic can physically path to.
 
-**Wait Time Optimizer** — Keeps queues from spiraling. Recommends and applies ride wait-time settings, flags rides that are capacity-bound (need more trains, not tuning) versus genuinely mistuned, and steps in before a queue crosses the point where guests start walking away.
+**Wait Time Optimizer** â€” Keeps queues from spiraling. Recommends and applies ride wait-time settings, flags rides that are capacity-bound (need more trains, not tuning) versus genuinely mistuned, and steps in before a queue crosses the point where guests start walking away.
 
-**Staff Extras** — Entertainers. Positions them at queues that are close to that same walk-out point, since an entertainer measurably buys guests more patience, and keeps one at the park entrance and at each food court. (Guests only walk out after ~15 minutes **and** when their happiness is low, 65 of 255 or less; an entertainer both resets the queue timer by 200 and raises happiness.)
+**Staff Extras** â€” Entertainers. Positions them at queues that are close to that same walk-out point, since an entertainer measurably buys guests more patience, and keeps one at the park entrance and at each food court. (Guests only walk out after ~15 minutes **and** when their happiness is low, 65 of 255 or less; an entertainer both resets the queue timer by 200 and raises happiness.)
 
-**Marketing Manager** — Advertising and voucher campaigns. Ranks every campaign type by actual value for your park's current pricing (some campaigns are quietly far worse value than others) and can start them for you, tracking whether they're actually bringing in guests.
+**Marketing Manager** â€” Advertising and voucher campaigns. Ranks every campaign type by actual value for your park's current pricing (some campaigns are quietly far worse value than others) and can start them for you, tracking whether they're actually bringing in guests.
 
-**Path Connector** (experimental: unreviewed, no tests) — A manual tool, not automation: draws a footpath between two tiles you pick, with warnings before you commit. No toggles, nothing runs in the background.
+**Path Connector** (experimental: unreviewed, no tests) â€” A manual tool, not automation: draws a footpath between two tiles you pick, with warnings before you commit. No toggles, nothing runs in the background.
 
-The rest of this guide covers every toggle across the five automated plugins in detail — what it does, why it defaults the way it does, and how to tell it's working.
+The rest of this guide covers every toggle across the five automated plugins in detail â€” what it does, why it defaults the way it does, and how to tell it's working.
 
 ---
 
@@ -30,20 +30,21 @@ The rest of this guide covers every toggle across the five automated plugins in 
 | Auto-place benches & bins where needed | Auto-Builder | **ON** | **Yes** | Places benches near nauseating ride exits and vomit hotspots (benches stop guests vomiting), and bins near food/drink stalls; costs money |
 | ...and remove ones no longer needed | Auto-Builder | **ON** | No | Works with auto-place to remove benches and bins that are no longer serving a purpose; **only ever removes amenities this plugin placed itself**; anything you placed by hand is never touched |
 | Auto-build toilets, first aid & food stalls | Auto-Builder | **ON** | **Yes** | Watches where guests have unmet needs and builds facilities once a gap persists across many samples; costs real money and **never demolishes anything** |
-| Auto-place TVs on long queues | Auto-Builder | **ON** | **Yes** | A queue TV on every 2nd empty queue tile of every ride, front first, a few queues a day; paid from the monthly extras budget (5% of cash above �1,000); needs the TV researched; never replaces anything |
+| Auto-place TVs on long queues | Auto-Builder | **ON** | **Yes** | A queue TV on every 2nd empty queue tile of every ride, front first, a few queues a day; paid from the monthly extras budget (5% of cash above £1,000); needs the TV researched; never replaces anything |
+| Repair broken benches, bins & lamps | Auto-Builder | **ON** | **Yes** | Re-places the same item on a broken tile, ~28% of the broken ones the first day, 20% a day after (at least 1), nearest the entrance first; same monthly budget; never adds new items |
 | Auto-build info kiosks & umbrella stall | Auto-Builder | **ON** | **Yes** | Once the park has 3 rides: an umbrella stall near the entrance (and the back of a big park); an information kiosk near the entrance, one at the far end of the paths, and one where guests say they're lost, unless one is already within 12 tiles; maps at 50p; at most 4 kiosks |
 | Max handymen cap | Trash Manager | (spinner) | No | Hard upper limit on auto-hired handymen (manual hires are unaffected); allows you to cap the formula's recommendation |
 | Diagnostics: stream timings to log sink | Trash Manager | **OFF** | No | Streams telemetry to a local log sink on 127.0.0.1:7777 for performance analysis; costs nothing when off |
 | Diagnostics: stream timings to log sink | Auto-Builder | **OFF** | No | Streams telemetry to a local log sink on 127.0.0.1:7777 for performance analysis; costs nothing when off |
-| Auto-manage daily (intervals + hiring + zones) | Mechanic Manager | **ON** | No | Re-applies inspection intervals daily (opening a ride's construction window silently resets them) and clears mechanic patrol zones, which lets mechanics reach **any** ride — OpenRCT2 dispatches the nearest mechanic to each breakdown automatically, and a patrol zone blocks that |
+| Auto-manage daily (intervals + hiring + zones) | Mechanic Manager | **ON** | No | Re-applies inspection intervals daily (opening a ride's construction window silently resets them) and clears mechanic patrol zones, which lets mechanics reach **any** ride â€” OpenRCT2 dispatches the nearest mechanic to each breakdown automatically, and a patrol zone blocks that |
 | Adaptive staffing (learn the right number) | Mechanic Manager | **ON** | No | Adjusts mechanic count downward while no rides are breaking down, hires back immediately if breakdowns go unattended |
 | Emergency repair stuck rides (cheat) | Mechanic Manager | **ON** | No | **This is a cheat**: clears the breakdown on any ride broken for 3+ days with no mechanic able to fix it (a pathfinding problem in the game itself); adds zero reliability and no mechanic travels |
 | Diagnostics: stream timings to log sink | Mechanic Manager | **OFF** | No | Streams telemetry to a local log sink on 127.0.0.1:7777 for performance analysis; costs nothing when off |
 | Auto-adjust wait times daily | Wait Time Optimizer | **ON** | No | Automatically applies recommended min/max wait times to all open rides each in-game day |
 | Tune ride operation settings (laps / rotations / speed) | Wait Time Optimizer | **OFF** | No | Shortens ride cycles on rides with long queues (5+ min), lengthens them on quiet ones (1 min or less); not yet shown to shorten queues overall ([#15](https://github.com/MatthewT1/matts-openrct2-plugins/issues/15)); **discards the ride's excitement/intensity/nausea ratings until it runs again**, so moves one step at a time; off by default |
 | Diagnostics: stream timings to log sink | Wait Time Optimizer | **OFF** | No | Streams telemetry to a local log sink on 127.0.0.1:7777 for performance analysis; costs nothing when off |
-| Auto-manage entertainers daily (spends money) | Staff Extras | **ON** | **Yes** | Hires and positions entertainers near queues close to the walk-out point (~15 min in the queue **and** happiness 65/255 or less) (entertainers cut guests' time-in-queue and raise happiness); also keeps one at the park entrance and one at each food court (up to 3 extra, on top of the 4 for queues); tracks which entertainers it hired and only ever fires those — one you placed by hand, in whatever costume, is never touched |
-| Hire 1 security guard for Best Staff award | Staff Extras | **ON** | **Yes** | Once the park has 20+ staff and no security guard, hires exactly one (£60/month). The Best Staff award (+25% new guests while held) needs every staff type, and nothing else hires security (#92) |
+| Auto-manage entertainers daily (spends money) | Staff Extras | **ON** | **Yes** | Hires and positions entertainers near queues close to the walk-out point (~15 min in the queue **and** happiness 65/255 or less) (entertainers cut guests' time-in-queue and raise happiness); also keeps one at the park entrance and one at each food court (up to 3 extra, on top of the 4 for queues); tracks which entertainers it hired and only ever fires those â€” one you placed by hand, in whatever costume, is never touched |
+| Hire 1 security guard for Best Staff award | Staff Extras | **ON** | **Yes** | Once the park has 20+ staff and no security guard, hires exactly one (Â£60/month). The Best Staff award (+25% new guests while held) needs every staff type, and nothing else hires security (#92) |
 | Diagnostics: stream timings to log sink | Staff Extras | **OFF** | No | Streams telemetry to a local log sink on 127.0.0.1:7777 for performance analysis; costs nothing when off |
 | Start (per campaign row) | Marketing Manager | manual | **Yes** | Starts that specific campaign for the chosen duration; disabled when the campaign isn't currently eligible (see below) or is already running |
 | Duration for next start (spinner) | Marketing Manager | 2 weeks | No | Sets how many weeks the *next* campaign you start (manually or automatically) runs, from 2 to 12 |
@@ -58,25 +59,27 @@ The rest of this guide covers every toggle across the five automated plugins in 
 
 These were off by default until [#51](https://github.com/MatthewT1/matts-openrct2-plugins/issues/51). In a 10-park headless test ([#63](https://github.com/MatthewT1/matts-openrct2-plugins/issues/63)) they made parks clearly cleaner (less litter and vomit, more 'very clean' thoughts) and did not hurt happiness, for about 500 less cash per 60 days (benches, bins, stalls and entertainer wages). Switch any of them off in the plugin's window; the choice is saved with the park.
 
-**Auto-sweep all litter each day** — Removes every piece of litter at the end of each day, including small recent pieces that don't cost rating yet. On a fully staffed park this can make some handymen redundant; adaptive staffing then hires fewer.
+**Auto-sweep all litter each day** â€” Removes every piece of litter at the end of each day, including small recent pieces that don't cost rating yet. On a fully staffed park this can make some handymen redundant; adaptive staffing then hires fewer.
 
-**Auto-place benches & bins where needed** (and **remove ones no longer needed**) — Costs money to build. Benches are cheap and stop guests vomiting near nauseating rides; bins catch litter near stalls. Removal only touches amenities this plugin placed.
+**Auto-place benches & bins where needed** (and **remove ones no longer needed**) â€” Costs money to build. Benches are cheap and stop guests vomiting near nauseating rides; bins catch litter near stalls. Removal only touches amenities this plugin placed.
 
-**Auto-build toilets, first aid & food stalls** — Costs real money (£225–£300 per facility). The algorithm is conservative and waits until a gap persists across many samples. It never demolishes anything.
+**Auto-build toilets, first aid & food stalls** â€” Costs real money (Â£225â€“Â£300 per facility). The algorithm is conservative and waits until a gap persists across many samples. It never demolishes anything.
 
-**Auto-build info kiosks & umbrella stall** — In rain, guests only go on sheltered rides unless they hold an umbrella, and they'll buy one in rain whatever it costs, so an umbrella stall by the entrance keeps rainy days going. About £250 per kiosk, at most 4 kiosks in the park (yours count). A guest with a map plans further ahead, considers every ride in the park and checks the map when lost. Maps are set to 50p, below what guests think a map is worth, so nobody refuses one as too expensive. No waiting period: it's cheap safety, the way many players build by hand.
+**Auto-build info kiosks & umbrella stall** â€” In rain, guests only go on sheltered rides unless they hold an umbrella, and they'll buy one in rain whatever it costs, so an umbrella stall by the entrance keeps rainy days going. About Â£250 per kiosk, at most 4 kiosks in the park (yours count). A guest with a map plans further ahead, considers every ride in the park and checks the map when lost. Maps are set to 50p, below what guests think a map is worth, so nobody refuses one as too expensive. No waiting period: it's cheap safety, the way many players build by hand.
 
-**Auto-place TVs on long queues** — Cheap path additions. A guest who has queued a long while loses happiness every moment unless their own queue tile has a TV, which lifts them instead, so TVs go on the front tiles where the longest waiters stand, then every 2nd tile back. At �15 each they come from a monthly extras budget: 5% of the cash above �1,000, fixed at the start of each month (cash in the bank, so a loss-making month doesn't stop it). The status line shows TVs placed and the month's spend. Only on empty queue tiles (never replaces your bin, bench or lamp), and not on a tile joined on all four sides, which the game refuses.
+**Auto-place TVs on long queues** â€” Cheap path additions. A guest who has queued a long while loses happiness every moment unless their own queue tile has a TV, which lifts them instead, so TVs go on the front tiles where the longest waiters stand, then every 2nd tile back. At £15 each they come from a monthly extras budget: 5% of the cash above £1,000, fixed at the start of each month (cash in the bank, so a loss-making month doesn't stop it). The status line shows TVs placed and the month's spend. Only on empty queue tiles (never replaces your bin, bench or lamp), and not on a tile joined on all four sides, which the game refuses.
 
-**Emergency repair stuck rides** — Labelled a cheat because it is one: it clears the breakdown on a ride no mechanic can reach (a long-standing pathfinding bug), with zero mechanic travel and zero reliability restored. It only acts on rides stuck broken for days with no mechanic able to fix them.
+**Repair broken benches, bins & lamps** — Angry guests break path items and nothing in the game fixes them; handymen even skip broken bins. The fix a player does by hand is to place the same item on that tile again, at its normal price. Auto-Builder does that gradually, like a crew working outwards from the entrance: about a quarter of the broken ones on the first day, then a fifth of what's left each day, at least one. It only repairs items that are already there, paid from the same monthly budget as queue TVs. Status: "Repaired N, M still broken".
 
-**Auto-manage entertainers** — Each entertainer costs a monthly wage like any other staff (£60/month). Entertainers go to queues close to the walk-out point first; up to 3 more stand at the park entrance and at food courts (2+ food/drink stalls together), where walking guests who meet them get happier. Queues always come first: if the roster is short, a station goes without, never a long queue.
+**Emergency repair stuck rides** â€” Labelled a cheat because it is one: it clears the breakdown on a ride no mechanic can reach (a long-standing pathfinding bug), with zero mechanic travel and zero reliability restored. It only acts on rides stuck broken for days with no mechanic able to fix them.
+
+**Auto-manage entertainers** â€” Each entertainer costs a monthly wage like any other staff (Â£60/month). Entertainers go to queues close to the walk-out point first; up to 3 more stand at the park entrance and at food courts (2+ food/drink stalls together), where walking guests who meet them get happier. Queues always come first: if the roster is short, a station goes without, never a long queue.
 
 ### Toggles That Are Off By Default (And Why)
 
-**Tune ride operation settings** — Changing operation settings (cycle time, laps, rotations) **discards the ride's excitement/intensity/nausea ratings until the ride runs again**. This can temporarily blind your park to high-intensity rides while tuning progresses, so it is off by default. The wait-time tuning (min/max queues) does not have this cost and runs by default.
+**Tune ride operation settings** â€” Changing operation settings (cycle time, laps, rotations) **discards the ride's excitement/intensity/nausea ratings until the ride runs again**. This can temporarily blind your park to high-intensity rides while tuning progresses, so it is off by default. The wait-time tuning (min/max queues) does not have this cost and runs by default.
 
-**Auto-start eligible campaigns (Marketing Manager)** — This spends real money starting advertising/voucher campaigns on your park's behalf, potentially several at once. In the #63 test it bought guests the parks couldn't hold comfortably and didn't earn its cost back within 60 days ([#74](https://github.com/MatthewT1/matts-openrct2-plugins/issues/74)). Off by default; the ranked list and manual Start buttons let you see and approve every campaign before it costs anything.
+**Auto-start eligible campaigns (Marketing Manager)** â€” This spends real money starting advertising/voucher campaigns on your park's behalf, potentially several at once. In the #63 test it bought guests the parks couldn't hold comfortably and didn't earn its cost back within 60 days ([#74](https://github.com/MatthewT1/matts-openrct2-plugins/issues/74)). Off by default; the ranked list and manual Start buttons let you see and approve every campaign before it costs anything.
 
 ### Benches Stop Vomiting
 
@@ -88,13 +91,13 @@ If the **Auto-place benches & bins** toggle is on, the plugin names which ride i
 
 The **Auto-build** toggle will place toilets, first aid, and food/drink stalls where guests have persistent unmet needs. It will never demolish a facility, including ones you built by hand. If you build a toilet on one side of the park and the plugin places one on the other (because both sides had gaps), both stay. For a food or drink stall it picks the unlocked stall type the park has fewest of, so new stalls keep cycling through the menu (burger, pizza, chicken...) instead of repeating one. If there's already a **food court** (2 or more food/drink stalls within 6 tiles of each other) within 8 tiles of where hungry or thirsty guests are, the new stall goes into the court (within 3 tiles of its middle) instead, which still puts it close enough to those guests.
 
-Unmet needs must persist across multiple sweeps of the whole guest roster before a facility is built — this prevents chasing temporary clusters of guests that move in the next moment. A gap far from the nearest facility that keeps reappearing is a real problem worth solving; a temporary crowd is not.
+Unmet needs must persist across multiple sweeps of the whole guest roster before a facility is built â€” this prevents chasing temporary clusters of guests that move in the next moment. A gap far from the nearest facility that keeps reappearing is a real problem worth solving; a temporary crowd is not.
 
-Each facility kind (toilets, food, drink, first aid) is capped at 8 plugin-built facilities — this only limits what the plugin itself builds automatically, not the total in your park; anything you build by hand doesn't count against it. If the plugin has stopped building a kind you still need more of, this cap is why — there's currently no toggle to raise it, but it's easy to adjust if your park has genuinely outgrown it.
+Each facility kind (toilets, food, drink, first aid) is capped at 8 plugin-built facilities â€” this only limits what the plugin itself builds automatically, not the total in your park; anything you build by hand doesn't count against it. If the plugin has stopped building a kind you still need more of, this cap is why â€” there's currently no toggle to raise it, but it's easy to adjust if your park has genuinely outgrown it.
 
 ### Info Kiosks and the Umbrella Stall: Front, Back and Where Guests Get Lost
 
-Once the park has 3 real rides, Auto-Builder places up to three kinds of spot for an information kiosk, in this order: the park **entrance** (every guest passes it), the **back** of the park (the path tile the most steps from the entrance, only if that's at least 25 steps away), and the spot where the most guests are thinking "I'm lost" or "I can't find..." right now (3 or more). The umbrella stall (if researched) only uses the front and back, since no guest thought says "I want an umbrella". The entrance gets both before the back gets either. A spot that already has one of the same kind within 12 tiles, including one you built, is skipped. It builds at most one a day, needs £2,000 in the bank, and stops at 4 kiosks in the park. The map price is set to 50p.
+Once the park has 3 real rides, Auto-Builder places up to three kinds of spot for an information kiosk, in this order: the park **entrance** (every guest passes it), the **back** of the park (the path tile the most steps from the entrance, only if that's at least 25 steps away), and the spot where the most guests are thinking "I'm lost" or "I can't find..." right now (3 or more). The umbrella stall (if researched) only uses the front and back, since no guest thought says "I want an umbrella". The entrance gets both before the back gets either. A spot that already has one of the same kind within 12 tiles, including one you built, is skipped. It builds at most one a day, needs Â£2,000 in the bank, and stops at 4 kiosks in the park. The map price is set to 50p.
 
 ### Bench and Bin Removal Only Touches What the Plugin Placed
 
@@ -106,18 +109,18 @@ The **Tune ride operation settings** toggle discovers the legal range for each r
 
 ### Marketing Campaigns Can Run Several at Once
 
-Unlike most other automation in these plugins, marketing campaigns aren't mutually exclusive: up to five or six different campaign types (the game allows one of each type) can run at the same time, each independently generating extra guests. The ranked list in the Marketing Manager window shows every campaign currently worth starting, cheapest cost-per-extra-guest first — general park/ride advertising is almost always poor value compared to the voucher campaigns (free/half-price entry, free food or drink), so don't be surprised if it's ranked last or missing from the list.
+Unlike most other automation in these plugins, marketing campaigns aren't mutually exclusive: up to five or six different campaign types (the game allows one of each type) can run at the same time, each independently generating extra guests. The ranked list in the Marketing Manager window shows every campaign currently worth starting, cheapest cost-per-extra-guest first â€” general park/ride advertising is almost always poor value compared to the voucher campaigns (free/half-price entry, free food or drink), so don't be surprised if it's ranked last or missing from the list.
 
 Three things the plugin checks that aren't obvious from playing normally:
-- **Free/half-price entry and free-ride vouchers are far less effective if your entrance fee (or that ride's price) is already very low** — the game itself cuts their effectiveness to an eighth in that case, and the plugin accounts for this when ranking.
-- **The plugin won't recommend or auto-start anything while the park is already at its guest capacity** — unless your scenario's objective specifically calls for more guests than the park currently supports, in which case it knows to keep going.
+- **Free/half-price entry and free-ride vouchers are far less effective if your entrance fee (or that ride's price) is already very low** â€” the game itself cuts their effectiveness to an eighth in that case, and the plugin accounts for this when ranking.
+- **The plugin won't recommend or auto-start anything while the park is already at its guest capacity** â€” unless your scenario's objective specifically calls for more guests than the park currently supports, in which case it knows to keep going.
 - **Entrance fee above your rides' value.** The game cuts new guest arrivals to 1/4 when the entrance fee is above the total value of your open rides, and to 1/16 above twice it. The window shows a line when this is happening, and a news message is posted once it has lasted 3 days (short dips while a ride is broken down are ignored). This is info only: the plugin never changes your fee, and it works with auto-start off.
 
-Because the game gives plugins no way to check which campaigns are currently running, the Marketing Manager window is the only place that information lives — it's tracked and saved with your park, so reloading doesn't lose it.
+Because the game gives plugins no way to check which campaigns are currently running, the Marketing Manager window is the only place that information lives â€” it's tracked and saved with your park, so reloading doesn't lose it.
 
 ### Diagnostics Streams Telemetry (Costs Nothing When Off)
 
-The **Diagnostics** toggle at the bottom of each plugin window streams timing and counter data to a local TCP sink on 127.0.0.1:7777. This is for profiling and understanding what the plugins are doing. It costs nothing when off (which is the default) and the data is not sent anywhere — it stays on your machine.
+The **Diagnostics** toggle at the bottom of each plugin window streams timing and counter data to a local TCP sink on 127.0.0.1:7777. This is for profiling and understanding what the plugins are doing. It costs nothing when off (which is the default) and the data is not sent anywhere â€” it stays on your machine.
 
 To enable:
 1. Tick **Diagnostics** in any plugin window
@@ -175,6 +178,7 @@ If you enable **Diagnostics** and run the log sink, the file `tools/rct-debug.lo
 - Benches appear near exits of nauseating rides and near stalls; bench/bin placement runs every in-game day regardless of game speed
 - Vomit hotspots are reported in the console with the ride name and the distance to the nearest facility
 - TVs appear on every 2nd tile of each queue, front first, a few queues a day (the console says "Placed a queue TV on ...'s queue"); the status line counts them since the park was loaded
+- In a park with vandalised items (Ivory Towers starts with some), broken benches/bins get fixed over a few days, entrance first (console: "Repairing N broken path item(s)")
 - An information kiosk and then an umbrella stall (if researched) appear near the entrance soon after the park has 3 rides (the console says "Built an information kiosk at the park front"), then one of each at the back of big parks
 
 #### Mechanic Manager
@@ -194,12 +198,12 @@ If you enable **Diagnostics** and run the log sink, the file `tools/rct-debug.lo
 
 - Entertainers are hired and positioned near queues nearing the walk-out point (~15 minutes **and** low happiness), not spread evenly across the park
 - One more stands near the park entrance, and one at each food court (up to 3 extra in all)
-- Hired entertainers all use the same costume — the first one the game accepts for this park, auto-discovered on first hire (slot 0 specifically does *not* work for entertainers, unlike every other staff type, so this can't be hardcoded and varies by park); if you want a specific themed costume near a ride, place that entertainer by hand — the plugin will never touch or replace it
+- Hired entertainers all use the same costume â€” the first one the game accepts for this park, auto-discovered on first hire (slot 0 specifically does *not* work for entertainers, unlike every other staff type, so this can't be hardcoded and varies by park); if you want a specific themed costume near a ride, place that entertainer by hand â€” the plugin will never touch or replace it
 
 #### Marketing Manager
 
 - The ranked list refreshes daily; a campaign disappears from it the moment it starts (it moves to "running, Nw left" instead) and reappears once it finishes
-- Voucher campaigns (free/half-price entry, free food/drink) are almost always ranked above general park/ride advertising — this is expected, not a bug
+- Voucher campaigns (free/half-price entry, free food/drink) are almost always ranked above general park/ride advertising â€” this is expected, not a bug
 - With auto-manage on, expect several campaigns to start over the first few days as it works through the ranked list within its daily budget, then quiet down once everything eligible is already running
 
 ---
@@ -220,7 +224,7 @@ A: The plugin detected a guest need cluster far from the nearest facility, and i
 
 **Q: The handymen aren't sweeping anymore.**
 
-A: Check auto-sweep. If it is off, handymen only sweep when they have work orders from you. If it is on, they should be sweeping. If neither, enable Diagnostics and check whether the staff count dropped to zero. The plugin may have determined the park is overstaffed — though it should never drop below a minimum tied to your current guest count.
+A: Check auto-sweep. If it is off, handymen only sweep when they have work orders from you. If it is on, they should be sweeping. If neither, enable Diagnostics and check whether the staff count dropped to zero. The plugin may have determined the park is overstaffed â€” though it should never drop below a minimum tied to your current guest count.
 
 **Q: Why aren't the mechanics fixing this ride?**
 
@@ -228,8 +232,8 @@ A: Mechanics cannot reach it (a pathfinding bug in the game). They have probably
 
 **Q: Why did it start 5 marketing campaigns at once?**
 
-A: This is intentional — the game allows one of each of the 6 campaign types to run concurrently, each generating guests independently, so running several eligible ones at once is normal and (per the plugin's own measured data) genuinely more effective than running just one. Check the ranked list or `activeCampaigns` in the diagnostics log to see what's running and why.
+A: This is intentional â€” the game allows one of each of the 6 campaign types to run concurrently, each generating guests independently, so running several eligible ones at once is normal and (per the plugin's own measured data) genuinely more effective than running just one. Check the ranked list or `activeCampaigns` in the diagnostics log to see what's running and why.
 
 **Q: How much money will this cost?**
 
-A: Auto-place benches cost tens of pounds per bench. Auto-build facilities cost £225–£300 each. Marketing campaigns cost £50/week (voucher campaigns) to £200-350/week (advertising), charged as a lump sum for the whole duration when started. Entertainers cost a monthly wage like any other staff. Everything else costs nothing. All money-spending toggles are off by default.
+A: Auto-place benches cost tens of pounds per bench. Auto-build facilities cost Â£225â€“Â£300 each. Marketing campaigns cost Â£50/week (voucher campaigns) to Â£200-350/week (advertising), charged as a lump sum for the whole duration when started. Entertainers cost a monthly wage like any other staff. Everything else costs nothing. All money-spending toggles are off by default.

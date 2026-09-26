@@ -25,6 +25,7 @@ import { createStallBuilder } from "./builder/stall-build";
 import { createCheapBuilder } from "./builder/cheap-builds";
 import { createQueueTvManager } from "./builder/queue-tvs";
 import { createExtrasBudget } from "./extras-budget";
+import { createRepairManager } from "./builder/repairs";
 import { createBuilderWindow } from "./builder/window";
 
 registerPlugin({
@@ -58,6 +59,7 @@ function autoBuilderMain(): void {
     // Monthly budget for cheap extras (queue TVs; repairs share it) (#116).
     const extras = createExtrasBudget();
     const queueTvs = createQueueTvManager(settings, dbg, extras);
+    const repairs = createRepairManager(settings, dbg, extras, scan);
     const { sampleGuestNeeds, manageFacilities, facilityTracker } = facilities;
 
     function placedCount(): number {
@@ -76,6 +78,8 @@ function autoBuilderMain(): void {
             autoQueueTvs: settings.autoQueueTvs.get(),
             extrasBudget: { allowance: extras.allowance(), spent: extras.spent() },
             queueTvsPlaced: queueTvs.placedCount(),
+            repaired: repairs.repairedCount(),
+            stillBroken: repairs.brokenCount(),
             placedAmenities: placedCount(),
             coverageTiles: scan.getCoverageTiles().length,
             vomit: scan.cache.vomit,
@@ -111,6 +115,7 @@ function autoBuilderMain(): void {
         dbg.time("day.facilities", manageFacilities);
         dbg.time("day.cheapBuilds", cheap.manage);
         extras.update(date.year * 12 + date.month, park.cash, park.getFlag("noMoney"));
+        dbg.time("day.repairs", repairs.manage); // before TVs: fixing what guests broke comes first
         dbg.time("day.queueTvs", queueTvs.manage);
         dbg.flushStats(parkContext());
     });
@@ -125,6 +130,8 @@ function autoBuilderMain(): void {
         facilityCounts: facilities.getFacilityCounts,
         queueTvCount: queueTvs.placedCount,
         extras,
+        repairedCount: repairs.repairedCount,
+        brokenCount: repairs.brokenCount,
     });
 
     ui.registerMenuItem("Auto-Builder", openWindow);

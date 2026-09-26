@@ -5,7 +5,7 @@
  * lowers their target happiness by 4 unless their own queue tile has a TV; on a TV tile
  * it is raised to at least 90, then +2 per update up to 165. The check is per tile, so
  * a TV only helps the guests standing on it. The longest-waiting guests are nearest the
- * ride, so TVs go from the front of the queue backwards. A TV costs £15 once, so every
+ * ride, so TVs go from the front of the queue backwards. A TV costs Â£15 once, so every
  * queue gets one on every 2nd empty tile, paid from the monthly extras budget
  * (extras-budget.ts); there is no queue-time trigger (#116).
  *

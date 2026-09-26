@@ -12,7 +12,7 @@ import { DIR_DX, DIR_DY } from "./stall-build";
 
 const OPTIONS = DEFAULT_QUEUE_TV_OPTIONS;
 
-/** A queue TV's price (object price 150 = £15); the action's own cost is used when given. */
+/** A queue TV's price (object price 150 = Â£15); the action's own cost is used when given. */
 const TV_COST = 150;
 
 /** Ride queues traced per day; every queue is revisited within a few days. */

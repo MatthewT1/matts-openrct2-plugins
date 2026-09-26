@@ -19,6 +19,8 @@ export function createBuilderSettings(storage: SettingsStore) {
         autoCheapBuilds: boolSetting(storage, "autoCheapBuilds", true),
         // #104, #116: TVs on every 2nd queue tile, from the monthly extras budget.
         autoQueueTvs: boolSetting(storage, "autoQueueTvs", true),
+        // #115: re-place broken benches/bins/lamps, a share a day, from the extras budget.
+        autoRepairs: boolSetting(storage, "autoRepairs", true),
     };
 }
 

@@ -7,6 +7,7 @@
 
 import { createHotspotAccumulator } from "../hotspots";
 import { getHandymen, isOldLitter, TileCoord, BoundingRect, TileCache } from "./shared";
+import { BrokenTile } from "../repairs";
 import { DebugChannel } from "../debug";
 import { createCooldown, TILE_SCAN_TICKS } from "../cooldown";
 
@@ -70,6 +71,9 @@ export function createMapScan(dbg: DebugChannel) {
      * network, collected for free during a walk we already do.
      */
     let coverageTiles: TileCoord[] = [];
+    // Broken path additions (any kind) and a park entrance tile, from the last tile scan (#115).
+    let brokenTiles: BrokenTile[] = [];
+    let entranceTile: TileCoord | null = null;
     const hotspots = createHotspotAccumulator(HOTSPOT_CELL_TILES);
     let lastHotspotReport = "";
 
@@ -89,6 +93,8 @@ export function createMapScan(dbg: DebugChannel) {
         // Rebuilt from scratch so demolished paths cannot leave stale candidates behind.
         const coverageSeen: Record<number, true> = {};
         const nextCoverage: TileCoord[] = [];
+        const nextBroken: BrokenTile[] = [];
+        let nextEntrance: TileCoord | null = null;
         let minPX = size.x, minPY = size.y, maxPX = 0, maxPY = 0;
         let minPathX = size.x, minPathY = size.y, maxPathX = 0, maxPathY = 0;
 
@@ -111,11 +117,17 @@ export function createMapScan(dbg: DebugChannel) {
                 let pathCounted = false; // guard against double-count on bridge tiles (2 stacked footpaths)
                 for (let i = 1; i < tile.numElements; i++) {
                     const el = tile.getElement(i);
-                    if (el.type === "footpath") {
+                    if (el.type === "entrance") {
+                        // EntranceType::parkEntrance = 2 (EntranceElement.h).
+                        if (nextEntrance === null && el.object === 2) nextEntrance = { x: x, y: y };
+                    } else if (el.type === "footpath") {
                         hasPath = true;
                         if (!el.isQueue && !pathCounted) { pathCount++; pathCounted = true; }
                         if (el.isAdditionFull)   fullBins++;
-                        if (el.isAdditionBroken) brokenBins++;
+                        if (el.isAdditionBroken) {
+                            brokenBins++;
+                            if (el.addition !== null) nextBroken.push({ x: x, y: y, z: el.baseZ, addition: el.addition });
+                        }
 
                         // Remember the first tile in each coverage cell that could
                         // actually take an addition. Sloped and fully-enclosed tiles are
@@ -153,6 +165,8 @@ export function createMapScan(dbg: DebugChannel) {
         cache.ownedTiles = ownedCount;
         cache.fullBins   = fullBins;
         cache.brokenBins = brokenBins;
+        brokenTiles      = nextBroken;
+        entranceTile     = nextEntrance;
     }
 
     // Cheap entity scan: litter age/type, guest count, handyman count.
@@ -229,6 +243,9 @@ export function createMapScan(dbg: DebugChannel) {
         updateCache,
         reportHotspots,
         getCoverageTiles(): TileCoord[] { return coverageTiles; },
+        /** Broken path additions from the last tile scan; a new array each scan. */
+        getBrokenTiles(): BrokenTile[] { return brokenTiles; },
+        getEntranceTile(): TileCoord | null { return entranceTile; },
         /** Makes the next updateTileCache run regardless of the cooldown. */
         forceTileScan(): void { tileScanCooldown.reset(); },
     };
