@@ -68,6 +68,17 @@ const KINDS: CheapKind[] = [
         maxPerKind: 6,
     },
     {
+        // #82. A guest thinking "running out of cash" heads for the nearest ATM the way
+        // a hungry one heads for food (Guest.cpp:1052-1054). Withdrawing adds GBP 50 to
+        // the guest and costs the park nothing (Guest.cpp:3320-3325).
+        key: "atm",
+        label: "ATM",
+        rideType: 45, // RIDE_TYPE_CASH_MACHINE (Ride.h:627)
+        thoughts: ["running_out"],
+        // Guests never withdraw in a no-money park (PeepShouldUseCashMachine, Guest.cpp:3270).
+        skip: function (): boolean { return park.getFlag("noMoney"); },
+    },
+    {
         // #105. In rain guests only ride sheltered rides unless they hold an umbrella
         // (Guest.cpp:2308-2322), and an umbrella bought in rain skips the souvenir price
         // check (:1441, :1495, :1522). No thought marks "wants an umbrella", so there is

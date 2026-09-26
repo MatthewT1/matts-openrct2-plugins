@@ -71,7 +71,7 @@ if (poolInfo) L.push(`Wall time ${(poolInfo.wallSeconds / 60).toFixed(1)} min at
 L.push(`Parks (perturb): ${parks.map((p) => `${p.dir} (${p.perturb})`).join(", ")}`, "");
 
 L.push("## Health and firing", "", "Deltas are summed over parks (end of run minus day 0). Runs are not exact repeats: scenario parks are seeded from the clock (Scenario.cpp:78), so treat single-park differences as noise.", "",
-    "| Arm | runs ok | game-log errors | kiosks + | umbrella stalls + | queue TVs + | stalls + | court stalls/amenities/toilets + | entertainers + |", "|---|---|---|---|---|---|---|---|---|");
+    "| Arm | runs ok | game-log errors | kiosks + | ATMs + | umbrella stalls + | queue TVs + | stalls + | court stalls/amenities/toilets + | entertainers + |", "|---|---|---|---|---|---|---|---|---|---|");
 const health = {};
 let prevErrs = null;
 for (const arm of arms) {
@@ -83,7 +83,7 @@ for (const arm of arms) {
     // (main already logs a few "Staff entity not found" per run).
     health[arm] = { ok: ok.length === parks.length && (prevErrs === null || errs <= prevErrs + parks.length / 2) };
     prevErrs = errs;
-    L.push(`| ${arm} | ${ok.length}/${parks.length} | ${errs} | ${d("kiosks")} | ${d("umbrellaStalls")} | ${d("queueTvs")} | ${d("stalls")} | ${d("courtStalls")}/${d("courtAmenities")}/${d("courtToilets")} | ${ent} |`);
+    L.push(`| ${arm} | ${ok.length}/${parks.length} | ${errs} | ${d("kiosks")} | ${d("atms")} | ${d("umbrellaStalls")} | ${d("queueTvs")} | ${d("stalls")} | ${d("courtStalls")}/${d("courtAmenities")}/${d("courtToilets")} | ${ent} |`);
 }
 L.push("", "Invariants: kiosks built per park <= 6; plugin entertainer cap 7 (only checked where the park started with none).", "");
 const inv = [];
