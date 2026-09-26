@@ -1,4 +1,4 @@
-import { createFacilityTracker, planFacilities, describePlan,
+import { createFacilityTracker, planFacilities, describePlan, pickFacilityVariant,
          DEFAULT_FACILITY_OPTIONS } from "./build/facilities.mjs";
 import { CLUSTER_MIN_GUESTS } from "./build/needs.mjs";
 let pass=0, fail=0; const ok=(c,m)=>{ c?pass++:(fail++,console.log("FAIL:",m)); };
@@ -255,5 +255,17 @@ sweep(cleared, [G("thirst", 60, 60, 6, 30)], OPT.confirmSweeps);
 cleared.observe([G("thirst", 66, 60, 6, 30)]);       // same gap, jittered
 cleared.clear("thirst", 60, 60);
 ok(cleared.pending().length === 0, "clear drops the merged region, got " + cleared.pending().length);
+
+// --- pickFacilityVariant: fewest built wins, ties in research order (#102) ---------
+ok(pickFacilityVariant([], {}) === -1, "no candidates -> -1");
+ok(pickFacilityVariant([7, 3, 9], {}) === 7, "nothing built -> first in research order");
+ok(pickFacilityVariant([7, 3, 9], { 7: 1 }) === 3, "unbuilt variant beats a built one");
+ok(pickFacilityVariant([7, 3, 9], { 7: 1, 3: 1, 9: 1 }) === 7, "all built once -> tie goes to first");
+ok(pickFacilityVariant([7, 3, 9], { 7: 2, 3: 1, 9: 1 }) === 3, "all built -> least-built, not the first");
+ok(pickFacilityVariant([7, 3, 9], { 7: 2, 3: 2, 9: 1 }) === 9, "least-built can be the last one");
+// Cycling: feed each pick back in; six picks over three variants build each twice.
+const cyc = {};
+for (let i = 0; i < 6; i++) { const v = pickFacilityVariant([7, 3, 9], cyc); cyc[v] = (cyc[v] || 0) + 1; }
+ok(cyc[7] === 2 && cyc[3] === 2 && cyc[9] === 2, "picks cycle evenly, got " + JSON.stringify(cyc));
 
 console.log(`${pass} passed, ${fail} failed`);

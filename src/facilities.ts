@@ -487,3 +487,25 @@ export function describePlan(plan: FacilityPlan): string {
     return "Building a " + facilityLabel(plan.kind) + " at (" + plan.site.x + ", " +
         plan.site.y + "): " + plan.reason + ".";
 }
+
+/**
+ * Which stall variant to build next: the one with the fewest already in the park,
+ * ties going to the earliest candidate (research order).
+ *
+ * `candidates` are the unlocked object indices for one ride type, in order;
+ * `builtCounts` maps an object index to how many of it the park has now. Unbuilt
+ * variants count as 0, so they still win first. Once every variant exists, new stalls
+ * keep cycling instead of repeating the first one (#102). Returns -1 for no candidates.
+ */
+export function pickFacilityVariant(candidates: number[], builtCounts: Record<number, number>): number {
+    let best = -1;
+    let bestCount = 0;
+    for (let i = 0; i < candidates.length; i++) {
+        const count = builtCounts[candidates[i]] || 0;
+        if (best < 0 || count < bestCount) {
+            best = candidates[i];
+            bestCount = count;
+        }
+    }
+    return best;
+}
