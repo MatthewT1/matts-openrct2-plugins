@@ -5,6 +5,8 @@
 
 import { diagnosticsCheckbox } from "../debug";
 import { BuilderSettings } from "./settings";
+import { ExtrasBudget } from "../extras-budget";
+import { formatMoney } from "../money";
 
 export interface BuilderWindowDeps {
     settings: BuilderSettings;
@@ -14,10 +16,11 @@ export interface BuilderWindowDeps {
     facilityCounts(): Record<string, number>;
     /** Queue TVs placed since the park was loaded. */
     queueTvCount(): number;
+    extras: ExtrasBudget;
 }
 
 export function createBuilderWindow(deps: BuilderWindowDeps) {
-    const { settings, placedCount, facilityCounts, queueTvCount } = deps;
+    const { settings, placedCount, facilityCounts, queueTvCount, extras } = deps;
 
     let win: Window | null           = null;
     let refreshHandle: number | null = null;
@@ -67,8 +70,8 @@ export function createBuilderWindow(deps: BuilderWindowDeps) {
                 {
                     type: "checkbox", name: "chkQueueTvs",
                     x: 14, y: 102, width: 276, height: 14,
-                    text: "Auto-place TVs on long queues",
-                    tooltip: "On queues posting 5+ minutes, puts a queue TV on empty queue tiles from the front backwards, every 3rd tile, up to 4 per queue and 2 a day. Guests who have waited a long time lose happiness in the queue unless their own tile has a TV. Never replaces anything already on the path. Needs the TV researched. On by default (#104).",
+                    text: "Auto-place TVs on queues",
+                    tooltip: "Once the TV is researched, puts a queue TV on every 2nd empty queue tile of every ride, front first, a few queues a day, paid from a monthly budget (5% of the cash above 1,000). Guests who have waited a long time lose happiness in the queue unless their own tile has a TV. Never replaces anything already on the path. On by default (#104, #116).",
                     isChecked: settings.autoQueueTvs.get(),
                     onChange: function(v: boolean): void { settings.autoQueueTvs.set(v); },
                 },
@@ -102,7 +105,9 @@ export function createBuilderWindow(deps: BuilderWindowDeps) {
         win.findWidget<LabelWidget>("lblFacilities").text =
             "Facilities: " + (parts.length > 0 ? parts.join(", ") : "not counted yet");
         win.findWidget<LabelWidget>("lblQueueTvs").text =
-            "Queue TVs placed since load: " + queueTvCount();
+            "Queue TVs: " + queueTvCount() + " placed, "
+            + (extras.open() ? "free (no-money park)"
+                : formatMoney(extras.spent() / 10) + " of " + formatMoney(extras.allowance() / 10) + " this month");
     }
 
     return {

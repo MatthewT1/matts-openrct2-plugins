@@ -30,7 +30,7 @@ The rest of this guide covers every toggle across the five automated plugins in 
 | Auto-place benches & bins where needed | Auto-Builder | **ON** | **Yes** | Places benches near nauseating ride exits and vomit hotspots (benches stop guests vomiting), and bins near food/drink stalls; costs money |
 | ...and remove ones no longer needed | Auto-Builder | **ON** | No | Works with auto-place to remove benches and bins that are no longer serving a purpose; **only ever removes amenities this plugin placed itself**; anything you placed by hand is never touched |
 | Auto-build toilets, first aid & food stalls | Auto-Builder | **ON** | **Yes** | Watches where guests have unmet needs and builds facilities once a gap persists across many samples; costs real money and **never demolishes anything** |
-| Auto-place TVs on long queues | Auto-Builder | **ON** | **Yes** | On queues posting 5+ minutes, a queue TV on empty queue tiles from the front backwards, every 3rd tile, up to 4 per queue and 2 a day; needs the TV researched; never replaces anything |
+| Auto-place TVs on long queues | Auto-Builder | **ON** | **Yes** | A queue TV on every 2nd empty queue tile of every ride, front first, a few queues a day; paid from the monthly extras budget (5% of cash above £1,000); needs the TV researched; never replaces anything |
 | Auto-build info kiosks & umbrella stall | Auto-Builder | **ON** | **Yes** | Once the park has 3 rides: an umbrella stall near the entrance (and the back of a big park); an information kiosk near the entrance, one at the far end of the paths, and one where guests say they're lost, unless one is already within 12 tiles; maps at 50p; at most 4 kiosks |
 | Max handymen cap | Trash Manager | (spinner) | No | Hard upper limit on auto-hired handymen (manual hires are unaffected); allows you to cap the formula's recommendation |
 | Diagnostics: stream timings to log sink | Trash Manager | **OFF** | No | Streams telemetry to a local log sink on 127.0.0.1:7777 for performance analysis; costs nothing when off |
@@ -66,7 +66,7 @@ These were off by default until [#51](https://github.com/MatthewT1/matts-openrct
 
 **Auto-build info kiosks & umbrella stall** â€” In rain, guests only go on sheltered rides unless they hold an umbrella, and they'll buy one in rain whatever it costs, so an umbrella stall by the entrance keeps rainy days going. About Â£250 per kiosk, at most 4 kiosks in the park (yours count). A guest with a map plans further ahead, considers every ride in the park and checks the map when lost. Maps are set to 50p, below what guests think a map is worth, so nobody refuses one as too expensive. No waiting period: it's cheap safety, the way many players build by hand.
 
-**Auto-place TVs on long queues** â€” Cheap path additions. A guest who has queued a long while loses happiness every moment unless their own queue tile has a TV, which lifts them instead, so TVs go on the front tiles where the longest waiters stand. Only on empty queue tiles (never replaces your bin, bench or lamp), and not on a tile joined on all four sides, which the game refuses.
+**Auto-place TVs on long queues** â€” Cheap path additions. A guest who has queued a long while loses happiness every moment unless their own queue tile has a TV, which lifts them instead, so TVs go on the front tiles where the longest waiters stand, then every 2nd tile back. At £15 each they come from a monthly extras budget: 5% of the cash above £1,000, fixed at the start of each month (cash in the bank, so a loss-making month doesn't stop it). The status line shows TVs placed and the month's spend. Only on empty queue tiles (never replaces your bin, bench or lamp), and not on a tile joined on all four sides, which the game refuses.
 
 **Emergency repair stuck rides** â€” Labelled a cheat because it is one: it clears the breakdown on a ride no mechanic can reach (a long-standing pathfinding bug), with zero mechanic travel and zero reliability restored. It only acts on rides stuck broken for days with no mechanic able to fix them.
 
@@ -174,7 +174,7 @@ If you enable **Diagnostics** and run the log sink, the file `tools/rct-debug.lo
 
 - Benches appear near exits of nauseating rides and near stalls; bench/bin placement runs every in-game day regardless of game speed
 - Vomit hotspots are reported in the console with the ride name and the distance to the nearest facility
-- TVs appear on the front of queues posting 5+ minutes (the console says "Placed a queue TV on ...'s queue"); the status line counts them since the park was loaded
+- TVs appear on every 2nd tile of each queue, front first, a few queues a day (the console says "Placed a queue TV on ...'s queue"); the status line counts them since the park was loaded
 - An information kiosk and then an umbrella stall (if researched) appear near the entrance soon after the park has 3 rides (the console says "Built an information kiosk at the park front"), then one of each at the back of big parks
 
 #### Mechanic Manager

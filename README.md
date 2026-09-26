@@ -55,9 +55,10 @@ Places benches and bins and builds guest facilities. Split out of Trash Manager 
   has 3 rides: an information kiosk by the entrance and at the far end of the paths, another
   where guests say they're lost, and an umbrella stall by the entrance for rainy days. Skips
   any spot that already has one within 12 tiles, including yours (#81, #105).
-- **Queue TVs** *(on by default, can be switched off)*. Puts TVs on empty tiles of queues
-  posting 5+ minutes, from the front backwards: long-waiting guests only stop losing
-  happiness on a tile with a TV (#104).
+- **Queue TVs** *(on by default, can be switched off)*. Once the TV is researched, puts a TV
+  on every 2nd empty queue tile of every ride, front first: long-waiting guests only stop
+  losing happiness on a tile with a TV. Paid from a monthly extras budget (5% of the cash
+  above £1,000, set at the start of each month) (#104, #116).
 
 <img src="docs/images/plugin-built-amenities.png" alt="Toilet, benches and bins placed by Auto-Builder along the path below the Woodchip coaster" width="480">
 

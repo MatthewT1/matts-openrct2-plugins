@@ -24,6 +24,7 @@ import { createFacilityManager } from "./builder/facilities";
 import { createStallBuilder } from "./builder/stall-build";
 import { createCheapBuilder } from "./builder/cheap-builds";
 import { createQueueTvManager } from "./builder/queue-tvs";
+import { createExtrasBudget } from "./extras-budget";
 import { createBuilderWindow } from "./builder/window";
 
 registerPlugin({
@@ -54,7 +55,9 @@ function autoBuilderMain(): void {
     const stalls = createStallBuilder(dbg);
     const cheap = createCheapBuilder(settings, dbg, stalls);
     const facilities = createFacilityManager(settings, dbg, stalls, cheap.listener);
-    const queueTvs = createQueueTvManager(settings, dbg);
+    // Monthly budget for cheap extras (queue TVs; repairs share it) (#116).
+    const extras = createExtrasBudget();
+    const queueTvs = createQueueTvManager(settings, dbg, extras);
     const { sampleGuestNeeds, manageFacilities, facilityTracker } = facilities;
 
     function placedCount(): number {
@@ -71,6 +74,8 @@ function autoBuilderMain(): void {
             autoCheapBuilds: settings.autoCheapBuilds.get(),
             cheapBuilds: cheap.status(),
             autoQueueTvs: settings.autoQueueTvs.get(),
+            extrasBudget: { allowance: extras.allowance(), spent: extras.spent() },
+            queueTvsPlaced: queueTvs.placedCount(),
             placedAmenities: placedCount(),
             coverageTiles: scan.getCoverageTiles().length,
             vomit: scan.cache.vomit,
@@ -105,6 +110,7 @@ function autoBuilderMain(): void {
         dbg.time("day.needSample", sampleGuestNeeds);
         dbg.time("day.facilities", manageFacilities);
         dbg.time("day.cheapBuilds", cheap.manage);
+        extras.update(date.year * 12 + date.month, park.cash, park.getFlag("noMoney"));
         dbg.time("day.queueTvs", queueTvs.manage);
         dbg.flushStats(parkContext());
     });
@@ -118,6 +124,7 @@ function autoBuilderMain(): void {
         placedCount,
         facilityCounts: facilities.getFacilityCounts,
         queueTvCount: queueTvs.placedCount,
+        extras,
     });
 
     ui.registerMenuItem("Auto-Builder", openWindow);
