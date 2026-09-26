@@ -347,8 +347,7 @@ several sessions ([NEEDS](docs/design-records.md#needs--guest-need-clustering-th
 ## Environment
 
 - **OS:** Windows 11 Pro
-- **Node:** v22.23.2 via nvm-windows (updated 2026-09-25; installed under `%LOCALAPPDATA%Author Software
-vm`, active version in its `.nodejs` folder)
+- **Node:** v22.23.2 via nvm-windows (updated 2026-09-25; installed under `%LOCALAPPDATA%\Author Software\nvm`, active version in its `.nodejs` folder)
 - **npm:** 10.9.8, working again (#13)
 - **Plugin folder:** `%USERPROFILE%\Documents\OpenRCT2\plugin\`
 - **Debug log:** `tools/rct-debug.log` (gitignored)
