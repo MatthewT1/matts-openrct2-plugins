@@ -33,6 +33,8 @@ export const METRICS = [
     { key: "thToilet", label: "Thought: toilet", better: -1 },
     { key: "thTired", label: "Thought: tired", better: -1 },
     { key: "thLost", label: "Thought: lost / can't find", better: -1 },
+    { key: "lostFresh", label: "Lost, award rule (#93)", better: -1 },
+    { key: "confusingAward", label: "Confusing-layout rule met (share of days)", better: -1, agg: "mean" },
     { key: "thCrowded", label: "Thought: crowded", better: -1 },
     { key: "thQueuingAges", label: "Thought: queuing ages", better: -1 },
     { key: "thBadValue", label: "Thought: bad value", better: -1 },

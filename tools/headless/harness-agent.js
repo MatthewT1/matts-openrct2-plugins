@@ -123,7 +123,7 @@ registerPlugin({
         function guestStats() {
             var guests = map.getAllEntities("guest");
             var inPark = 0, happy = 0, c;
-            var out = { thoughtsNeg: 0, thoughtsPos: 0 };
+            var out = { thoughtsNeg: 0, thoughtsPos: 0, lostFresh: 0 };
             for (c in THOUGHTS_NEG) out[c] = 0;
             for (c in THOUGHTS_POS) out[c] = 0;
             for (c in THOUGHTS_INFO) out[c] = 0;
@@ -132,6 +132,10 @@ registerPlugin({
                 inPark++;
                 happy += guests[i].happiness;
                 var th = guests[i].thoughts;
+                // #93 Most Confusing Layout (Award.cpp:539-556): the guest's newest thought is lost or
+                // cant_find (not cant_find_exit) with freshness <= 5. Close, not exact: the API hides
+                // freshness-0 thoughts (ScGuest.cpp:578), which wait at most ~220 ticks (Guest.cpp:5145-5200).
+                if (th.length > 0 && th[0].freshness <= 5 && (th[0].type === "lost" || th[0].type === "cant_find")) out.lostFresh++;
                 for (var j = 0; j < th.length; j++) {
                     var col = thoughtCol[th[j].type];
                     if (!col) continue;
@@ -141,6 +145,8 @@ registerPlugin({
                 }
             }
             out.avgHappiness = inPark > 0 ? Math.round(happy / inPark) : 0;
+            // 1 when the award rule is met today: >= 10 and >= guests / 64 (integer division).
+            out.confusingAward = out.lostFresh >= 10 && out.lostFresh >= Math.floor(inPark / 64) ? 1 : 0;
             return out;
         }
 
