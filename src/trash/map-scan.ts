@@ -62,7 +62,8 @@ export function createMapScan(dbg: DebugChannel) {
     // Blanket coverage: one candidate path tile is remembered per cell of this size, so
     // benches and bins end up spread across the whole path network rather than only
     // clustering at rides and stalls.
-    const COVERAGE_CELL_TILES   = 6;
+    // #117: 6 -> 5, a few more blanket-coverage benches/bins.
+    const COVERAGE_CELL_TILES   = 5;
 
     /**
      * One representative placeable path tile per COVERAGE_CELL_TILES cell, rebuilt by

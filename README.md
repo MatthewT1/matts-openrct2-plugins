@@ -7,7 +7,7 @@ few jobs the game leaves entirely to you.
 Every decision is based on what's actually happening in your park, not on a fixed ratio.
 If the park is clean with 20 handymen, the plugin won't hire 40 because a formula says so.
 
-[Download the latest release](../../releases/latest) Â· [User guide](docs/user-guide.md) Â· [MIT license](LICENSE)
+[Download the latest release](../../releases/latest) · [User guide](docs/user-guide.md) · [MIT license](LICENSE)
 
 ---
 
