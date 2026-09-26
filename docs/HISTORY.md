@@ -66,7 +66,7 @@ No code changes.
 Repository prep for GitHub: git history reconstructed, README, LICENSE, CI, `.gitignore`
 (excludes the ~400 MB `gamesrc/` clone and debug logs), `TODO.md` backlog.
 
-## On GitHub: v1.0.0 to v1.4.0 (2026-09-24 to 2026-09-25)
+## On GitHub: v1.0.0 to v1.5.0 (2026-09-24 to 2026-09-26)
 
 From here the work is in pull requests and issues on
 [GitHub](https://github.com/MatthewT1/matts-openrct2-plugins). Session notes are local only.
@@ -109,3 +109,18 @@ This entry covers the main points.
     happiness; tuning stays off by default.
   - **Docs**: walk-out rule (#70), doc drift (#71), Path Connector marked experimental (#9),
     README screenshot (#4).
+- **v1.5.0**:
+  - **New plugin: Auto-Builder (#84)**: bins/benches and toilets/food stalls/first aid moved
+    out of Trash Manager into their own plugin; a save keeps the choices it had (#96).
+  - **Facilities (#80)**: the whole park is checked daily, one streak point per sweep, so
+    needed facilities are built sooner (#89).
+  - **Staff Extras (#92)**: hires one security guard once there are 20+ staff, so the Best
+    Staff award is reachable (toggle, on by default) (#97).
+  - **Marketing Manager (#94)**: warns once when the entrance fee is above the rides' total
+    value, which cuts new guests to almost none (#98).
+  - **Stall variety (#102)**: new food/drink stalls cycle through the unlocked stall types
+    (fewest built first) instead of repeating one (#106).
+  - **Harness**: `thRunningOut` (#88) and `lostFresh`/`confusingAward` (#93, #99) columns.
+  - **Docs**: walk-out needs a long wait and low happiness (#68, #107), ride-settings
+    research (#38, #91), facility facts (#90), social preview image (#4, #95), npm scripts
+    (#13, #103).
