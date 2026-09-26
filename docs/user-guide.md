@@ -4,7 +4,7 @@ This is a suite of seven plugins that take over the repetitive parts of running 
 
 **Trash Manager** — Keeps the park clean. Adjusts handyman headcount to match how dirty the park actually is and sweeps litter each day.
 
-**Auto-Builder** — Places benches and bins where they're measurably needed (benches specifically stop guests from vomiting in the first place), and builds toilets, food stalls and first-aid rooms where guests keep going without, plus information kiosks at the entrance, the back of the park and wherever guests get lost. These toggles were in Trash Manager before 1.5 (#84); a save keeps the choices it had there.
+**Auto-Builder** — Places benches and bins where they're measurably needed (benches specifically stop guests from vomiting in the first place), and builds toilets, food stalls and first-aid rooms where guests keep going without, plus information kiosks at the entrance, the back of the park and wherever guests get lost, and an umbrella stall by the entrance for rainy days. These toggles were in Trash Manager before 1.5 (#84); a save keeps the choices it had there.
 
 **Mechanic Manager** — Keeps rides running. Adjusts mechanic headcount to match real breakdowns, keeps inspection intervals from silently resetting, and clears patrol zones so mechanics can reach any ride. A separate cheat toggle exists for the rare ride no mechanic can physically path to.
 
@@ -30,7 +30,7 @@ The rest of this guide covers every toggle across the five automated plugins in 
 | Auto-place benches & bins where needed | Auto-Builder | **ON** | **Yes** | Places benches near nauseating ride exits and vomit hotspots (benches stop guests vomiting), and bins near food/drink stalls; costs money |
 | ...and remove ones no longer needed | Auto-Builder | **ON** | No | Works with auto-place to remove benches and bins that are no longer serving a purpose; **only ever removes amenities this plugin placed itself**; anything you placed by hand is never touched |
 | Auto-build toilets, first aid & food stalls | Auto-Builder | **ON** | **Yes** | Watches where guests have unmet needs and builds facilities once a gap persists across many samples; costs real money and **never demolishes anything** |
-| Auto-build info kiosks (front, back, lost guests) | Auto-Builder | **ON** | **Yes** | Once the park has 3 rides: an information kiosk near the entrance, one at the far end of the paths, and one where guests say they're lost, unless one is already within 12 tiles; maps at 50p; at most 4 |
+| Auto-build info kiosks & umbrella stall | Auto-Builder | **ON** | **Yes** | Once the park has 3 rides: an umbrella stall near the entrance (and the back of a big park); an information kiosk near the entrance, one at the far end of the paths, and one where guests say they're lost, unless one is already within 12 tiles; maps at 50p; at most 4 kiosks |
 | Max handymen cap | Trash Manager | (spinner) | No | Hard upper limit on auto-hired handymen (manual hires are unaffected); allows you to cap the formula's recommendation |
 | Diagnostics: stream timings to log sink | Trash Manager | **OFF** | No | Streams telemetry to a local log sink on 127.0.0.1:7777 for performance analysis; costs nothing when off |
 | Diagnostics: stream timings to log sink | Auto-Builder | **OFF** | No | Streams telemetry to a local log sink on 127.0.0.1:7777 for performance analysis; costs nothing when off |
@@ -63,7 +63,7 @@ These were off by default until [#51](https://github.com/MatthewT1/matts-openrct
 
 **Auto-build toilets, first aid & food stalls** — Costs real money (£225–£300 per facility). The algorithm is conservative and waits until a gap persists across many samples. It never demolishes anything.
 
-**Auto-build info kiosks** — About £250 each, at most 4 in the park (yours count). A guest with a map plans further ahead, considers every ride in the park and checks the map when lost. Maps are set to 50p, below what guests think a map is worth, so nobody refuses one as too expensive. No waiting period: it's cheap safety, the way many players build by hand.
+**Auto-build info kiosks & umbrella stall** — In rain, guests only go on sheltered rides unless they hold an umbrella, and they'll buy one in rain whatever it costs, so an umbrella stall by the entrance keeps rainy days going. About £250 per kiosk, at most 4 kiosks in the park (yours count). A guest with a map plans further ahead, considers every ride in the park and checks the map when lost. Maps are set to 50p, below what guests think a map is worth, so nobody refuses one as too expensive. No waiting period: it's cheap safety, the way many players build by hand.
 
 **Emergency repair stuck rides** — Labelled a cheat because it is one: it clears the breakdown on a ride no mechanic can reach (a long-standing pathfinding bug), with zero mechanic travel and zero reliability restored. It only acts on rides stuck broken for days with no mechanic able to fix them.
 
@@ -89,9 +89,9 @@ Unmet needs must persist across multiple sweeps of the whole guest roster before
 
 Each facility kind (toilets, food, drink, first aid) is capped at 8 plugin-built facilities — this only limits what the plugin itself builds automatically, not the total in your park; anything you build by hand doesn't count against it. If the plugin has stopped building a kind you still need more of, this cap is why — there's currently no toggle to raise it, but it's easy to adjust if your park has genuinely outgrown it.
 
-### Info Kiosks: Front, Back and Where Guests Get Lost
+### Info Kiosks and the Umbrella Stall: Front, Back and Where Guests Get Lost
 
-Once the park has 3 real rides, Auto-Builder places up to three kinds of spot for an information kiosk, in this order: the park **entrance** (every guest passes it), the **back** of the park (the path tile the most steps from the entrance, only if that's at least 25 steps away), and the spot where the most guests are thinking "I'm lost" or "I can't find..." right now (3 or more). A spot that already has a kiosk within 12 tiles, including one you built, is skipped. It builds at most one a day, needs £2,000 in the bank, and stops at 4 kiosks in the park. The map price is set to 50p.
+Once the park has 3 real rides, Auto-Builder places up to three kinds of spot for an information kiosk, in this order: the park **entrance** (every guest passes it), the **back** of the park (the path tile the most steps from the entrance, only if that's at least 25 steps away), and the spot where the most guests are thinking "I'm lost" or "I can't find..." right now (3 or more). The umbrella stall (if researched) only uses the front and back, since no guest thought says "I want an umbrella". The entrance gets both before the back gets either. A spot that already has one of the same kind within 12 tiles, including one you built, is skipped. It builds at most one a day, needs £2,000 in the bank, and stops at 4 kiosks in the park. The map price is set to 50p.
 
 ### Bench and Bin Removal Only Touches What the Plugin Placed
 
@@ -171,7 +171,7 @@ If you enable **Diagnostics** and run the log sink, the file `tools/rct-debug.lo
 
 - Benches appear near exits of nauseating rides and near stalls; bench/bin placement runs every in-game day regardless of game speed
 - Vomit hotspots are reported in the console with the ride name and the distance to the nearest facility
-- An information kiosk appears near the entrance soon after the park has 3 rides (the console says "Built an information kiosk at the park front"), then one at the back of big parks
+- An information kiosk and then an umbrella stall (if researched) appear near the entrance soon after the park has 3 rides (the console says "Built an information kiosk at the park front"), then one of each at the back of big parks
 
 #### Mechanic Manager
 

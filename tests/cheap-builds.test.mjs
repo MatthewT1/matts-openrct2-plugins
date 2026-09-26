@@ -1,5 +1,5 @@
 import { tileKey, keyTile, farthestPathTile, buildAnchors, uncoveredAnchors, pickSite,
-         createSpotAccumulator, DEFAULT_CHEAP_BUILD_OPTIONS } from "./build/cheap-builds.mjs";
+         createSpotAccumulator, buildQueue, DEFAULT_CHEAP_BUILD_OPTIONS } from "./build/cheap-builds.mjs";
 let pass=0, fail=0; const ok=(c,m)=>{ c?pass++:(fail++,console.log("FAIL:",m)); };
 const OPT = DEFAULT_CHEAP_BUILD_OPTIONS;
 
@@ -72,5 +72,15 @@ ok(top.length === 1 && top[0].x === 41 && top[0].y === 42 && top[0].count === 3,
 ok(sp.top(2, 2).length === 2 && sp.top(2, 2)[0].count === 3, "fullest first");
 sp.reset();
 ok(sp.top(1, 5).length === 0, "reset clears");
+
+// --- build queue: every kind's front before any back, kinds in order (#82) ---------
+const A = (role, x) => ({ role, x, y: 0 });
+const q = buildQueue([
+    { kind: "kiosk", anchors: [A("front", 1), A("back", 2), A("cluster", 3)] },
+    { kind: "atm", anchors: [A("front", 4), A("cluster", 5)] },
+]);
+ok(q.map((e) => e.kind + ":" + e.anchor.role).join() === "kiosk:front,atm:front,kiosk:back,kiosk:cluster,atm:cluster",
+   "queue order, got " + q.map((e) => e.kind + ":" + e.anchor.role).join());
+ok(buildQueue([]).length === 0, "empty queue");
 
 console.log(`${pass} passed, ${fail} failed`);

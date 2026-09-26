@@ -57,8 +57,8 @@ export function createBuilderWindow(deps: BuilderWindowDeps) {
                 {
                     type: "checkbox", name: "chkCheapBuilds",
                     x: 14, y: 84, width: 276, height: 14,
-                    text: "Auto-build info kiosks (front, back, lost guests)",
-                    tooltip: "Once the park has 3 rides, builds an information kiosk near the park entrance, one at the far end of the paths, and one where guests say they are lost, unless one is already within 12 tiles. Maps are priced at 50p so guests never refuse them. Cheap (about 250 each), at most 4, never demolishes anything. On by default (#81).",
+                    text: "Auto-build info kiosks & umbrella stall",
+                    tooltip: "Once the park has 3 rides, builds an information kiosk near the park entrance, one at the far end of the paths, and one where guests say they are lost, unless one is already within 12 tiles. Also an umbrella stall at the entrance (and the back of a big park) for rainy days. Maps are priced at 50p so guests never refuse them. Cheap (about 250 each), at most 4 kiosks, never demolishes anything. On by default (#81, #105).",
                     isChecked: settings.autoCheapBuilds.get(),
                     onChange: function(v: boolean): void { settings.autoCheapBuilds.set(v); },
                 },

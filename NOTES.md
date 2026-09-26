@@ -50,7 +50,7 @@ openrct2 plugin/
 │   │   ├── amenities.ts        # benches/bins, vomit attribution
 │   │   ├── facilities.ts       # guest-need sampling, facility placement
 │   │   ├── stall-build.ts      # shared site search + ridecreate/trackplace chain
-│   │   ├── cheap-builds.ts     # info kiosks at front/back/lost clusters (#81)
+│   │   ├── cheap-builds.ts     # kiosks + umbrella stall at front/back/clusters (#81, #105)
 │   │   └── window.ts           # the Auto-Builder window
 │   ├── wait-time-optimizer.ts
 │   ├── mechanic-manager.ts
