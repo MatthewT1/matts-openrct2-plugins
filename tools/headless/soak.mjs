@@ -85,12 +85,12 @@ for (const arm of arms) {
     prevErrs = errs;
     L.push(`| ${arm} | ${ok.length}/${parks.length} | ${errs} | ${d("kiosks")} | ${d("umbrellaStalls")} | ${d("queueTvs")} | ${d("stalls")} | ${d("courtStalls")}/${d("courtAmenities")}/${d("courtToilets")} | ${ent} |`);
 }
-L.push("", "Invariants: kiosks built per park <= 4; plugin entertainer cap 7 (only checked where the park started with none).", "");
+L.push("", "Invariants: kiosks built per park <= 6; plugin entertainer cap 7 (only checked where the park started with none).", "");
 const inv = [];
 for (const arm of arms) R[arm].forEach((r, i) => {
     if (!r?.census?.end) return;
     const kd = r.census.end.kiosks - r.census.start.kiosks;
-    if (kd > 4) inv.push(`${arm} ${parks[i].dir}: ${kd} kiosks built`);
+    if (kd > 6) inv.push(`${arm} ${parks[i].dir}: ${kd} kiosks built`);
     const e0 = r.summary.metrics.entertainers?.start ?? 0, emax = r.summary.metrics.entertainers?.max ?? 0;
     if (e0 === 0 && emax > 7) inv.push(`${arm} ${parks[i].dir}: ${emax} entertainers`);
 });

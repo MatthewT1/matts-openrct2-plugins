@@ -1,4 +1,4 @@
-import { tileKey, keyTile, farthestPathTile, buildAnchors, uncoveredAnchors, pickSite,
+import { tileKey, keyTile, farthestPathTile, sidePathTiles, buildAnchors, uncoveredAnchors, pickSite,
          createSpotAccumulator, buildQueue, DEFAULT_CHEAP_BUILD_OPTIONS } from "./build/cheap-builds.mjs";
 let pass=0, fail=0; const ok=(c,m)=>{ c?pass++:(fail++,console.log("FAIL:",m)); };
 const OPT = DEFAULT_CHEAP_BUILD_OPTIONS;
@@ -33,18 +33,33 @@ ok(two.steps === 5, "multi-source takes the nearer entrance, got " + JSON.string
 const island = graph([...line, [[50, 50], [50, 51]]]);
 ok(farthestPathTile([tileKey(10, 10)], island).x === 11, "disconnected paths ignored");
 
+// --- sides (#81 east/west): farthest reachable tile each side of the front -> back line
+// A T: a spine from (20,10) to (20,40), and a crossbar at y = 25 from x = 0 to x = 40.
+const tee = [];
+for (let y = 10; y < 40; y++) tee.push([[20, y], [20, y + 1]]);
+for (let x = 0; x < 40; x++) tee.push([[x, 25], [x + 1, 25]]);
+const sd = sidePathTiles([tileKey(20, 10)], graph(tee), { x: 20, y: 9 }, { x: 20, y: 40 }, 12);
+ok(sd.length === 2 && sd.some((t) => t.x === 0 && t.y === 25) && sd.some((t) => t.x === 40 && t.y === 25),
+    "both ends of the crossbar, got " + JSON.stringify(sd));
+const narrow = sidePathTiles([tileKey(20, 10)], graph(tee), { x: 20, y: 9 }, { x: 20, y: 40 }, 21);
+ok(narrow.length === 0, "flanks under minOffset are not sides");
+const cut = sidePathTiles([tileKey(20, 10)], graph([...tee.filter(([a]) => a[0] >= 20 || a[1] !== 25), [[60, 60], [60, 61]]]),
+    { x: 20, y: 9 }, { x: 20, y: 40 }, 12);
+ok(cut.length === 1 && cut[0].x === 40, "only reachable tiles, one side, got " + JSON.stringify(cut));
+ok(sidePathTiles([tileKey(20, 10)], graph(tee), { x: 5, y: 5 }, { x: 5, y: 5 }, 12).length === 0, "front == back -> none");
+
 // --- anchors: front, then back if deep enough, then clusters -----------------------
-const a1 = buildAnchors([{ x: 5, y: 5 }], { x: 60, y: 60, steps: 80 }, [{ x: 30, y: 30 }], OPT);
-ok(a1.map((a) => a.role).join() === "front,back,cluster", "anchor order");
-const a2 = buildAnchors([{ x: 5, y: 5 }], { x: 9, y: 9, steps: OPT.minBackSteps - 1 }, [], OPT);
+const a1 = buildAnchors([{ x: 5, y: 5 }], { x: 60, y: 60, steps: 80 }, [{ x: 50, y: 10 }], [{ x: 30, y: 30 }], OPT);
+ok(a1.map((a) => a.role).join() === "front,back,side,cluster", "anchor order");
+const a2 = buildAnchors([{ x: 5, y: 5 }], { x: 9, y: 9, steps: OPT.minBackSteps - 1 }, [], [], OPT);
 ok(a2.length === 1 && a2[0].role === "front", "shallow park has no back anchor");
-ok(buildAnchors([], null, [], OPT).length === 0, "no entrance, no anchors");
+ok(buildAnchors([], null, [], [], OPT).length === 0, "no entrance, no anchors");
 
 // --- coverage: anything within coverRadius covers an anchor ------------------------
 const un1 = uncoveredAnchors(a1, [{ x: 5 + OPT.coverRadius, y: 5 }], OPT);
-ok(un1.map((a) => a.role).join() === "back,cluster", "front covered at exactly coverRadius");
+ok(un1.map((a) => a.role).join() === "back,side,cluster", "front covered at exactly coverRadius");
 const un2 = uncoveredAnchors(a1, [{ x: 5 + OPT.coverRadius + 1, y: 5 }], OPT);
-ok(un2.length === 3, "one tile further does not cover");
+ok(un2.length === 4, "one tile further does not cover");
 const many = Array.from({ length: OPT.maxPerKind }, (_, i) => ({ x: 200 + i, y: 200 }));
 ok(uncoveredAnchors(a1, many, OPT).length === 0, "nothing once the kind is at maxPerKind");
 
