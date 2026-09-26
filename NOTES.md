@@ -227,7 +227,8 @@ can auto-sweep.
     `queryAction` calls and the winner is counted in telemetry.
 - **Automatic benches and bins** (off by default): places benches at nauseating ride exits
   and vomit hotspots, bins near stalls, **plus blanket coverage across the whole path
-  network** (one candidate tile per 6x6 cell). Budget is 15 placements per 10 seconds.
+  network** (one candidate tile per 5x5 cell). Budget is 35 placements a day; an existing item within
+  2 tiles covers a demand; our own items are removed at most 1 a day after 10 unjustified passes (#117).
   Removal is a separate toggle and **only ever touches amenities the plugin placed
   itself** — anything you placed by hand is never removed. Replaces the manual
   `benchwarmer` plugin.

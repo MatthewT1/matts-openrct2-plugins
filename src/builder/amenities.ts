@@ -40,14 +40,17 @@ export function createAmenityManager(
     // in-game days can elapse inside one real-time cooldown window, so the pass silently
     // skipped days precisely when a growing park needed it to run every one of them. Removed.
     const AMENITY_RADIUS        = 6;  // how far from a demand an amenity may be placed
-    const AMENITY_SATISFIED     = 3;  // an existing amenity this close already covers it
+    // #117: 3 -> 2, one step more generous: benches are £5, bins £3.
+    const AMENITY_SATISFIED     = 2;  // an existing amenity this close already covers it
     // Raised from 15: measured 2026-09-20, a park that grew from ~130 to ~360+ path tiles
     // (coverageTiles 22 -> 32+) left blanket coverage - the lowest-priority demand kind -
     // perpetually starved behind higher-weight vomit/ride/stall demands at the old cap,
     // which is exactly the "need more bins and benches" complaint. Each placement is a
     // cheap O(1) action (see above), so a larger per-pass budget costs little.
-    const AMENITY_MAX_PLACE     = 25; // per pass
-    const AMENITY_MAX_REMOVE    = 2;  // per pass, kept low: removal is the risky direction
+    // #117: 25 -> 35.
+    const AMENITY_MAX_PLACE     = 35; // per pass
+    // #117: 2 -> 1, less eager removal of our own items.
+    const AMENITY_MAX_REMOVE    = 1;  // per pass, kept low: removal is the risky direction
     /**
      * Consecutive passes an amenity must look unjustified before it is actually removed.
      *
@@ -59,10 +62,12 @@ export function createAmenityManager(
      *
      * Same discipline as the staffing controller: do not act on a transient signal.
      */
-    const REMOVAL_CONFIRM_PASSES = 5;
+    // #117: 5 -> 10, so a bench that did its job lingers longer.
+    const REMOVAL_CONFIRM_PASSES = 10;
     // How many vomit clusters get their own bench demand. Raised from 3: vomit is the
     // dominant litter type on real parks, so more of it deserves direct attention.
-    const VOMIT_DEMAND_COUNT    = 8;
+    // #117: 8 -> 12.
+    const VOMIT_DEMAND_COUNT    = 12;
     /**
      * Vomit in one cell before it justifies a BENCH there.
      *
