@@ -568,5 +568,6 @@ export function createAmenityManager(
         isAmenityRemoval,
         reportVomit,
         manageAmenities,
+        amenityObjectIndex,
     };
 }

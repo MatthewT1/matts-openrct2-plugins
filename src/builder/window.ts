@@ -19,10 +19,11 @@ export interface BuilderWindowDeps {
     extras: ExtrasBudget;
     repairedCount(): number;
     brokenCount(): number;
+    courtStats(): { stalls: number; amenities: number; toilets: number };
 }
 
 export function createBuilderWindow(deps: BuilderWindowDeps) {
-    const { settings, placedCount, facilityCounts, queueTvCount, extras, repairedCount, brokenCount } = deps;
+    const { settings, placedCount, facilityCounts, queueTvCount, extras, repairedCount, brokenCount, courtStats } = deps;
 
     let win: Window | null           = null;
     let refreshHandle: number | null = null;
@@ -34,9 +35,9 @@ export function createBuilderWindow(deps: BuilderWindowDeps) {
             classification: "auto-builder",
             title: "Auto-Builder v" + __PLUGIN_VERSION__,
             width: 300,
-            height: 246,
+            height: 278,
             widgets: [
-                { type: "groupbox", x: 6, y: 16, width: 288, height: 128, text: "Automation  (runs each in-game day)" },
+                { type: "groupbox", x: 6, y: 16, width: 288, height: 146, text: "Automation  (runs each in-game day)" },
                 {
                     type: "checkbox", name: "chkAmenities",
                     x: 14, y: 30, width: 276, height: 14,
@@ -85,13 +86,22 @@ export function createBuilderWindow(deps: BuilderWindowDeps) {
                     isChecked: settings.autoRepairs.get(),
                     onChange: function(v: boolean): void { settings.autoRepairs.set(v); },
                 },
+                {
+                    type: "checkbox", name: "chkCourtExtras",
+                    x: 14, y: 138, width: 276, height: 14,
+                    text: "Dress up food courts (benches, bins, toilet)",
+                    tooltip: "Where 2+ food or drink stalls stand together (a food court), fills the paths within 3 tiles with benches and bins, a few a day, and builds a toilet next to it if none is within 8 tiles. Paid from the same monthly budget as queue TVs. Never replaces anything already on the path, never removes anything. On by default (#83).",
+                    isChecked: settings.autoCourtExtras.get(),
+                    onChange: function(v: boolean): void { settings.autoCourtExtras.set(v); },
+                },
 
-                { type: "groupbox", x: 6, y: 150, width: 288, height: 72, text: "Status" },
-                { type: "label", name: "lblPlaced",     x: 14, y: 164, width: 276, height: 14, text: "" },
-                { type: "label", name: "lblFacilities", x: 14, y: 178, width: 276, height: 14, text: "" },
-                { type: "label", name: "lblQueueTvs",   x: 14, y: 192, width: 276, height: 14, text: "" },
-                { type: "label", name: "lblRepairs",    x: 14, y: 206, width: 276, height: 14, text: "" },
-                diagnosticsCheckbox(14, 228, 276),
+                { type: "groupbox", x: 6, y: 168, width: 288, height: 86, text: "Status" },
+                { type: "label", name: "lblPlaced",     x: 14, y: 182, width: 276, height: 14, text: "" },
+                { type: "label", name: "lblFacilities", x: 14, y: 196, width: 276, height: 14, text: "" },
+                { type: "label", name: "lblQueueTvs",   x: 14, y: 210, width: 276, height: 14, text: "" },
+                { type: "label", name: "lblRepairs",    x: 14, y: 224, width: 276, height: 14, text: "" },
+                { type: "label", name: "lblCourts",     x: 14, y: 238, width: 276, height: 14, text: "" },
+                diagnosticsCheckbox(14, 260, 276),
             ],
             onClose: function(): void {
                 win = null;
@@ -121,6 +131,9 @@ export function createBuilderWindow(deps: BuilderWindowDeps) {
                 : formatMoney(extras.spent() / 10) + " of " + formatMoney(extras.allowance() / 10) + " this month");
         win.findWidget<LabelWidget>("lblRepairs").text =
             "Repaired " + repairedCount() + ", " + brokenCount() + " still broken";
+        const cs = courtStats();
+        win.findWidget<LabelWidget>("lblCourts").text =
+            "Food courts: " + cs.stalls + " stalls, " + cs.amenities + " benches/bins, " + cs.toilets + " toilets";
     }
 
     return {

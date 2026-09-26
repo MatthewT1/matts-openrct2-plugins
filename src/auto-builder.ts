@@ -26,6 +26,7 @@ import { createCheapBuilder } from "./builder/cheap-builds";
 import { createQueueTvManager } from "./builder/queue-tvs";
 import { createExtrasBudget } from "./extras-budget";
 import { createRepairManager } from "./builder/repairs";
+import { createCourtExtrasManager, createCourtStats } from "./builder/court-extras";
 import { createBuilderWindow } from "./builder/window";
 
 registerPlugin({
@@ -52,14 +53,16 @@ function autoBuilderMain(): void {
     // Our own litter/tile scan: the vomit clusters and path coverage tiles the bench/bin
     // planner works from. Trash Manager keeps its own for staffing.
     const scan = createMapScan(dbg);
-    const { reportVomit, manageAmenities } = createAmenityManager(storage, settings, dbg, scan);
+    const { reportVomit, manageAmenities, amenityObjectIndex } = createAmenityManager(storage, settings, dbg, scan);
     const stalls = createStallBuilder(dbg);
     const cheap = createCheapBuilder(settings, dbg, stalls);
-    const facilities = createFacilityManager(settings, dbg, stalls, cheap.listener);
+    const courtStats = createCourtStats(storage);
+    const facilities = createFacilityManager(settings, dbg, stalls, cheap.listener, courtStats);
     // Monthly budget for cheap extras (queue TVs; repairs share it) (#116).
     const extras = createExtrasBudget();
     const queueTvs = createQueueTvManager(settings, dbg, extras);
     const repairs = createRepairManager(settings, dbg, extras, scan);
+    const courtExtras = createCourtExtrasManager(settings, dbg, extras, stalls, courtStats, amenityObjectIndex);
     const { sampleGuestNeeds, manageFacilities, facilityTracker } = facilities;
 
     function placedCount(): number {
@@ -79,6 +82,8 @@ function autoBuilderMain(): void {
             extrasBudget: { allowance: extras.allowance(), spent: extras.spent() },
             queueTvsPlaced: queueTvs.placedCount(),
             repaired: repairs.repairedCount(),
+            autoCourtExtras: courtExtras.isOn(),
+            courtStats: courtStats.read(),
             stillBroken: repairs.brokenCount(),
             placedAmenities: placedCount(),
             coverageTiles: scan.getCoverageTiles().length,
@@ -117,6 +122,7 @@ function autoBuilderMain(): void {
         extras.update(date.year * 12 + date.month, park.cash, park.getFlag("noMoney"));
         dbg.time("day.repairs", repairs.manage); // before TVs: fixing what guests broke comes first
         dbg.time("day.queueTvs", queueTvs.manage);
+        dbg.time("day.courtExtras", courtExtras.manage);
         dbg.flushStats(parkContext());
     });
 
@@ -132,6 +138,7 @@ function autoBuilderMain(): void {
         extras,
         repairedCount: repairs.repairedCount,
         brokenCount: repairs.brokenCount,
+        courtStats: courtStats.read,
     });
 
     ui.registerMenuItem("Auto-Builder", openWindow);

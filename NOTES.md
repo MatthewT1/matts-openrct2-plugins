@@ -49,6 +49,7 @@ openrct2 plugin/
 │   │   ├── settings.ts         # its toggles + the keys moved from Trash Manager
 │   │   ├── amenities.ts        # benches/bins, vomit attribution
 │   │   ├── facilities.ts       # guest-need sampling, facility placement, food courts (#83)
+│   │   ├── court-extras.ts     # food courts: dense benches/bins + a toilet, extras budget (#83)
 │   │   ├── stall-build.ts      # shared site search + ridecreate/trackplace chain
 │   │   ├── cheap-builds.ts     # kiosks + umbrella stall at front/back/clusters (#81, #105)
 │   │   └── window.ts           # the Auto-Builder window
