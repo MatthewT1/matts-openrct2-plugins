@@ -13,11 +13,12 @@ import {
     CLUSTER_MIN_GUESTS, NeedKind, NeedCounts, NeedGap, Facility,
 } from "../needs";
 import {
-    createFacilityTracker, planFacilities, describePlan, DEFAULT_FACILITY_OPTIONS,
-    FacilityPlan, GapObservation,
+    createFacilityTracker, planFacilities, describePlan, findCourts, courtForGap, DEFAULT_FACILITY_OPTIONS,
+    DEFAULT_COURT_OPTIONS, FacilityPlan, GapObservation,
 } from "../facilities";
 import { createThoughtAccumulator, describeThoughts, ThoughtTally } from "../thoughts";
 import { StallBuilder } from "./stall-build";
+import { pickSite, DEFAULT_CHEAP_BUILD_OPTIONS } from "../cheap-builds";
 
 /**
  * Gets every fresh thought the need sampler reads, with the guest's tile, and hears
@@ -419,7 +420,45 @@ export function createFacilityManager(settings: BuilderSettings, dbg: DebugChann
         // Arm the watchdog: the next ready() is due five days from now.
         buildWatchdog.reset();
         buildWatchdog.ready(date.ticksElapsed, Date.now());
-        buildFacility(plans[0]);
+        buildFacility(toCourt(plans[0]));
+    }
+
+    /**
+     * Food courts (#83): a food or drink stall whose gap has a court (2+ food/drink
+     * stalls together) within reach is built in the court rather than at the gap. The
+     * gap chosen is unchanged; only where the stall goes moves. See DEFAULT_COURT_OPTIONS
+     * for why the gap still resolves.
+     */
+    const COURT_PICK = {
+        coverRadius: DEFAULT_CHEAP_BUILD_OPTIONS.coverRadius,
+        minBackSteps: DEFAULT_CHEAP_BUILD_OPTIONS.minBackSteps,
+        clusterMinGuests: DEFAULT_CHEAP_BUILD_OPTIONS.clusterMinGuests,
+        maxPerKind: DEFAULT_CHEAP_BUILD_OPTIONS.maxPerKind,
+        minRides: DEFAULT_CHEAP_BUILD_OPTIONS.minRides,
+        siteRadius: DEFAULT_COURT_OPTIONS.siteRadius,
+    };
+
+    function toCourt(plan: FacilityPlan): FacilityPlan {
+        if (plan.kind !== "hunger" && plan.kind !== "thirst") return plan;
+        const stallTiles: Array<{ x: number; y: number }> = [];
+        const facilities = collectFacilities();
+        for (let i = 0; i < facilities.length; i++) {
+            const k = facilities[i].kind;
+            if (k === "hunger" || k === "thirst") stallTiles.push({ x: facilities[i].x, y: facilities[i].y });
+        }
+        const court = courtForGap(plan.gap, findCourts(stallTiles, DEFAULT_COURT_OPTIONS), DEFAULT_COURT_OPTIONS);
+        if (court === null) return plan;
+        const radius = DEFAULT_COURT_OPTIONS.siteRadius;
+        const site = pickSite(court, stalls.collectSites([court], radius), COURT_PICK);
+        if (site === null) {
+            dbg.count("facilityCourtNoSite");
+            return plan;
+        }
+        dbg.count("facilityCourt");
+        return {
+            kind: plan.kind, gap: plan.gap, site: site,
+            reason: plan.reason + ", built in the food court at (" + court.x + ", " + court.y + ")",
+        };
     }
 
     return {

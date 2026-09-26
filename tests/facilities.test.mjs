@@ -1,5 +1,5 @@
 import { createFacilityTracker, planFacilities, describePlan, pickFacilityVariant,
-         DEFAULT_FACILITY_OPTIONS } from "./build/facilities.mjs";
+         DEFAULT_FACILITY_OPTIONS, findCourts, courtForGap, DEFAULT_COURT_OPTIONS } from "./build/facilities.mjs";
 import { CLUSTER_MIN_GUESTS } from "./build/needs.mjs";
 let pass=0, fail=0; const ok=(c,m)=>{ c?pass++:(fail++,console.log("FAIL:",m)); };
 
@@ -267,5 +267,19 @@ ok(pickFacilityVariant([7, 3, 9], { 7: 2, 3: 2, 9: 1 }) === 9, "least-built can 
 const cyc = {};
 for (let i = 0; i < 6; i++) { const v = pickFacilityVariant([7, 3, 9], cyc); cyc[v] = (cyc[v] || 0) + 1; }
 ok(cyc[7] === 2 && cyc[3] === 2 && cyc[9] === 2, "picks cycle evenly, got " + JSON.stringify(cyc));
+
+// --- food courts (#83) ---------------------------------------------------------------
+const CO = DEFAULT_COURT_OPTIONS;
+ok(CO.reach + CO.siteRadius < DEFAULT_FACILITY_OPTIONS.minDistance, "court build lands closer than minDistance");
+const courts = findCourts([{x:10,y:10},{x:12,y:10},{x:11,y:13},{x:40,y:40},{x:80,y:80},{x:82,y:81}], CO);
+ok(courts.length === 2 && courts[0].stalls === 3 && courts[0].x === 11 && courts[0].y === 11,
+   "densest group first at its mean, got " + JSON.stringify(courts));
+ok(courts[1].stalls === 2 && courts[1].x === 81, "second court; lone stall is not a court");
+ok(findCourts([{x:1,y:1}], CO).length === 0, "one stall is no court");
+ok(findCourts([{x:1,y:1},{x:1,y:1+CO.clusterRadius+1}], CO).length === 0, "two far stalls are no court");
+ok(courtForGap({kind:"hunger",x:11+CO.reach,y:11}, courts, CO) === courts[0], "hunger gap within reach -> court");
+ok(courtForGap({kind:"thirst",x:11+CO.reach+1,y:11}, courts, CO) === null, "just out of reach -> none");
+ok(courtForGap({kind:"toilet",x:11,y:11}, courts, CO) === null, "toilets never go to courts");
+ok(courtForGap({kind:"hunger",x:60,y:60}, [], CO) === null, "no courts -> none");
 
 console.log(`${pass} passed, ${fail} failed`);

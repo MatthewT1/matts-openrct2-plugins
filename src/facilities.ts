@@ -509,3 +509,88 @@ export function pickFacilityVariant(candidates: number[], builtCounts: Record<nu
     }
     return best;
 }
+
+// ---------------------------------------------------------------------------
+// Food courts (#83)
+// ---------------------------------------------------------------------------
+
+/** A group of food/drink stalls close together, at their mean position. */
+export interface Court {
+    x: number;
+    y: number;
+    stalls: number;
+}
+
+export interface CourtOptions {
+    /** Stalls needed before a group counts as a court. */
+    minStalls: number;
+    /** Stalls within this many tiles (Manhattan) of the group's seed join it. */
+    clusterRadius: number;
+    /** A court whose centre is this close to a food/drink gap serves it instead. */
+    reach: number;
+    /** How far from the court centre the new stall may go. */
+    siteRadius: number;
+}
+
+/**
+ * `reach + siteRadius` stays under `minDistance` (12): the new stall then lands within
+ * 11 tiles of the gap, closer than the "nearest is 12+ tiles away" that made it a gap,
+ * so the gap resolves instead of building at the court again and again.
+ */
+export const DEFAULT_COURT_OPTIONS: CourtOptions = {
+    minStalls: 2,
+    clusterRadius: 6,
+    reach: 8,
+    siteRadius: 3,
+};
+
+/**
+ * Groups stalls into courts. Greedy: the stall with the most neighbours seeds a court
+ * of itself and its neighbours, those are removed, and the rest are grouped again.
+ * Deterministic for a given list (ties go to the earlier stall).
+ */
+export function findCourts(stalls: Array<{ x: number; y: number }>, options: CourtOptions): Court[] {
+    const left = stalls.slice();
+    const courts: Court[] = [];
+    while (left.length >= options.minStalls) {
+        let seed = -1;
+        let seedN = 0;
+        for (let i = 0; i < left.length; i++) {
+            let n = 0;
+            for (let j = 0; j < left.length; j++) {
+                if (manhattan(left[i].x, left[i].y, left[j].x, left[j].y) <= options.clusterRadius) n++;
+            }
+            if (n > seedN) { seed = i; seedN = n; }
+        }
+        if (seedN < options.minStalls) break;
+        const s = left[seed];
+        let sx = 0, sy = 0;
+        const rest: Array<{ x: number; y: number }> = [];
+        for (let j = 0; j < left.length; j++) {
+            if (manhattan(s.x, s.y, left[j].x, left[j].y) <= options.clusterRadius) {
+                sx += left[j].x;
+                sy += left[j].y;
+            } else {
+                rest.push(left[j]);
+            }
+        }
+        courts.push({ x: Math.round(sx / seedN), y: Math.round(sy / seedN), stalls: seedN });
+        left.length = 0;
+        for (let j = 0; j < rest.length; j++) left.push(rest[j]);
+    }
+    return courts;
+}
+
+/** The nearest court within `reach` of a food or drink gap, or null (toilets, first aid never). */
+export function courtForGap(gap: { kind: NeedKind; x: number; y: number }, courts: Court[],
+                            options: CourtOptions): Court | null {
+    if (gap.kind !== "hunger" && gap.kind !== "thirst") return null;
+    let best: Court | null = null;
+    let bestD = 0;
+    for (let i = 0; i < courts.length; i++) {
+        const d = manhattan(gap.x, gap.y, courts[i].x, courts[i].y);
+        if (d > options.reach) continue;
+        if (best === null || d < bestD) { best = courts[i]; bestD = d; }
+    }
+    return best;
+}
