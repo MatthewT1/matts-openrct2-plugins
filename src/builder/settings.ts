@@ -17,6 +17,8 @@ export function createBuilderSettings(storage: SettingsStore) {
         // #81: info kiosks at the park front/back and where guests get lost. New key,
         // nothing to migrate from Trash Manager.
         autoCheapBuilds: boolSetting(storage, "autoCheapBuilds", true),
+        // #104: TVs on queues posting 5+ minutes.
+        autoQueueTvs: boolSetting(storage, "autoQueueTvs", true),
     };
 }
 

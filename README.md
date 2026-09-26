@@ -51,6 +51,13 @@ Places benches and bins and builds guest facilities. Split out of Trash Manager 
 - **Toilets, first aid and food stalls** *(on by default, can be switched off)*. Builds a facility only when guests
   in one area have kept going without one across five full passes over the park, so a
   crowd that happens to be passing through doesn't trigger a build.
+- **Info kiosks and an umbrella stall** *(on by default, can be switched off)*. Once the park
+  has 3 rides: an information kiosk by the entrance and at the far end of the paths, another
+  where guests say they're lost, and an umbrella stall by the entrance for rainy days. Skips
+  any spot that already has one within 12 tiles, including yours (#81, #105).
+- **Queue TVs** *(on by default, can be switched off)*. Puts TVs on empty tiles of queues
+  posting 5+ minutes, from the front backwards: long-waiting guests only stop losing
+  happiness on a tile with a TV (#104).
 
 <img src="docs/images/plugin-built-amenities.png" alt="Toilet, benches and bins placed by Auto-Builder along the path below the Woodchip coaster" width="480">
 
