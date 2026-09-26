@@ -6,7 +6,9 @@
  * P2 covered two untouched staff types. Security guards were closed without code:
  * `brokenBins` measured 0 in every one of 528 telemetry records ever taken, and
  * "vandal" never appears in `park.problems` across either park in `tools/rct-debug.log`.
- * There is no signal to act on, so nothing was built for them.
+ * There is no signal to act on, so nothing was built for them. The one exception is
+ * #92: the Best Staff award (+25% guest generation while held) needs a guard on the
+ * roster, so once the park has 20+ staff and no guard, one is hired (see wantsAwardGuard).
  *
  * Entertainers are different. `Staff::entertainerUpdateNearbyPeeps()`
  * (`gamesrc/OpenRCT2/src/openrct2/entity/Staff.cpp:889-933`) gives a queuing guest
@@ -42,7 +44,7 @@ import {
     planEntertainerRoster, costumeCandidates,
 } from "./entertainer-targeting";
 import { createStaffingController, StaffingDecision } from "./staffing";
-import { createStaffHirer } from "./staff-hiring";
+import { createStaffHirer, wantsAwardGuard, HIRE_BACKOFF_DAYS } from "./staff-hiring";
 import { createDeferredActions } from "./deferred";
 import { createCooldown, ENTERTAINER_CENSUS_TICKS } from "./cooldown";
 
@@ -61,6 +63,9 @@ registerPlugin({
         // staffhire action arg, source-verified: 0=handyman, 1=mechanic, 2=security,
         // 3=entertainer.
         const STAFF_TYPE_ENTERTAINER = 3;
+        const STAFF_TYPE_SECURITY = 2;
+        // Source-verified wage (Staff.cpp:2654): security guards are GBP 60/month.
+        const SECURITY_WAGE_PER_MONTH = 60;
         // StaffOrders bitmask only applies to handyman (0) / mechanic (1) staffTypes
         // per @openrct2/types' own doc comment; entertainers ignore it, so 0 is correct,
         // not merely "unset".
@@ -74,6 +79,7 @@ registerPlugin({
         const storage: Configuration = context.getParkStorage();
         const settings = {
             autoManage: boolSetting(storage, "autoManageEntertainers", true),
+            awardGuard: boolSetting(storage, "hireAwardGuard", true),
         };
         const dbg = createDebugChannel("staff-extras");
 
@@ -89,6 +95,31 @@ registerPlugin({
             execute: (action, args, cb) => context.executeAction(action, args, cb),
             count: (name, n) => dbg.count(name, n),
         });
+
+        // One guard for the Best Staff award (#92). Orders 0: the bitmask only applies to
+        // handymen and mechanics, same as entertainers.
+        const guardHirer = createStaffHirer({
+            staffType: STAFF_TYPE_SECURITY,
+            orders: 0,
+            noun: "security guard",
+            plugin: "Staff Extras",
+            counterPrefix: "guard",
+            backoffDays: HIRE_BACKOFF_DAYS,
+            execute: (action, args, cb) => context.executeAction(action, args, cb),
+            count: (name, n) => dbg.count(name, n),
+        });
+
+        /** Hires the award guard if the roster needs one. Cheap: one staff list read. */
+        function manageAwardGuard(): void {
+            if (!settings.awardGuard.get()) return;
+            const types = map.getAllEntities("staff").map((s: Staff) => s.staffType);
+            if (!wantsAwardGuard(types) || guardHirer.blocked()) return;
+            guardHirer.hire(() => {
+                dbg.count("guardHired");
+                console.log("[Staff Extras] Hired a security guard (" + formatMoney(SECURITY_WAGE_PER_MONTH) +
+                    "/month) so the Best Staff award becomes possible: it needs every staff type.");
+            });
+        }
 
         function getAutoManage(): boolean {
             return settings.autoManage.get();
@@ -444,6 +475,7 @@ registerPlugin({
         const requestAssignPatrols = deferred.define(() => assignPatrols(getEntertainers(), cache.targets));
 
         context.subscribe("interval.day", () => {
+            dbg.time("day.awardGuard", manageAwardGuard);
             // Check the toggle FIRST. The cache refresh is by far the most expensive
             // thing this plugin does, and a switched-off plugin must cost nothing —
             // it was previously paying the full 206ms every day regardless.
@@ -504,7 +536,7 @@ registerPlugin({
                 classification: "staff-extras",
                 title: "Staff Extras v" + PLUGIN_VERSION,
                 width: 280,
-                height: 260,
+                height: 276,
                 widgets: [
                     {
                         type: "label", name: "lblStats",
@@ -550,8 +582,18 @@ registerPlugin({
                             entertainerStaffingSeeded = false;
                         }
                     },
-                    { type: "label", name: "lblStatus", x: 8, y: 198, width: 264, height: 14, text: "" },
-                    diagnosticsCheckbox(8, 218, 264)
+                    {
+                        type: "checkbox", name: "chkGuard",
+                        x: 8, y: 196, width: 264, height: 14,
+                        text: "Hire 1 security guard for Best Staff award",
+                        tooltip: "Once the park has 20+ staff and no security guard, hire one ("
+                            + formatMoney(SECURITY_WAGE_PER_MONTH) + "/month). The Best Staff award (+25% new guests "
+                            + "while held) needs every staff type, and nothing else hires security. On by default (#92).",
+                        isChecked: settings.awardGuard.get(),
+                        onChange: (checked: boolean) => { settings.awardGuard.set(checked); }
+                    },
+                    { type: "label", name: "lblStatus", x: 8, y: 214, width: 264, height: 14, text: "" },
+                    diagnosticsCheckbox(8, 234, 264)
                 ],
                 onClose: () => {
                     pluginWindow = null;

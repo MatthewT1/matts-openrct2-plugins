@@ -100,6 +100,9 @@ Hires entertainers and places them at queues that are close to the point where g
 out, because that's where an entertainer makes the most difference. It only ever fires
 entertainers it hired itself, so the ones you placed by a themed ride stay put.
 
+Once the park has 20 or more staff and no security guard, it also hires one guard. The Best
+Staff award (+25% new guests while held) needs every staff type on the roster (#92).
+
 ### Marketing Manager
 
 Handles advertising and voucher campaigns.

@@ -25,6 +25,7 @@ export const TOGGLES = [
     { plugin: "Mechanic Manager", key: "emergencyRepair", defaultOn: true },
     { plugin: "Marketing Manager", key: "autoManage", defaultOn: false },
     { plugin: "Staff Extras", key: "autoManageEntertainers", defaultOn: true },
+    { plugin: "Staff Extras", key: "hireAwardGuard", defaultOn: true },
 ];
 
 export const PRESETS = ["save", "defaults", "all"];
