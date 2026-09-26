@@ -348,6 +348,10 @@ labyrinth beats a maze. An over-complicated maze means guests complain about bei
 ride too long *and* the queue backs up. This directly supports the OPS policy of
 shortening the maze time limit under queue pressure.
 
+> **Correction (#38):** a maze's operation option is *max guests in the maze*, not a time
+> limit (`Guest.cpp:3447-3451`), and OPS never touches mazes. See
+> [ride-settings.md](ride-settings.md).
+
 **Not found:** no published optimal values for lap counts or rotations. As with staffing
 ratios, there is no consensus number to copy — which is again why the controller measures
 rather than predicts.

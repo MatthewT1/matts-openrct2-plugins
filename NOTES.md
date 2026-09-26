@@ -10,6 +10,7 @@ game's plugin folder.
 | [docs/api-reference.md](docs/api-reference.md) | **Verified** API facts, each cited to a file and line in `gamesrc/`. Units, gotchas, lifecycle. Check here before assuming anything about the API. |
 | [docs/performance.md](docs/performance.md) | Cost model, measured timings, the performance rules, and the debug/profiling channel. |
 | [docs/research.md](docs/research.md) | Community research digest — game mechanics, staffing strategy, contested ratios, sources. |
+| [docs/ride-settings.md](docs/ride-settings.md) | Source-verified dispatch rules, `operationOption` meaning and rating effect per ride type (#38 step 1). |
 | [docs/design-records.md](docs/design-records.md) | Per-feature design record (basis, measurements, decisions, rejections). Read before changing or reopening a feature. |
 | [docs/archive/](docs/archive/) | Verbatim field logs and build-out work log moved out of performance.md and roadmap.md. Rarely needed. |
 | [docs/roadmap.md](docs/roadmap.md) | Proposed improvements, prioritised, each tagged with its basis and cost. |
