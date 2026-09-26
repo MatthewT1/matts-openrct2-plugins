@@ -1,5 +1,5 @@
 import { createFacilityTracker, planFacilities, describePlan, pickFacilityVariant,
-         DEFAULT_FACILITY_OPTIONS, findCourts, courtForGap, DEFAULT_COURT_OPTIONS } from "./build/facilities.mjs";
+         DEFAULT_FACILITY_OPTIONS, findCourts, courtForGap, courtTried, DEFAULT_COURT_OPTIONS } from "./build/facilities.mjs";
 import { CLUSTER_MIN_GUESTS } from "./build/needs.mjs";
 let pass=0, fail=0; const ok=(c,m)=>{ c?pass++:(fail++,console.log("FAIL:",m)); };
 
@@ -270,7 +270,6 @@ ok(cyc[7] === 2 && cyc[3] === 2 && cyc[9] === 2, "picks cycle evenly, got " + JS
 
 // --- food courts (#83) ---------------------------------------------------------------
 const CO = DEFAULT_COURT_OPTIONS;
-ok(CO.reach + CO.siteRadius < DEFAULT_FACILITY_OPTIONS.minDistance, "court build lands closer than minDistance");
 const courts = findCourts([{x:10,y:10},{x:12,y:10},{x:11,y:13},{x:40,y:40},{x:80,y:80},{x:82,y:81}], CO);
 ok(courts.length === 2 && courts[0].stalls === 3 && courts[0].x === 11 && courts[0].y === 11,
    "densest group first at its mean, got " + JSON.stringify(courts));
@@ -281,5 +280,12 @@ ok(courtForGap({kind:"hunger",x:11+CO.reach,y:11}, courts, CO) === courts[0], "h
 ok(courtForGap({kind:"thirst",x:11+CO.reach+1,y:11}, courts, CO) === null, "just out of reach -> none");
 ok(courtForGap({kind:"toilet",x:11,y:11}, courts, CO) === null, "toilets never go to courts");
 ok(courtForGap({kind:"hunger",x:60,y:60}, [], CO) === null, "no courts -> none");
+// #83: a gap must be 12+ tiles from its nearest stall, so reach has to exceed minDistance
+// or a gap near a court (whose stalls sit around its centre) can almost never exist.
+ok(CO.reach > DEFAULT_FACILITY_OPTIONS.minDistance, "court reach above minDistance");
+const tried = [{ kind: "hunger", x: 30, y: 30 }];
+ok(courtTried({ kind: "hunger", x: 35, y: 34 }, tried, 12), "same gap back after a court build -> tried");
+ok(!courtTried({ kind: "thirst", x: 30, y: 30 }, tried, 12), "other kind -> not tried");
+ok(!courtTried({ kind: "hunger", x: 50, y: 30 }, tried, 12), "far gap -> not tried");
 
 console.log(`${pass} passed, ${fail} failed`);

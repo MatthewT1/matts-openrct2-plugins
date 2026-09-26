@@ -533,16 +533,31 @@ export interface CourtOptions {
 }
 
 /**
- * `reach + siteRadius` stays under `minDistance` (12): the new stall then lands within
- * 11 tiles of the gap, closer than the "nearest is 12+ tiles away" that made it a gap,
- * so the gap resolves instead of building at the court again and again.
+ * `reach` is above `minDistance` (12). A gap means the nearest stall of its kind is 12+
+ * tiles away, and a court's stalls sit within a few tiles of its centre, so with the old
+ * reach of 8 a gap near a court almost could not exist and court placement never fired
+ * (#83: 0 in 20 soak runs). A court stall can now land farther than 12 tiles from the gap,
+ * so the gap may come back; `courtTried` then sends the next stall to the gap itself.
  */
 export const DEFAULT_COURT_OPTIONS: CourtOptions = {
     minStalls: 2,
     clusterRadius: 6,
-    reach: 8,
+    reach: 16,
     siteRadius: 3,
 };
+
+/**
+ * True when a court stall was already built for this gap (same kind, within `radius`):
+ * the court did not resolve it, so the next stall goes to the gap (#83).
+ */
+export function courtTried(gap: { kind: NeedKind; x: number; y: number },
+                           tried: Array<{ kind: NeedKind; x: number; y: number }>, radius: number): boolean {
+    for (let i = 0; i < tried.length; i++) {
+        const t = tried[i];
+        if (t.kind === gap.kind && manhattan(gap.x, gap.y, t.x, t.y) <= radius) return true;
+    }
+    return false;
+}
 
 /**
  * Groups stalls into courts. Greedy: the stall with the most neighbours seeds a court
