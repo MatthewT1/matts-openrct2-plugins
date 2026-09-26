@@ -70,8 +70,8 @@ export function createBuilderWindow(deps: BuilderWindowDeps) {
                 {
                     type: "checkbox", name: "chkQueueTvs",
                     x: 14, y: 102, width: 276, height: 14,
-                    text: "Auto-place TVs on long queues",
-                    tooltip: "On queues posting 5+ minutes, puts a queue TV on empty queue tiles from the front backwards, every 3rd tile, up to 4 per queue and 2 a day. Guests who have waited a long time lose happiness in the queue unless their own tile has a TV. Never replaces anything already on the path. Needs the TV researched. On by default (#104).",
+                    text: "Auto-place TVs on queues",
+                    tooltip: "Once the TV is researched, puts a queue TV on every 2nd empty queue tile of every ride, front first, a few queues a day, paid from a monthly budget (5% of the cash above 1,000). Guests who have waited a long time lose happiness in the queue unless their own tile has a TV. Never replaces anything already on the path. On by default (#104, #116).",
                     isChecked: settings.autoQueueTvs.get(),
                     onChange: function(v: boolean): void { settings.autoQueueTvs.set(v); },
                 },
