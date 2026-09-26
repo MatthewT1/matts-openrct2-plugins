@@ -40,6 +40,9 @@ registerPlugin({
         var daysDone = 0;
         var breakdownsToday = 0;
         context.subscribe("ride.breakdown", function () { breakdownsToday++; });
+        // Pause at load: an unpaused save otherwise ticks in real time until "start", so
+        // day 0 (and the whole run) depended on how fast the harness connected.
+        if (!context.paused) context.executeAction("pausetoggle", {});
 
         // #63 guest thought tally: column name -> thought types counted in it.
         var THOUGHTS_NEG = {
@@ -212,6 +215,30 @@ registerPlugin({
             return row;
         }
 
+        // End-of-run build census for the soak test (#81 kiosks, #105 umbrella stall, #104
+        // queue TVs): counted from the map, so it needs no debug channel.
+        function census() {
+            var out = { kiosks: 0, umbrellaStalls: 0, stalls: 0, queueTvs: 0 };
+            var rides = map.rides;
+            for (var i = 0; i < rides.length; i++) {
+                var r = rides[i];
+                if (r.type === 35) out.kiosks++; // RIDE_TYPE_INFORMATION_KIOSK
+                if (r.classification === "stall") out.stalls++;
+                if (r.type === 32 && r.object && r.object.shopItem === 4) out.umbrellaStalls++; // ShopItem::umbrella
+            }
+            var tv = -1, adds = objectManager.getAllObjects("footpath_addition");
+            for (var j = 0; j < adds.length; j++) if (adds[j].identifier.toLowerCase().indexOf("qtv") !== -1) tv = adds[j].index;
+            if (tv < 0) return out;
+            for (var x = 0; x < map.size.x; x++) for (var y = 0; y < map.size.y; y++) {
+                var els = map.getTile(x, y).elements;
+                for (var e = 0; e < els.length; e++) {
+                    var el = els[e];
+                    if (el.type === "footpath" && el.isQueue && el.addition === tv) out.queueTvs++;
+                }
+            }
+            return out;
+        }
+
         function hello() {
             var names = [];
             var plugins = pluginManager.plugins;
@@ -224,7 +251,9 @@ registerPlugin({
                 parkName: park.name,
                 noMoney: park.getFlag("noMoney"),
                 openRides: rideStats().openRides,
-                plugins: names
+                plugins: names,
+                // What src/cooldown.ts headlessGame() sees: true = real-time floors are off.
+                headlessGame: typeof globalThis !== "undefined" && globalThis.context !== undefined && globalThis.ui === undefined
             });
         }
 
@@ -263,6 +292,7 @@ registerPlugin({
             daysDone = 0;
             breakdownsToday = 0;
             moneyReset();
+            var census0 = census();
             send(snapshot());
             // Writing context.paused from a socket callback throws "Game state is not
             // mutable in this context"; the pausetoggle action works.
@@ -279,7 +309,7 @@ registerPlugin({
                     daySub.dispose();
                     daySub = null;
                     if (!context.paused) context.executeAction("pausetoggle", {});
-                    send({ type: "done", days: daysDone });
+                    send({ type: "done", days: daysDone, census0: census0, census: census() });
                 }
             });
         }

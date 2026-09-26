@@ -205,6 +205,7 @@ async function runArm(a, arm) {
     const rows = [];
     let hello = null;
     let settings = null;
+    let census = null;
     try {
         const sock = await connectAgent(a.agentPort, 120000, game);
         const next = lineReader(sock);
@@ -243,6 +244,7 @@ async function runArm(a, arm) {
                 rows.push(msg);
                 if (msg.day % 10 === 0) console.log(`[${arm}] day ${msg.day}/${a.days}: rating ${msg.rating}, guests ${msg.guests}, cash ${(msg.cash / 10).toFixed(0)}`);
             } else if (msg.type === "done") {
+                census = { start: msg.census0 ?? null, end: msg.census ?? null };
                 break;
             } else if (msg.type === "error") {
                 throw new Error(`agent error: ${msg.error}`);
@@ -258,7 +260,7 @@ async function runArm(a, arm) {
     writeFileSync(join(armDir, "days.csv"), toCsv(rows));
     const errors = countLogErrors(readFileSync(logPath, "utf8"));
     console.log(`[${arm}] done: ${rows.length - 1} days in ${seconds.toFixed(0)} s`);
-    return { arm, hello, settings, rows, seconds, provenance, errors, summary: summariseRun(rows) };
+    return { arm, hello, settings, rows, seconds, provenance, errors, census, summary: summariseRun(rows) };
 }
 
 async function main() {
@@ -302,7 +304,7 @@ async function main() {
         settings: results.on?.settings ?? null,
         arms: Object.fromEntries(a.arms.map((arm) => [arm, {
             start: results[arm].hello, seconds: results[arm].seconds, pluginFiles: results[arm].provenance,
-            errors: results[arm].errors, summary: results[arm].summary,
+            errors: results[arm].errors, census: results[arm].census, summary: results[arm].summary,
         }])),
         comparison: results.on && results.off ? compareRuns(results.on.summary, results.off.summary) : null,
     }, null, 2));
