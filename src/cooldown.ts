@@ -10,8 +10,8 @@
  * Pick floors below one game interval at speed 4 (`MS_PER_DAY_AT_SPEED[4]` per day),
  * or the floor binds at speed 4 and the speeds drift apart again.
  *
- * Free of OpenRCT2 globals so it can be unit-tested; callers pass
- * `date.ticksElapsed` and `Date.now()`.
+ * Unit-testable (only `typeof` checks on OpenRCT2 globals); callers pass
+ * `date.ticksElapsed` and `Date.now()`. Headless games drop the floor (headlessGame).
  */
 
 /** Game ticks per in-game day (harness days.csv: 528-547 ticks between days). */
@@ -32,7 +32,18 @@ export interface Cooldown {
     reset(): void;
 }
 
+/**
+ * True in a headless game (dedicated server, test harness): the game `context` exists but
+ * no `ui`. There are no frames to protect there, and a real-time floor would make runs
+ * depend on machine speed (the harness found repeat runs differing from day 1).
+ */
+function headlessGame(): boolean {
+    const g = globalThis as { context?: unknown; ui?: unknown };
+    return g.context !== undefined && g.ui === undefined;
+}
+
 export function createCooldown(minTicks: number, minMs: number): Cooldown {
+    if (headlessGame()) minMs = 0;
     let lastTicks = 0, lastMs = 0, fresh = true;
     return {
         ready(ticks: number, nowMs: number): boolean {

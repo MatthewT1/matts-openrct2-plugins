@@ -63,6 +63,27 @@ with fewer than 5 open rides, and runs 4 arms per park (off/on × perturb 0/1, 6
 same-arm spread; an effect within the noise is reported as noise. Resumable: finished and
 skipped parks are kept in `harness-runs/viability-seed63/state.json`.
 
+## Parallel runs and the per-PR soak test
+
+```
+node tools/headless/pool.mjs <jobs.json> --k 4
+node tools/headless/soak.mjs --builds <dir> --tag soak-s12 --seed 12 --k 4
+```
+
+`pool.mjs` runs K `run.mjs` processes at once, worker i on game port 11800 + 10i and agent
+port 47820 + i. Jobs are `{ save, out, days?, perturb?, pluginDir?, settings?, arms? }`;
+finished jobs (`out/summary.json`) are skipped and a failed job is retried once. Keep
+`--debug` out of pooled runs: the log sink (port 7777) is the one shared thing. 4 runs at
+K=4 take about as long as one (6 cores / 12 threads).
+
+`soak.mjs` tests a stack of branches: `<dir>` holds one built plugin folder per arm, run in
+name order (`0-main`, `1-cheap-builds-81`, ...). Parks come from the #63 pool (Magic
+Mountain and Jetlag Heights always in), each with one seeded RNG perturb shared by every
+arm; 30 days, `--settings defaults`. `report.md` shows health (runs, game-log errors), what
+fired (kiosks, umbrella stalls, queue TVs and stalls built, from an end-of-run census the
+agent takes off the map) and a sign test of each arm against the previous one, with the
+fail limits at the top of the script.
+
 ## How it works
 
 1. For each arm, `run.mjs` makes a user-data folder: a copied `config.ini`, a copy of the
@@ -73,7 +94,8 @@ skipped parks are kept in `harness-runs/viability-seed63/state.json`.
    takes a fixed set of JSON commands, with no way to run arbitrary code. On the on arm,
    `settings` writes the `--settings` booleans into each plugin's park storage and reads
    every toggle back. The toggle list is `tools/headless/settings.mjs`, and a test checks
-   it against the `boolSetting` calls in `src/`. `start` unpauses
+   it against the `boolSetting` calls in `src/`. The agent pauses the game as it loads, so
+   an unpaused save does not tick while the runner connects. `start` unpauses
    the game, sets the speed, and sends a snapshot at the start and after every
    `interval.day`. It pauses the game again when the days are done.
 4. The runner writes the CSV, stops the game, and moves to the next arm. Summary maths is
@@ -81,17 +103,22 @@ skipped parks are kept in `harness-runs/viability-seed63/state.json`.
 
 ## Things to know
 
-- **Runs are deterministic.** With the same save and plugins, two 60-day runs of Thunder
-  Rock gave byte-identical CSVs, for both the off arm and the on arm (2026-09-25). A
-  single run per arm reproduces exactly. That does **not** make an on − off difference a
-  real effect: one extra RNG draw (`--perturb 1`) changes a 5-day Dynamite Dunes run
+- **Only `.park` saves are deterministic.** With the same save and plugins, two 60-day
+  runs of Thunder Rock gave byte-identical CSVs, for both the off arm and the on arm
+  (2026-09-25), and so did Mel's World (2026-09-26, also 2 runs at once). Scenarios are
+  not: `ScenarioBegin` seeds the game RNG from the clock (`Scenario.cpp:78`), so every run of
+  a `.sc6`/`.sc4`/`.SC6` is a fresh replicate, even with no plugins. Diamond Heights (an
+  old `.sv6` save) also differed from day 2 with no plugins. And at K=4 one Mel's World run
+  still differed from day 1 (at K=2 it matched): cause unknown, not chased. Compare arms
+  across many parks, never one run against one run. Even for a `.park` save, an on − off
+  difference is not automatically a real effect: one extra RNG draw (`--perturb 1`) changes a 5-day Dynamite Dunes run
   (litter 3 vs 1, cash 7659 vs 7613), so compare against perturbed replicates (#63).
-- **Some plugin cooldowns use real time, not game time.** `Date.now()` rate-limits the
-  Staff Extras entertainer cache, Trash Manager guest-need sampling, facility build
-  timeout, and tile scan. At 8× these run less often per in-game day than they do at
-  normal speed. So the harness measures the plugins as they behave on fast-forward. That
-  also makes determinism depend on those cooldowns falling on the same days, which they
-  did in the runs above.
+- **Cooldowns are game time; headless drops their real-time floor.** Since #48 the plugin
+  throttles count game ticks with a small real-time floor (`src/cooldown.ts`) to bound
+  frame cost. By 2026-09-26 the half-day need-sampling cooldown (1 s floor) sat right at
+  the harness's ~2 s per day, and repeat runs differed from day 1, serial or parallel.
+  Headless games (a `context` but no `ui`) now skip the floor. Unpaused saves also used to
+  tick while the runner connected; the agent now pauses at load.
 - **The save's own state carries over.** If the save was paused, the agent unpauses it.
   Plugin settings live in the save's park storage, so with `--settings save` each toggle
   is whatever it was when the save was made. Use `all` or a file to compare saves on the
