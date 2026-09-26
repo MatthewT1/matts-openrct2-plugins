@@ -347,7 +347,7 @@ export function createOpsController(probeCeiling: number, knownRange?: KnownOpsR
                 // notice it was making things worse.
                 //
                 // Measured 2026-09-20: `tuned` climbed 0 -> 4 while the worst queue rose
-                // 7 -> 10 minutes and later to 16, past the 15-minute walk-out cliff.
+                // 7 -> 10 minutes and later to 16, past the ~15-minute walk-out point (for guests at happiness <= 65).
                 // That rise has other plausible causes (a ride broken for 8 days, a
                 // growing park) so OPS is NOT being blamed for all of it — but a
                 // calibration that can only ever hurt a congested ride is wrong on its

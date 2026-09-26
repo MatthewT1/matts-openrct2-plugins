@@ -40,7 +40,7 @@ The rest of this guide covers every toggle across the five automated plugins in 
 | Auto-adjust wait times daily | Wait Time Optimizer | **ON** | No | Automatically applies recommended min/max wait times to all open rides each in-game day |
 | Tune ride operation settings (laps / rotations / speed) | Wait Time Optimizer | **OFF** | No | Shortens ride cycles on rides with long queues (5+ min), lengthens them on quiet ones (1 min or less); not yet shown to shorten queues overall ([#15](https://github.com/MatthewT1/matts-openrct2-plugins/issues/15)); **discards the ride's excitement/intensity/nausea ratings until it runs again**, so moves one step at a time; off by default |
 | Diagnostics: stream timings to log sink | Wait Time Optimizer | **OFF** | No | Streams telemetry to a local log sink on 127.0.0.1:7777 for performance analysis; costs nothing when off |
-| Auto-manage entertainers daily (spends money) | Staff Extras | **ON** | **Yes** | Hires and positions entertainers near queues close to the 15-minute walk-out point (entertainers cut guests' time-in-queue and raise happiness); tracks which entertainers it hired and only ever fires those — one you placed by hand, in whatever costume, is never touched |
+| Auto-manage entertainers daily (spends money) | Staff Extras | **ON** | **Yes** | Hires and positions entertainers near queues close to the walk-out point (~15 min in the queue **and** happiness 65/255 or less) (entertainers cut guests' time-in-queue and raise happiness); tracks which entertainers it hired and only ever fires those — one you placed by hand, in whatever costume, is never touched |
 | Hire 1 security guard for Best Staff award | Staff Extras | **ON** | **Yes** | Once the park has 20+ staff and no security guard, hires exactly one (£60/month). The Best Staff award (+25% new guests while held) needs every staff type, and nothing else hires security (#92) |
 | Diagnostics: stream timings to log sink | Staff Extras | **OFF** | No | Streams telemetry to a local log sink on 127.0.0.1:7777 for performance analysis; costs nothing when off |
 | Start (per campaign row) | Marketing Manager | manual | **Yes** | Starts that specific campaign for the chosen duration; disabled when the campaign isn't currently eligible (see below) or is already running |
@@ -175,12 +175,12 @@ If you enable **Diagnostics** and run the log sink, the file `tools/rct-debug.lo
 
 - Ride properties change roughly once per day when queues are high (you will see the numbers in the ride info window)
 - Rides flagged with `[C]` are capacity-bound and need more trains, not tuning
-- Rides flagged with `[!!]` are at the 15-minute walk-out cliff (guests are abandoning them)
+- Rides flagged with `[!!]` have a queue of 12+ minutes, close to the walk-out point (unhappy guests, happiness 65/255 or less, may leave after ~15 minutes; happy guests never do)
 - The optimizer is silent when doing its job; only unusual conditions get console messages
 
 #### Staff Extras (Entertainers)
 
-- Entertainers are hired and positioned near queues nearing the 15-minute walk-out point, not spread evenly across the park
+- Entertainers are hired and positioned near queues nearing the walk-out point (~15 minutes **and** low happiness), not spread evenly across the park
 - Hired entertainers all use the same costume — the first one the game accepts for this park, auto-discovered on first hire (slot 0 specifically does *not* work for entertainers, unlike every other staff type, so this can't be hardcoded and varies by park); if you want a specific themed costume near a ride, place that entertainer by hand — the plugin will never touch or replace it
 
 #### Marketing Manager
