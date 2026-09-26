@@ -500,3 +500,42 @@ export function autoStartHold(
     if (!hasBaseline) return "measuring income first";
     return null;
 }
+
+/**
+ * Guest-generation divisor from the entrance fee (#94). Park.cpp:185-194: probability /4
+ * when the fee is above `park.totalRideValueForMoney`, and /4 again (/16 total) when
+ * fee / 2 (integer division, money64) is above it. Both are raw tenths of a pound.
+ * `fee` must be the fee the game actually charges: 0 when entry is free or the park
+ * has no money (GetEntranceFee, Park.cpp:725-737).
+ */
+export function entranceFeePenalty(fee: number, totalRideValue: number): 1 | 4 | 16 {
+    if (fee <= totalRideValue) return 1;
+    return Math.floor(fee / 2) > totalRideValue ? 16 : 4;
+}
+
+/** Days a penalty must hold before the warning posts. Ride value drops while a ride is broken down or closed (Park.cpp:81-84), so a one-day dip is not a pricing problem. */
+export const FEE_WARNING_HOLD_DAYS = 3;
+
+/**
+ * Debounce for the entrance-fee warning. Call `observe` once a day with that day's
+ * penalty; it returns the penalty to warn about, or null. It warns once per level:
+ * again only if the penalty worsens (4 -> 16), and re-arms after the fee has been back
+ * under the ride value for the hold period.
+ */
+export function createFeeWatch(holdDays: number = FEE_WARNING_HOLD_DAYS) {
+    let current: 1 | 4 | 16 = 1;
+    let streak = 0;
+    let warned: 1 | 4 | 16 = 1;
+    return {
+        observe(penalty: 1 | 4 | 16): 4 | 16 | null {
+            streak = penalty === current ? streak + 1 : 1;
+            current = penalty;
+            if (streak < holdDays) return null;
+            if (current === 1) { warned = 1; return null; }
+            if (current > warned) { warned = current; return current; }
+            return null;
+        },
+        /** The held penalty (1 while none has held for the hold period). */
+        held(): 1 | 4 | 16 { return streak >= holdDays ? current : 1; },
+    };
+}

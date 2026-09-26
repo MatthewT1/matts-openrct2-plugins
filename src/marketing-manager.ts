@@ -22,7 +22,7 @@ import {
     MIN_WEEKS, MAX_WEEKS, WEEKLY_COST, rankCampaigns, createAttributionTracker,
     CampaignRankingResult, MarketingSignals, AttributionTracker, AttributionSnapshot,
     AutoBatch, IncomeSample, MoodSample, PAYBACK_BASELINE_DAYS, PAYBACK_COOLDOWN_DAYS, TREND_DAYS,
-    autoStartHold, dailyIncomeRate, judgeBatch, moodHold,
+    autoStartHold, dailyIncomeRate, judgeBatch, moodHold, entranceFeePenalty, createFeeWatch, FEE_WARNING_HOLD_DAYS,
 } from "./marketing";
 import { spendGate } from "./cash-gate";
 
@@ -290,6 +290,32 @@ registerPlugin({
         }
 
         let lastRanking: CampaignRankingResult = { ranked: [], blockedReason: "not yet computed" };
+
+        // Entrance-fee warning (#94). Info only: the plugin never changes the fee.
+        const feeWatch = createFeeWatch();
+        let lastFeeLine = "";
+
+        /** The fee the game charges (GetEntranceFee, Park.cpp:725-737): 0 on no-money parks or when entry is free. */
+        function chargedEntranceFee(): number {
+            if (park.getFlag("noMoney")) return 0;
+            if (!park.getFlag("unlockAllPrices") && park.getFlag("freeParkEntry")) return 0;
+            return park.entranceFee;
+        }
+
+        function checkEntranceFee(): void {
+            const fee = chargedEntranceFee();
+            const value = park.totalRideValueForMoney;
+            const warn = feeWatch.observe(entranceFeePenalty(fee, value));
+            const held = feeWatch.held();
+            lastFeeLine = held === 1 ? "" : "Entrance fee " + formatMoney(fee / 10) + " > ride value "
+                + formatMoney(value / 10) + ": new guests /" + held;
+            if (warn === null) return;
+            const text = "Entrance fee " + formatMoney(fee / 10) + " is above "
+                + (warn === 16 ? "twice " : "") + "your rides' total value (" + formatMoney(value / 10)
+                + "). The game cuts new guest arrivals to 1/" + warn + ". Lower the fee or add rides.";
+            console.log("[Marketing Manager] " + text);
+            park.postMessage({ type: "money", text });
+        }
         let lastTracked: TrackedCampaigns = {};
         let lastFoodOrDrinkStalls: Ride[] = [];
 
@@ -474,6 +500,9 @@ registerPlugin({
                     : lastHold !== null ? "Auto-start waiting: " + lastHold : "";
             }
 
+            const feeLabel = pluginWindow.findWidget<LabelWidget>("lblFee");
+            if (feeLabel) feeLabel.text = lastFeeLine;
+
             const status = pluginWindow.findWidget<LabelWidget>("lblStatus");
             if (status) {
                 status.text = isAutoManage()
@@ -521,7 +550,7 @@ registerPlugin({
                 title: "Marketing Manager v" + PLUGIN_VERSION,
                 // 320, not 300: "Half-price entry vouchers - £34.87/guest" was cut off (#24).
                 width: 320,
-                height: rowsBottom + 82,
+                height: rowsBottom + 100,
                 widgets: [
                     {
                         type: "label", name: "lblStatus",
@@ -568,6 +597,12 @@ registerPlugin({
                         },
                     },
                     diagnosticsCheckbox(8, rowsBottom + 42, 304),
+                    {
+                        type: "label", name: "lblFee",
+                        x: 8, y: rowsBottom + 62, width: 304, height: 14,
+                        text: "",
+                        tooltip: "The game cuts new guest arrivals to 1/4 when the entrance fee is above your open rides' total value, and to 1/16 above twice it. Checked daily; a news message is posted once it has lasted " + FEE_WARNING_HOLD_DAYS + " days.",
+                    },
                 ],
                 onClose: () => { pluginWindow = null; },
             });
@@ -582,6 +617,7 @@ registerPlugin({
             updateIncome();
             updateMood();
             judgePending();
+            checkEntranceFee();
 
             lastTracked = upkeepCampaigns(loadTracked());
             saveTracked(lastTracked);
