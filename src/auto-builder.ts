@@ -66,6 +66,7 @@ function autoBuilderMain(): void {
             amenityRemoval: settings.amenityRemoval.get(),
             autoFacilities: settings.autoFacilities.get(),
             autoCheapBuilds: settings.autoCheapBuilds.get(),
+            cheapBuilds: cheap.status(),
             placedAmenities: placedCount(),
             coverageTiles: scan.getCoverageTiles().length,
             vomit: scan.cache.vomit,

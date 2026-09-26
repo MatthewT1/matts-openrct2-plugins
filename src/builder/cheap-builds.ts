@@ -232,5 +232,24 @@ export function createCheapBuilder(settings: BuilderSettings, dbg: DebugChannel,
         }
     }
 
-    return { listener, manage, isOn };
+    /** For the debug channel: what the last scan found and what each kind still lacks. */
+    function status(): Record<string, unknown> {
+        const out: Record<string, unknown> = {
+            fronts: fronts.length,
+            back: back === null ? null : { x: back.x, y: back.y, steps: back.steps },
+        };
+        for (let i = 0; i < KINDS.length; i++) {
+            const k = KINDS[i];
+            const built = builtOf(k.rideType);
+            out[k.key] = {
+                built: built.length,
+                clusters: lastClusters[k.key].length,
+                uncovered: uncoveredAnchors(buildAnchors(fronts, back, lastClusters[k.key], OPTIONS), built, OPTIONS)
+                    .map(function (a): string { return a.role; }),
+            };
+        }
+        return out;
+    }
+
+    return { listener, manage, isOn, status };
 }
