@@ -8,7 +8,8 @@
  *     across the path network (and removes ones it placed that are no longer needed);
  *   - toilets, first aid and food/drink stalls where sampled guest needs go unmet;
  *   - cheap "just in case" buildings (info kiosks, an umbrella stall) at the park front,
- *     back and where guests get lost (#81, #105).
+ *     back and where guests get lost (#81, #105);
+ *   - TVs on long queues (#104).
  *
  * The settings used to live in Trash Manager's park storage; they are moved across on
  * load (see migrateKeys), so a save keeps whatever the player had chosen.
@@ -22,6 +23,7 @@ import { createAmenityManager } from "./builder/amenities";
 import { createFacilityManager } from "./builder/facilities";
 import { createStallBuilder } from "./builder/stall-build";
 import { createCheapBuilder } from "./builder/cheap-builds";
+import { createQueueTvManager } from "./builder/queue-tvs";
 import { createBuilderWindow } from "./builder/window";
 
 registerPlugin({
@@ -52,6 +54,7 @@ function autoBuilderMain(): void {
     const stalls = createStallBuilder(dbg);
     const cheap = createCheapBuilder(settings, dbg, stalls);
     const facilities = createFacilityManager(settings, dbg, stalls, cheap.listener);
+    const queueTvs = createQueueTvManager(settings, dbg);
     const { sampleGuestNeeds, manageFacilities, facilityTracker } = facilities;
 
     function placedCount(): number {
@@ -67,6 +70,7 @@ function autoBuilderMain(): void {
             autoFacilities: settings.autoFacilities.get(),
             autoCheapBuilds: settings.autoCheapBuilds.get(),
             cheapBuilds: cheap.status(),
+            autoQueueTvs: settings.autoQueueTvs.get(),
             placedAmenities: placedCount(),
             coverageTiles: scan.getCoverageTiles().length,
             vomit: scan.cache.vomit,
@@ -101,6 +105,7 @@ function autoBuilderMain(): void {
         dbg.time("day.needSample", sampleGuestNeeds);
         dbg.time("day.facilities", manageFacilities);
         dbg.time("day.cheapBuilds", cheap.manage);
+        dbg.time("day.queueTvs", queueTvs.manage);
         dbg.flushStats(parkContext());
     });
 
@@ -112,6 +117,7 @@ function autoBuilderMain(): void {
         settings,
         placedCount,
         facilityCounts: facilities.getFacilityCounts,
+        queueTvCount: queueTvs.placedCount,
     });
 
     ui.registerMenuItem("Auto-Builder", openWindow);

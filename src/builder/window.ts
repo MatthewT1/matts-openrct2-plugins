@@ -12,10 +12,12 @@ export interface BuilderWindowDeps {
     placedCount(): number;
     /** Facilities in the park by kind, from the last facility pass. */
     facilityCounts(): Record<string, number>;
+    /** Queue TVs placed since the park was loaded. */
+    queueTvCount(): number;
 }
 
 export function createBuilderWindow(deps: BuilderWindowDeps) {
-    const { settings, placedCount, facilityCounts } = deps;
+    const { settings, placedCount, facilityCounts, queueTvCount } = deps;
 
     let win: Window | null           = null;
     let refreshHandle: number | null = null;
@@ -27,9 +29,9 @@ export function createBuilderWindow(deps: BuilderWindowDeps) {
             classification: "auto-builder",
             title: "Auto-Builder v" + __PLUGIN_VERSION__,
             width: 300,
-            height: 182,
+            height: 214,
             widgets: [
-                { type: "groupbox", x: 6, y: 16, width: 288, height: 92, text: "Automation  (runs each in-game day)" },
+                { type: "groupbox", x: 6, y: 16, width: 288, height: 110, text: "Automation  (runs each in-game day)" },
                 {
                     type: "checkbox", name: "chkAmenities",
                     x: 14, y: 30, width: 276, height: 14,
@@ -62,11 +64,20 @@ export function createBuilderWindow(deps: BuilderWindowDeps) {
                     isChecked: settings.autoCheapBuilds.get(),
                     onChange: function(v: boolean): void { settings.autoCheapBuilds.set(v); },
                 },
+                {
+                    type: "checkbox", name: "chkQueueTvs",
+                    x: 14, y: 102, width: 276, height: 14,
+                    text: "Auto-place TVs on long queues",
+                    tooltip: "On queues posting 5+ minutes, puts a queue TV on empty queue tiles from the front backwards, every 3rd tile, up to 4 per queue and 2 a day. Guests who have waited a long time lose happiness in the queue unless their own tile has a TV. Never replaces anything already on the path. Needs the TV researched. On by default (#104).",
+                    isChecked: settings.autoQueueTvs.get(),
+                    onChange: function(v: boolean): void { settings.autoQueueTvs.set(v); },
+                },
 
-                { type: "groupbox", x: 6, y: 114, width: 288, height: 44, text: "Status" },
-                { type: "label", name: "lblPlaced",     x: 14, y: 128, width: 276, height: 14, text: "" },
-                { type: "label", name: "lblFacilities", x: 14, y: 142, width: 276, height: 14, text: "" },
-                diagnosticsCheckbox(14, 164, 276),
+                { type: "groupbox", x: 6, y: 132, width: 288, height: 58, text: "Status" },
+                { type: "label", name: "lblPlaced",     x: 14, y: 146, width: 276, height: 14, text: "" },
+                { type: "label", name: "lblFacilities", x: 14, y: 160, width: 276, height: 14, text: "" },
+                { type: "label", name: "lblQueueTvs",   x: 14, y: 174, width: 276, height: 14, text: "" },
+                diagnosticsCheckbox(14, 196, 276),
             ],
             onClose: function(): void {
                 win = null;
@@ -90,6 +101,8 @@ export function createBuilderWindow(deps: BuilderWindowDeps) {
         for (const kind in counts) parts.push(kind + " " + counts[kind]);
         win.findWidget<LabelWidget>("lblFacilities").text =
             "Facilities: " + (parts.length > 0 ? parts.join(", ") : "not counted yet");
+        win.findWidget<LabelWidget>("lblQueueTvs").text =
+            "Queue TVs placed since load: " + queueTvCount();
     }
 
     return {
