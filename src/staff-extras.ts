@@ -41,12 +41,13 @@ import { formatMoney } from "./money";
 import {
     selectEntertainerTargets, censusQueues, entertainerStaffingSignals,
     ENTERTAINER_THRESHOLDS, EntertainerTarget, RideQueueSignal, MAX_TARGETED_ENTERTAINERS,
-    planEntertainerRoster, costumeCandidates,
+    planEntertainerRoster, costumeCandidates, selectStationTargets, StationSignal, MAX_STATION_ENTERTAINERS,
 } from "./entertainer-targeting";
+import { findCourts, DEFAULT_COURT_OPTIONS } from "./facilities";
 import { createStaffingController, StaffingDecision } from "./staffing";
 import { createStaffHirer, wantsAwardGuard, HIRE_BACKOFF_DAYS } from "./staff-hiring";
 import { createDeferredActions } from "./deferred";
-import { createCooldown, ENTERTAINER_CENSUS_TICKS } from "./cooldown";
+import { createCooldown, ENTERTAINER_CENSUS_TICKS, TICKS_PER_DAY } from "./cooldown";
 
 registerPlugin({
     name: "Staff Extras",
@@ -145,12 +146,61 @@ registerPlugin({
             urgentQueues: number;
             worstQueueMinutes: number;
             targets: EntertainerTarget[];
+            /** Entrance and food-court stations (#68), already included in `targets`. */
+            stationCount: number;
         }
 
         const cache: Cache = {
             rideCount: 0, entertainerCount: 0, targetCount: 0,
-            eligibleQueues: 0, urgentQueues: 0, worstQueueMinutes: 0, targets: [],
+            eligibleQueues: 0, urgentQueues: 0, worstQueueMinutes: 0, targets: [], stationCount: 0,
         };
+
+        // --- Stations away from queues (#68) ---
+
+        /** EntranceType::parkEntrance (EntranceElement.h). */
+        const ENTRANCE_TYPE_PARK = 2;
+        /** RIDE_TYPE_FOOD_STALL, RIDE_TYPE_DRINK_STALL (Ride.h). */
+        const FOOD_DRINK_RIDE_TYPES = [28, 30];
+        // Park entrances barely ever move, and finding them walks the whole map.
+        const entranceCooldown = createCooldown(30 * TICKS_PER_DAY, 5_000);
+        let entrances: StationSignal[] = [];
+
+        function findEntrances(): StationSignal[] {
+            const out: StationSignal[] = [];
+            const size = map.size;
+            for (let x = 1; x < size.x - 1; x++) {
+                for (let y = 1; y < size.y - 1; y++) {
+                    const tile = map.getTile(x, y);
+                    for (let i = 0; i < tile.numElements; i++) {
+                        const el = tile.getElement(i);
+                        if (el.type === "entrance" && (el as EntranceElement).object === ENTRANCE_TYPE_PARK
+                            && (el as EntranceElement).sequence === 0) {
+                            out.push({ name: "park entrance", x: x * 32, y: y * 32 });
+                        }
+                    }
+                }
+            }
+            return out;
+        }
+
+        /** The park entrance first (one), then food courts, largest first. */
+        function collectStations(): StationSignal[] {
+            if (entranceCooldown.ready(date.ticksElapsed, Date.now())) entrances = findEntrances();
+            const out: StationSignal[] = entrances.slice(0, 1);
+            const stalls: Array<{ x: number; y: number }> = [];
+            const rides = map.rides;
+            for (let i = 0; i < rides.length; i++) {
+                if (FOOD_DRINK_RIDE_TYPES.indexOf(rides[i].type) < 0 || rides[i].stations.length === 0) continue;
+                const s = rides[i].stations[0].start;
+                if (!s || s.x < 0 || s.y < 0) continue;
+                stalls.push({ x: s.x >> 5, y: s.y >> 5 });
+            }
+            const courts = findCourts(stalls, DEFAULT_COURT_OPTIONS);
+            for (let i = 0; i < courts.length && out.length < MAX_STATION_ENTERTAINERS; i++) {
+                out.push({ name: "food court", x: courts[i].x * 32, y: courts[i].y * 32 });
+            }
+            return out;
+        }
 
         /**
          * Highest peep-animation object slot the game will look at
@@ -366,8 +416,12 @@ registerPlugin({
             cache.eligibleQueues = census.eligibleCount;
             cache.urgentQueues = census.urgentCount;
             cache.worstQueueMinutes = census.worstMinutes;
+            // Queues first, stations after: a short roster leaves a station empty, never
+            // a long queue (#68).
+            const stations = dbg.time("cache.stations", () => selectStationTargets(collectStations()));
+            cache.stationCount = stations.length;
             cache.targets = selectEntertainerTargets(signals,
-                Math.max(cache.entertainerCount, census.eligibleCount));
+                Math.max(cache.entertainerCount, census.eligibleCount)).concat(stations);
         }
 
         // --- Game state mutations (only from interval hooks) ---
@@ -457,6 +511,7 @@ registerPlugin({
                 rides: cache.rideCount,
                 entertainers: cache.entertainerCount,
                 targetEntertainers: cache.targetCount,
+                stations: cache.stationCount,
                 eligibleQueues: cache.eligibleQueues,
                 urgentQueues: cache.urgentQueues,
                 worstQueueMinutes: cache.worstQueueMinutes,
@@ -494,13 +549,14 @@ registerPlugin({
             }
             const decision = dbg.time("day.staffing", () => entertainerStaffing.update(signals));
             lastDecision = decision;
-            cache.targetCount = decision.target;
+            // The controller sizes the queue roster; stations are added on top (#68).
+            cache.targetCount = decision.target + cache.stationCount;
             if (decision.reason !== "" && decision.reason !== lastStaffingReason) {
                 lastStaffingReason = decision.reason;
                 console.log("[Staff Extras] Adaptive entertainer target now " + decision.target + ": " + decision.reason + ".");
             }
 
-            const rosterChanged = hireToTarget(entertainers, decision.target);
+            const rosterChanged = hireToTarget(entertainers, cache.targetCount);
             const liveEntertainers = rosterChanged ? getEntertainers() : entertainers;
             cache.entertainerCount = liveEntertainers.length;
             dbg.time("day.assignPatrols", () => assignPatrols(liveEntertainers, cache.targets));
@@ -575,7 +631,8 @@ registerPlugin({
                         text: "Auto-manage entertainers daily  (spends money)",
                         tooltip: "Hires up to " + MAX_TARGETED_ENTERTAINERS + " entertainers at "
                             + formatMoney(ENTERTAINER_WAGE_PER_MONTH) + "/month each and patrols them near "
-                            + "congested queues (3+ minute posted wait). On by default (#51); entertainers cost wages.",
+                            + "congested queues (3+ minute posted wait), plus up to " + MAX_STATION_ENTERTAINERS
+                            + " more at the park entrance and food courts (#68). On by default (#51); entertainers cost wages.",
                         isChecked: getAutoManage(),
                         onChange: (checked: boolean) => {
                             settings.autoManage.set(checked);

@@ -1,6 +1,6 @@
 import {
     selectEntertainerTargets, censusQueues, entertainerStaffingSignals,
-    QUEUE_FLOOR_MINUTES, QUEUE_URGENT_MINUTES, MAX_TARGETED_ENTERTAINERS,
+    QUEUE_FLOOR_MINUTES, QUEUE_URGENT_MINUTES, MAX_TARGETED_ENTERTAINERS, MAX_ENTERTAINERS, MAX_STATION_ENTERTAINERS, selectStationTargets,
     PATROL_RADIUS_TILES, TILE_SIZE, ENTERTAINER_THRESHOLDS, planEntertainerRoster, costumeCandidates,
 } from "./build/entertainer-targeting.mjs";
 import { createStaffingController } from "./build/staffing.mjs";
@@ -99,7 +99,7 @@ const ride = (rideId, name, queueMinutes, stationX = 1000, stationY = 2000) =>
 {
     ok(planEntertainerRoster(3, [10], {}).hire === 2, "hires the deficit from the live count");
     ok(planEntertainerRoster(4, [1, 2, 3, 4], {}).hire === 0, "at target: no hire");
-    ok(planEntertainerRoster(20, [], {}).hire === MAX_TARGETED_ENTERTAINERS, "target clamped to cap");
+    ok(planEntertainerRoster(20, [], {}).hire === MAX_ENTERTAINERS, "target clamped to cap (queues + stations, #68)");
     ok(planEntertainerRoster(-3, [], {}).hire === 0, "negative target hires nothing");
 }
 
@@ -129,8 +129,9 @@ const ride = (rideId, name, queueMinutes, stationX = 1000, stationY = 2000) =>
     ok(plan.protectedCount === 1, "player surplus protected, got " + plan.protectedCount);
     const none = planEntertainerRoster(0, [1, 2], {});
     ok(none.fireIds.length === 0 && none.protectedCount === 2, "never fires a hand-hired entertainer");
-    const clamp = planEntertainerRoster(9, [1, 2, 3, 4, 5, 6], { "6": true, "5": true });
-    ok(clamp.fireIds.join(",") === "5,6", "over cap trims owned back to cap, got " + clamp.fireIds.join(","));
+    // Cap is MAX_ENTERTAINERS (7) since #68: a roster of 9 trims 2 owned ones.
+    const clamp = planEntertainerRoster(12, [1, 2, 3, 4, 5, 6, 7, 8, 9], { "8": true, "9": true, "3": true });
+    ok(clamp.fireIds.join(",") === "3,8", "over cap trims owned back to cap, got " + clamp.fireIds.join(","));
 }
 
 // --- #50 costume candidates: entertainer objects first, known non-entertainers never.
@@ -151,6 +152,16 @@ const ride = (rideId, name, queueMinutes, stationX = 1000, stationY = 2000) =>
   ok(c.length === 7, "#50 each index once (4,5,6..10), got " + c.length);
   const bare = costumeCandidates([], 3);
   ok(bare.join(",") === "0,1,2,3", "#50 no object list: falls back to the full walk");
+}
+
+// --- stations (#68): entrance/courts, capped, rect around the spot ----------------
+{
+    const st = selectStationTargets([{ name: "entrance", x: 320, y: 640 }, { name: "a", x: 0, y: 0 },
+        { name: "b", x: 0, y: 0 }, { name: "c", x: 0, y: 0 }]);
+    ok(st.length === MAX_STATION_ENTERTAINERS, "stations capped, got " + st.length);
+    ok(st[0].name === "entrance" && st[0].patrol.x1 === 320 - 128 && st[0].patrol.y2 === 640 + 128, "entrance rect");
+    ok(MAX_ENTERTAINERS === MAX_TARGETED_ENTERTAINERS + MAX_STATION_ENTERTAINERS, "total cap = queues + stations");
+    ok(selectStationTargets([]).length === 0, "no stations");
 }
 
 console.log(`entertainer-targeting: ${pass} passed, ${fail} failed`);
