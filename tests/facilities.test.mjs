@@ -220,6 +220,18 @@ ok(wander.pending().length === 1, "and is tracked as ONE gap, got " + wander.pen
 ok(wander.pending()[0].x === 76 && wander.pending()[0].y === 68,
    "the first anchor is kept, got (" + wander.pending()[0].x + ", " + wander.pending()[0].y + ")");
 
+// #80: several clusters merging into one gap in the SAME sweep add one streak point,
+// not one each. Measured in the harness: a toilet gap went 9 -> 24 in three sweeps.
+const multi = createFacilityTracker(OPT);
+multi.observe([G("toilet", 40, 40, 5, 20), G("toilet", 44, 40, 9, 22), G("toilet", 40, 46, 6, 21)]);
+ok(multi.pending().length === 1 && multi.pending()[0].sweeps === 1,
+   "three merged sightings in one sweep count once, got " + multi.pending()[0].sweeps);
+ok(multi.pending()[0].guests === 9, "and keep the strongest reading, got " + multi.pending()[0].guests);
+let multiConfirmed = [];
+for (let i = 1; i < OPT.confirmSweeps; i++)
+  multiConfirmed = multi.observe([G("toilet", 40, 40, 5, 20), G("toilet", 44, 40, 9, 22)]);
+ok(multiConfirmed.length === 1, "and confirm after exactly confirmSweeps sweeps");
+
 // Genuinely distant gaps of the same kind stay separate.
 const apart = createFacilityTracker(OPT);
 apart.observe([G("hunger", 10, 10, 6, 30), G("hunger", 90, 90, 6, 30)]);

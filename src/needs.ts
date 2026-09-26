@@ -444,8 +444,11 @@ export interface SampleWindow {
  * The fix is to decide completion from the pass that just ran, not from the next one.
  */
 export interface SampleRotation {
-    /** Advances the window over a roster of `total` entries. */
-    next(total: number): SampleWindow;
+    /**
+     * Advances the window over a roster of `total` entries. `size` overrides the
+     * window size for this pass only (#80: the caller scales it to the park).
+     */
+    next(total: number, size?: number): SampleWindow;
     /** Current offset, for telemetry. */
     offset(): number;
     reset(): void;
@@ -455,7 +458,8 @@ export function createSampleRotation(windowSize: number): SampleRotation {
     const size = windowSize < 1 ? 1 : windowSize;
     let start = 0;
 
-    function next(total: number): SampleWindow {
+    function next(total: number, sizeOverride?: number): SampleWindow {
+        const n = sizeOverride !== undefined && sizeOverride >= 1 ? sizeOverride : size;
         if (total <= 0) {
             start = 0;
             return { start: 0, end: 0, sweepComplete: false };
@@ -464,7 +468,7 @@ export function createSampleRotation(windowSize: number): SampleRotation {
         // offset stranded past the end and starve the sweep just as surely.
         if (start >= total) start = 0;
 
-        const end = start + size > total ? total : start + size;
+        const end = start + n > total ? total : start + n;
         const complete = end >= total;
         const window: SampleWindow = { start: start, end: end, sweepComplete: complete };
         start = complete ? 0 : end;

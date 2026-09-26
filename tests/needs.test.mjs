@@ -101,6 +101,13 @@ ok(wb.start===100 && wb.end===200 && !wb.sweepComplete, "pass 2");
 ok(wc.start===200 && wc.end===250 &&  wc.sweepComplete, "pass 3 completes");
 ok(r2.next(250).start===0, "then wraps");
 
+// #80: a per-pass size override lets the caller read the whole park in one pass.
+const rOv=createSampleRotation(400);
+const wf=rOv.next(1200, 1200);
+ok(wf.start===0 && wf.end===1200 && wf.sweepComplete, "size override sweeps a 1200 roster in one pass");
+const wg=rOv.next(1200);
+ok(wg.end===400 && !wg.sweepComplete, "without the override the default window applies");
+
 // THE BUG: a roster that grows every pass must still complete sweeps.
 const r3=createSampleRotation(400);
 let rtotal=200, sweeps=0;
