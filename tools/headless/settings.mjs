@@ -18,6 +18,7 @@ export const TOGGLES = [
     { plugin: "Auto-Builder", key: "autoAmenities", defaultOn: true },
     { plugin: "Auto-Builder", key: "autoAmenityRemoval", defaultOn: true },
     { plugin: "Auto-Builder", key: "autoFacilities", defaultOn: true },
+    { plugin: "Auto-Builder", key: "autoCheapBuilds", defaultOn: true },
     { plugin: "Wait Time Optimizer", key: "autoManage", defaultOn: true },
     { plugin: "Wait Time Optimizer", key: "autoOperationTuning", defaultOn: false },
     { plugin: "Mechanic Manager", key: "autoManage", defaultOn: true },
