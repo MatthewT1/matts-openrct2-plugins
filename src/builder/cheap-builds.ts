@@ -1,7 +1,6 @@
 /**
  * Cheap "just in case" buildings at the park front, the back, and where the guests who
- * need them cluster (#81 info kiosks; the kind table is shared with #82 ATMs and #105
- * the umbrella stall). Placement rules are in cheap-builds.ts, where they are tested;
+ * need them cluster (#81 info kiosks, #105 the umbrella stall; #82 ATMs were tried and held back). Placement rules are in cheap-builds.ts, where they are tested;
  * this file reads the map and issues the builds through the shared stall builder.
  */
 
@@ -10,8 +9,8 @@ import { BuilderSettings } from "./settings";
 import { spendGate } from "../cash-gate";
 import { createCooldown, TICKS_PER_DAY, BUILD_WATCHDOG_TICKS } from "../cooldown";
 import {
-    createSpotAccumulator, farthestPathTile, buildAnchors, uncoveredAnchors, pickSite, tileKey,
-    DEFAULT_CHEAP_BUILD_OPTIONS, Tile,
+    createSpotAccumulator, farthestPathTile, buildAnchors, uncoveredAnchors, pickSite, tileKey, buildQueue,
+    DEFAULT_CHEAP_BUILD_OPTIONS, Tile, Anchor,
 } from "../cheap-builds";
 import { StallBuilder, DIR_DX, DIR_DY } from "./stall-build";
 import { GuestThoughtListener } from "./facilities";
@@ -25,7 +24,14 @@ interface CheapKind {
     thoughts: string[];
     /** Primary price to set once built, in tenths of a pound; undefined keeps the default. */
     price?: number;
+    /** True when this kind is pointless in the current park. */
+    skip?: () => boolean;
+    /** Narrows which unlocked objects of the ride type count (e.g. the umbrella shop). */
+    accept?: (objectIndex: number) => boolean;
 }
+
+/** ShopItem::umbrella (ride/ShopItem.h:28). */
+const SHOP_ITEM_UMBRELLA = 4;
 
 const OPTIONS = DEFAULT_CHEAP_BUILD_OPTIONS;
 
@@ -53,6 +59,20 @@ const KINDS: CheapKind[] = [
         // much" (Guest.cpp:1517-1535). GBP 0.50 is under every value, so it never is,
         // and still earns more than the GBP 0.10 each map costs.
         price: 5,
+    },
+    {
+        // #105. In rain guests only ride sheltered rides unless they hold an umbrella
+        // (Guest.cpp:2308-2322), and an umbrella bought in rain skips the souvenir price
+        // check (:1441, :1495, :1522). No thought marks "wants an umbrella", so there is
+        // no cluster anchor: the entrance, plus the back in a deep park.
+        key: "umbrella",
+        label: "umbrella stall",
+        rideType: 32, // RIDE_TYPE_SHOP (Ride.h:614)
+        thoughts: [],
+        accept: function (objectIndex: number): boolean {
+            const obj = objectManager.getObject("ride", objectIndex);
+            return obj !== null && obj.shopItem === SHOP_ITEM_UMBRELLA;
+        },
     },
 ];
 
@@ -148,12 +168,13 @@ export function createCheapBuilder(settings: BuilderSettings, dbg: DebugChannel,
     }
 
     /** Where this kind already stands (station tile), the player's own included. */
-    function builtOf(rideType: number): Tile[] {
+    function builtOf(rideType: number, accept?: (objectIndex: number) => boolean): Tile[] {
         const out: Tile[] = [];
         const rides = map.rides;
         for (let i = 0; i < rides.length; i++) {
             const r = rides[i];
             if (r.type !== rideType || r.stations.length === 0) continue;
+            if (accept !== undefined && !accept(r.object.index)) continue;
             const s = r.stations[0].start;
             if (!s || s.x < 0 || s.y < 0) continue;
             out.push({ x: s.x >> 5, y: s.y >> 5 });
@@ -198,37 +219,45 @@ export function createCheapBuilder(settings: BuilderSettings, dbg: DebugChannel,
 
         if (scanCooldown.ready(date.ticksElapsed, Date.now())) scanPaths();
 
+        const perKind: Array<{ kind: CheapKind; anchors: Anchor[] }> = [];
+        const objects: Record<string, number> = {};
         for (let i = 0; i < KINDS.length; i++) {
             const kind = KINDS[i];
+            if (kind.skip !== undefined && kind.skip()) continue;
             const anchors = uncoveredAnchors(
                 buildAnchors(fronts, back, lastClusters[kind.key], OPTIONS),
-                builtOf(kind.rideType), OPTIONS);
+                builtOf(kind.rideType, kind.accept), OPTIONS);
             if (anchors.length === 0) continue;
-            const rideObject = stalls.unlockedObject(kind.rideType);
+            const rideObject = stalls.unlockedObject(kind.rideType, kind.accept);
             if (rideObject < 0) {
                 dbg.count("cheapNotUnlocked_" + kind.key);
                 continue;
             }
-            for (let a = 0; a < anchors.length; a++) {
-                const anchor = anchors[a];
-                const site = pickSite(anchor, stalls.collectSites([anchor], OPTIONS.siteRadius), OPTIONS);
-                if (site === null) {
-                    dbg.count("cheapNoSite_" + anchor.role);
-                    continue;
-                }
-                building = true;
-                buildWatchdog.reset();
-                buildWatchdog.ready(date.ticksElapsed, Date.now());
-                stalls.build("cheap", kind.rideType, rideObject, site,
-                    function (): void { building = false; },
-                    function (rideId: number): void {
-                        dbg.count("cheapPlaced_" + kind.key + "_" + anchor.role);
-                        setPrice(kind, rideId);
-                        console.log("[Auto-Builder] Built an " + kind.label + " at the park " + anchor.role
-                            + " (" + site.x + ", " + site.y + ").");
-                    });
-                return;
+            objects[kind.key] = rideObject;
+            perKind.push({ kind: kind, anchors: anchors });
+        }
+
+        const queue = buildQueue(perKind);
+        for (let q = 0; q < queue.length; q++) {
+            const kind = queue[q].kind;
+            const anchor = queue[q].anchor;
+            const site = pickSite(anchor, stalls.collectSites([anchor], OPTIONS.siteRadius), OPTIONS);
+            if (site === null) {
+                dbg.count("cheapNoSite_" + anchor.role);
+                continue;
             }
+            building = true;
+            buildWatchdog.reset();
+            buildWatchdog.ready(date.ticksElapsed, Date.now());
+            stalls.build("cheap", kind.rideType, objects[kind.key], site,
+                function (): void { building = false; },
+                function (rideId: number): void {
+                    dbg.count("cheapPlaced_" + kind.key + "_" + anchor.role);
+                    setPrice(kind, rideId);
+                    console.log("[Auto-Builder] Built " + (/^[aeiou]/i.test(kind.label) ? "an " : "a ") + kind.label
+                        + " at the park " + anchor.role + " (" + site.x + ", " + site.y + ").");
+                });
+            return;
         }
     }
 
