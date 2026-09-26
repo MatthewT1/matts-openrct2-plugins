@@ -36,6 +36,7 @@ import {
     computeRatingPenalty, computeNeededHandymen, createTrashSettings,
 } from "./trash/shared";
 import { createMapScan } from "./trash/map-scan";
+import { TILE_SCAN_TICKS } from "./cooldown";
 import { createHandymen } from "./trash/handymen";
 import { createTrashWindow } from "./trash/window";
 
@@ -58,7 +59,9 @@ function trashManagerMain(): void {
     // The work is split by job into src/trash/ (#6). Each factory keeps its own state;
     // this function wires them together and owns the staffing decision and the hooks.
     const settings = createTrashSettings(storage);
-    const scan = createMapScan(dbg);
+    // #100: path tiles and bin counts change slowly; a 10-day scan keeps the split from
+    // doubling the tile-walk cost (Auto-Builder keeps the 2.5-day one for placement).
+    const scan = createMapScan(dbg, 4 * TILE_SCAN_TICKS);
     const {
         cache, hotspots, updateTileCache, updateEntityCache, updateCache, reportHotspots,
     } = scan;
@@ -170,7 +173,7 @@ function trashManagerMain(): void {
 
     /**
      * Daily: update entity cache (cheap); tile cache is rate-limited internally.
-     * Expensive tile scan runs at most once per three in-game days (tileScanCooldown).
+     * Expensive tile scan runs at most once per ten in-game days (tileScanCooldown, #100).
      */
     context.subscribe("interval.day", function(): void {
         dbg.time("day.tileCache", updateTileCache); // no-op if cooldown hasn't elapsed
