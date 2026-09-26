@@ -18,7 +18,7 @@ export interface Tile {
     y: number;
 }
 
-export type AnchorRole = "front" | "back" | "cluster";
+export type AnchorRole = "front" | "back" | "side" | "cluster";
 
 export interface Anchor extends Tile {
     role: AnchorRole;
@@ -107,20 +107,66 @@ export function farthestPathTile(
 }
 
 /**
- * The front, back and cluster anchors, in build order.
+ * The reachable path tiles farthest to each side of the front -> back line (#81 east/west
+ * kiosks): the largest perpendicular offset on each side, when it is at least `minOffset`
+ * tiles. So a wide park gets a building at each flank, not only front and back.
+ */
+export function sidePathTiles(
+    starts: number[],
+    neighbours: Record<number, number[]>,
+    front: Tile,
+    back: Tile,
+    minOffset: number,
+): Tile[] {
+    const dx = back.x - front.x, dy = back.y - front.y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len === 0) return [];
+    const seen: Record<number, true> = {};
+    const queue: number[] = [];
+    for (let i = 0; i < starts.length; i++) {
+        const k = starts[i];
+        if (neighbours[k] === undefined || seen[k]) continue;
+        seen[k] = true;
+        queue.push(k);
+    }
+    let lo = 0, hi = 0;
+    let loTile: Tile | null = null, hiTile: Tile | null = null;
+    for (let head = 0; head < queue.length; head++) {
+        const t = keyTile(queue[head]);
+        const s = ((t.x - front.x) * -dy + (t.y - front.y) * dx) / len;
+        if (s > hi) { hi = s; hiTile = t; }
+        if (s < lo) { lo = s; loTile = t; }
+        const next = neighbours[queue[head]];
+        for (let i = 0; i < next.length; i++) {
+            const n = next[i];
+            if (seen[n] || neighbours[n] === undefined) continue;
+            seen[n] = true;
+            queue.push(n);
+        }
+    }
+    const out: Tile[] = [];
+    if (hiTile !== null && hi >= minOffset) out.push(hiTile);
+    if (loTile !== null && -lo >= minOffset) out.push(loTile);
+    return out;
+}
+
+/**
+ * The front, back, side and cluster anchors, in build order.
  *
  * Front first because every guest passes it; the back only when the park is deep
- * enough that the front does not already serve it; clusters last.
+ * enough that the front does not already serve it; then the sides; clusters last.
  */
 export function buildAnchors(
     fronts: Tile[],
     back: { x: number; y: number; steps: number } | null,
+    sides: Tile[],
     clusters: Tile[],
     options: CheapBuildOptions,
 ): Anchor[] {
     const out: Anchor[] = [];
     for (let i = 0; i < fronts.length; i++) out.push({ x: fronts[i].x, y: fronts[i].y, role: "front" });
     if (back !== null && back.steps >= options.minBackSteps) out.push({ x: back.x, y: back.y, role: "back" });
+    for (let i = 0; i < sides.length; i++) out.push({ x: sides[i].x, y: sides[i].y, role: "side" });
     for (let i = 0; i < clusters.length; i++) out.push({ x: clusters[i].x, y: clusters[i].y, role: "cluster" });
     return out;
 }
@@ -142,7 +188,7 @@ export function uncoveredAnchors(anchors: Anchor[], built: Tile[], options: Chea
     });
 }
 
-const ROLE_RANK: Record<AnchorRole, number> = { front: 0, back: 1, cluster: 2 };
+const ROLE_RANK: Record<AnchorRole, number> = { front: 0, back: 1, side: 2, cluster: 3 };
 
 /**
  * Every (kind, anchor) pair to try, fronts of every kind first, then backs, then

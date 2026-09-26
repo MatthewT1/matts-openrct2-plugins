@@ -9,8 +9,8 @@ import { BuilderSettings } from "./settings";
 import { spendGate } from "../cash-gate";
 import { createCooldown, TICKS_PER_DAY, BUILD_WATCHDOG_TICKS } from "../cooldown";
 import {
-    createSpotAccumulator, farthestPathTile, buildAnchors, uncoveredAnchors, pickSite, tileKey, buildQueue,
-    DEFAULT_CHEAP_BUILD_OPTIONS, Tile, Anchor,
+    createSpotAccumulator, farthestPathTile, sidePathTiles, buildAnchors, uncoveredAnchors, pickSite, tileKey, buildQueue,
+    DEFAULT_CHEAP_BUILD_OPTIONS, CheapBuildOptions, Tile, Anchor,
 } from "../cheap-builds";
 import { StallBuilder, DIR_DX, DIR_DY } from "./stall-build";
 import { GuestThoughtListener } from "./facilities";
@@ -28,6 +28,10 @@ interface CheapKind {
     skip?: () => boolean;
     /** Narrows which unlocked objects of the ride type count (e.g. the umbrella shop). */
     accept?: (objectIndex: number) => boolean;
+    /** Also build at each side of the park (#81 east/west). */
+    sides?: boolean;
+    /** Overrides DEFAULT_CHEAP_BUILD_OPTIONS.maxPerKind. */
+    maxPerKind?: number;
 }
 
 /** ShopItem::umbrella (ride/ShopItem.h:28). */
@@ -59,6 +63,9 @@ const KINDS: CheapKind[] = [
         // much" (Guest.cpp:1517-1535). GBP 0.50 is under every value, so it never is,
         // and still earns more than the GBP 0.10 each map costs.
         price: 5,
+        // #81: front, back, east and west (four at least), plus up to two where guests get lost.
+        sides: true,
+        maxPerKind: 6,
     },
     {
         // #105. In rain guests only ride sheltered rides unless they hold an umbrella
@@ -92,9 +99,27 @@ export function createCheapBuilder(settings: BuilderSettings, dbg: DebugChannel,
     const scanCooldown = createCooldown(7 * TICKS_PER_DAY, 5_000);
     let fronts: Tile[] = [];
     let back: { x: number; y: number; steps: number } | null = null;
+    let sides: Tile[] = [];
 
     let building = false;
     const buildWatchdog = createCooldown(BUILD_WATCHDOG_TICKS, 5_000);
+
+    function optionsOf(kind: CheapKind): CheapBuildOptions {
+        if (kind.maxPerKind === undefined) return OPTIONS;
+        const o: CheapBuildOptions = {
+            coverRadius: OPTIONS.coverRadius, minBackSteps: OPTIONS.minBackSteps,
+            clusterMinGuests: OPTIONS.clusterMinGuests, maxPerKind: kind.maxPerKind,
+            siteRadius: OPTIONS.siteRadius, minRides: OPTIONS.minRides,
+        };
+        return o;
+    }
+
+    /** Anchors of this kind with none of it nearby yet. */
+    function uncoveredOf(kind: CheapKind, built: Tile[]): Anchor[] {
+        const opts = optionsOf(kind);
+        return uncoveredAnchors(
+            buildAnchors(fronts, back, kind.sides === true ? sides : [], lastClusters[kind.key], opts), built, opts);
+    }
 
     function isOn(): boolean {
         return settings.autoCheapBuilds.get();
@@ -164,6 +189,8 @@ export function createCheapBuilder(settings: BuilderSettings, dbg: DebugChannel,
         }
         fronts = centres;
         back = farthestPathTile(starts, graph);
+        sides = back !== null && centres.length > 0
+            ? sidePathTiles(starts, graph, centres[0], back, OPTIONS.coverRadius) : [];
         dbg.count("cheapScan");
     }
 
@@ -224,9 +251,7 @@ export function createCheapBuilder(settings: BuilderSettings, dbg: DebugChannel,
         for (let i = 0; i < KINDS.length; i++) {
             const kind = KINDS[i];
             if (kind.skip !== undefined && kind.skip()) continue;
-            const anchors = uncoveredAnchors(
-                buildAnchors(fronts, back, lastClusters[kind.key], OPTIONS),
-                builtOf(kind.rideType, kind.accept), OPTIONS);
+            const anchors = uncoveredOf(kind, builtOf(kind.rideType, kind.accept));
             if (anchors.length === 0) continue;
             const rideObject = stalls.unlockedObject(kind.rideType, kind.accept);
             if (rideObject < 0) {
@@ -266,15 +291,15 @@ export function createCheapBuilder(settings: BuilderSettings, dbg: DebugChannel,
         const out: Record<string, unknown> = {
             fronts: fronts.length,
             back: back === null ? null : { x: back.x, y: back.y, steps: back.steps },
+            sides: sides.length,
         };
         for (let i = 0; i < KINDS.length; i++) {
             const k = KINDS[i];
-            const built = builtOf(k.rideType);
+            const built = builtOf(k.rideType, k.accept);
             out[k.key] = {
                 built: built.length,
                 clusters: lastClusters[k.key].length,
-                uncovered: uncoveredAnchors(buildAnchors(fronts, back, lastClusters[k.key], OPTIONS), built, OPTIONS)
-                    .map(function (a): string { return a.role; }),
+                uncovered: uncoveredOf(k, built).map(function (a): string { return a.role; }),
             };
         }
         return out;
