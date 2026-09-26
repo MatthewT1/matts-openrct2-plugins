@@ -1,12 +1,13 @@
 /**
- * Queue TVs on long queues (#104): which queue tiles get one.
+ * Queue TVs (#104, #116): which queue tiles get one.
  *
  * Source (`Guest.cpp:1107-1150`): once a guest has queued for 2000+ ticks, each update
  * lowers their target happiness by 4 unless their own queue tile has a TV; on a TV tile
  * it is raised to at least 90, then +2 per update up to 165. The check is per tile, so
  * a TV only helps the guests standing on it. The longest-waiting guests are nearest the
- * ride, so TVs go from the front of the queue backwards, spaced out so one queue gets
- * several screens along its length rather than a cluster at the start.
+ * ride, so TVs go from the front of the queue backwards. A TV costs £15 once, so every
+ * queue gets one on every 2nd empty tile, paid from the monthly extras budget
+ * (extras-budget.ts); there is no queue-time trigger (#116).
  *
  * Placement limits (`FootpathAdditionPlaceAction.cpp:115-124`): queue tiles only, and
  * not a tile with all 4 edges connected.
@@ -26,22 +27,15 @@ export interface QueueTile {
 }
 
 export interface QueueTvOptions {
-    /** Posted wait (station queueTime, minutes) before a queue gets TVs. */
-    minQueueMinutes: number;
     /** Most TVs on one queue, counting any already there. */
     maxPerQueue: number;
     /** Tiles between TVs along the queue (2 = every other tile). */
     spacing: number;
-    /** Most TVs placed per day, across all queues. */
-    maxPerDay: number;
 }
 
 export const DEFAULT_QUEUE_TV_OPTIONS: QueueTvOptions = {
-    // The walk-out warning threshold (QUEUE_WARN_MINUTES in wait-time-optimizer.ts).
-    minQueueMinutes: 5,
-    maxPerQueue: 4,
-    spacing: 3,
-    maxPerDay: 2,
+    maxPerQueue: 1_000,
+    spacing: 2,
 };
 
 /**

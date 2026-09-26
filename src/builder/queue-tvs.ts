@@ -1,18 +1,22 @@
 /**
- * Queue TVs on long queues (#104). Which tiles is decided in queue-tv.ts (tested); this
- * file traces each long queue on the map and places the TVs like bins and benches.
+ * Queue TVs (#104, #116). Which tiles is decided in queue-tv.ts (tested); this file
+ * traces a few ride queues a day (round robin) and places TVs while the monthly extras
+ * budget (extras-budget.ts) lasts.
  */
 
 import { DebugChannel } from "../debug";
 import { BuilderSettings } from "./settings";
-import { spendGate } from "../cash-gate";
+import { ExtrasBudget } from "../extras-budget";
 import { pickTvTiles, edgeCount, DEFAULT_QUEUE_TV_OPTIONS, QueueTile } from "../queue-tv";
 import { DIR_DX, DIR_DY } from "./stall-build";
 
 const OPTIONS = DEFAULT_QUEUE_TV_OPTIONS;
 
-/** Same floor as the other builds; a TV costs far less than a stall. */
-const MIN_CASH = 2_000 * 10;
+/** A queue TV's price (object price 150 = £15); the action's own cost is used when given. */
+const TV_COST = 150;
+
+/** Ride queues traced per day; every queue is revisited within a few days. */
+const QUEUES_PER_DAY = 4;
 
 /** Longest queue the trace follows, so a looping queue cannot run away. */
 const MAX_TRACE = 200;
@@ -21,11 +25,12 @@ interface TracedTile extends QueueTile {
     z: number;
 }
 
-export function createQueueTvManager(settings: BuilderSettings, dbg: DebugChannel) {
+export function createQueueTvManager(settings: BuilderSettings, dbg: DebugChannel, budget: ExtrasBudget) {
     // The loaded object list does not change during a park session. undefined = not
     // looked up yet; -1 = none loaded.
     let tvObject: number | undefined = undefined;
     let placedTotal = 0;
+    let cursor = 0;
 
     function isOn(): boolean {
         return settings.autoQueueTvs.get();
@@ -71,8 +76,9 @@ export function createQueueTvManager(settings: BuilderSettings, dbg: DebugChanne
         const out: TracedTile[] = [];
         const seen: Record<string, true> = {};
         const frontier: Array<{ x: number; y: number }> = [];
-        for (let s = 0; s < ride.stations.length; s++) {
-            const e = ride.stations[s].entrance;
+        const stations = ride.stations; // rebuilt on every access: hoist
+        for (let s = 0; s < stations.length; s++) {
+            const e = stations[s].entrance;
             if (!e || e.x < 0 || e.y < 0) continue;
             const ex = e.x >> 5, ey = e.y >> 5;
             for (let d = 0; d < 4; d++) frontier.push({ x: ex + DIR_DX[d], y: ey + DIR_DY[d] });
@@ -98,14 +104,6 @@ export function createQueueTvManager(settings: BuilderSettings, dbg: DebugChanne
         return out;
     }
 
-    function worstQueueMinutes(ride: Ride): number {
-        let worst = 0;
-        for (let s = 0; s < ride.stations.length; s++) {
-            if (ride.stations[s].queueTime > worst) worst = ride.stations[s].queueTime;
-        }
-        return worst;
-    }
-
     function place(tile: TracedTile, obj: number, rideName: string): void {
         const args = { x: tile.x * 32, y: tile.y * 32, z: tile.z, object: obj };
         // Query first: a refusal is then silent instead of an error window.
@@ -119,6 +117,7 @@ export function createQueueTvManager(settings: BuilderSettings, dbg: DebugChanne
                     dbg.count("queueTvFailed");
                     return;
                 }
+                budget.spend(r.cost !== undefined && r.cost > 0 ? r.cost : TV_COST);
                 placedTotal++;
                 dbg.count("queueTvPlaced");
                 console.log("[Auto-Builder] Placed a queue TV on " + rideName + "'s queue at ("
@@ -127,7 +126,7 @@ export function createQueueTvManager(settings: BuilderSettings, dbg: DebugChanne
         });
     }
 
-    /** Places up to `maxPerDay` TVs on the longest queues. Never removes anything. */
+    /** Traces a few ride queues and places TVs the budget covers. Never removes anything. */
     function manage(): void {
         if (!isOn()) return;
         const obj = findTvObject();
@@ -139,27 +138,24 @@ export function createQueueTvManager(settings: BuilderSettings, dbg: DebugChanne
             dbg.count("queueTvNotResearched");
             return;
         }
-        const gate = spendGate(park.cash, MIN_CASH, park.getFlag("noMoney"), "build");
-        if (gate === "lowCash") {
-            dbg.count("queueTvSkippedLowCash");
+        let room = budget.affordable(TV_COST);
+        if (room <= 0) {
+            dbg.count("queueTvSkippedBudget");
             return;
         }
 
-        const long: Array<{ ride: Ride; minutes: number }> = [];
         const rides = map.rides;
-        for (let i = 0; i < rides.length; i++) {
-            if (rides[i].classification !== "ride") continue;
-            const minutes = worstQueueMinutes(rides[i]);
-            if (minutes >= OPTIONS.minQueueMinutes) long.push({ ride: rides[i], minutes: minutes });
-        }
-        long.sort(function (a, b): number { return b.minutes - a.minutes; });
+        const queued: Ride[] = [];
+        for (let i = 0; i < rides.length; i++) if (rides[i].classification === "ride") queued.push(rides[i]);
+        if (queued.length === 0) return;
 
-        let budget = OPTIONS.maxPerDay;
-        for (let i = 0; i < long.length && budget > 0; i++) {
-            const trace = traceQueue(long[i].ride);
-            const picks = pickTvTiles(trace, OPTIONS, budget);
-            for (let p = 0; p < picks.length; p++) place(trace[picks[p]], obj, long[i].ride.name);
-            budget -= picks.length;
+        const visits = Math.min(QUEUES_PER_DAY, queued.length);
+        for (let v = 0; v < visits && room > 0; v++) {
+            const ride = queued[cursor++ % queued.length];
+            const trace = traceQueue(ride);
+            const picks = pickTvTiles(trace, OPTIONS, room);
+            for (let p = 0; p < picks.length; p++) place(trace[picks[p]], obj, ride.name);
+            room -= picks.length;
         }
     }
 

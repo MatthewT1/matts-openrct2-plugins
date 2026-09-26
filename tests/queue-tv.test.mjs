@@ -1,6 +1,6 @@
 import { pickTvTiles, edgeCount, DEFAULT_QUEUE_TV_OPTIONS } from "./build/queue-tv.mjs";
 let pass=0, fail=0; const ok=(c,m)=>{ c?pass++:(fail++,console.log("FAIL:",m)); };
-const OPT = DEFAULT_QUEUE_TV_OPTIONS; // spacing 3, maxPerQueue 4
+const OPT = { spacing: 3, maxPerQueue: 4 };
 const T = (o = {}) => ({ x: 0, y: 0, edgeCount: 2, hasAddition: false, hasTv: false, ...o });
 const q = (n, over = {}) => Array.from({ length: n }, (_, i) => T(over[i] || {}));
 
@@ -22,5 +22,10 @@ ok(pickTvTiles(full, OPT, 10).length === 0, "queue at maxPerQueue gets nothing")
 ok(pickTvTiles(q(10, { 0: { hasAddition: true }, 1: { edgeCount: 4 } }), OPT, 1).join() === "2",
    "skips occupied and 4-edge tiles");
 ok(pickTvTiles([], OPT, 2).length === 0, "empty queue");
+
+// Default (#116): every 2nd tile, no per-queue cap beyond the budget.
+ok(pickTvTiles(q(9), DEFAULT_QUEUE_TV_OPTIONS, 100).join() === "0,2,4,6,8", "default: every 2nd tile");
+ok(pickTvTiles(q(9, { 2: { hasAddition: true } }), DEFAULT_QUEUE_TV_OPTIONS, 100).join() === "0,3,5,7",
+   "default: skips an occupied tile and keeps spacing");
 
 console.log(`${pass} passed, ${fail} failed`);
