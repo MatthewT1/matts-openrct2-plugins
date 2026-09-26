@@ -22,10 +22,10 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "..", "..");
 const userDir = join(homedir(), "Documents", "OpenRCT2");
 
-/** Our six plugins, as deployed by the dev build. */
+/** Our seven plugins, as deployed by the dev build. */
 const OUR_PLUGINS = [
     "trash-manager", "wait-time-optimizer", "mechanic-manager",
-    "marketing-manager", "staff-extras", "path-connector",
+    "marketing-manager", "staff-extras", "path-connector", "auto-builder",
 ];
 
 function parseArgs(argv) {

@@ -1,11 +1,11 @@
 /**
  * Guest-need sampling and automatic facility (stall/toilet) placement.
  *
- * Split out of trash-manager.ts (#6) with no behaviour change.
+ * Split out of trash-manager.ts (#6); moved to the Auto-Builder plugin (#84).
  */
 
 import { isDebugEnabled, DebugChannel } from "../debug";
-import { TrashSettings } from "./shared";
+import { BuilderSettings } from "./settings";
 import { spendGate } from "../cash-gate";
 import { createCooldown, NEED_SAMPLE_TICKS, BUILD_WATCHDOG_TICKS } from "../cooldown";
 import {
@@ -18,7 +18,7 @@ import {
 } from "../facilities";
 import { createThoughtAccumulator, describeThoughts, ThoughtTally } from "../thoughts";
 
-export function createFacilityManager(settings: TrashSettings, dbg: DebugChannel) {
+export function createFacilityManager(settings: BuilderSettings, dbg: DebugChannel) {
 
 
     // --- Guest-need instrumentation (Phase 1: measure, do not act) ------------
@@ -339,7 +339,7 @@ export function createFacilityManager(settings: TrashSettings, dbg: DebugChannel
         if (key === lastProblemReport) return;
         lastProblemReport = key;
         dbg.count("guestProblemsReported");
-        console.log("[Trash Manager] " + describeThoughts(worst, sampled));
+        console.log("[Auto-Builder] " + describeThoughts(worst, sampled));
     }
 
     /** Logs the worst-served need cluster, once per change. */
@@ -353,7 +353,7 @@ export function createFacilityManager(settings: TrashSettings, dbg: DebugChannel
         if (key === lastGapReport) return;
         lastGapReport = key;
         dbg.count("needGapsReported");
-        console.log("[Trash Manager] " + describeGap(worst));
+        console.log("[Auto-Builder] " + describeGap(worst));
     }
 
     // -------------------------------------------------------------------------
@@ -602,7 +602,7 @@ export function createFacilityManager(settings: TrashSettings, dbg: DebugChannel
                     // It exists now, so the cluster must prove itself all over again
                     // before anything else gets built for it.
                     facilityTracker.clear(plan.gap.kind, plan.gap.x, plan.gap.y);
-                    console.log("[Trash Manager] " + describePlan(plan));
+                    console.log("[Auto-Builder] " + describePlan(plan));
                 });
             });
         }

@@ -1,8 +1,10 @@
 # User Guide — OpenRCT2 Management Plugins
 
-This is a suite of six plugins that take over the repetitive parts of running a park — staffing, cleanliness, ride tuning, facility placement, entertainers, and marketing — so you can spend your time designing rides and the park itself instead of babysitting numbers. Every plugin is independent (use one, use all six, doesn't matter) and every toggle can be switched off. The cleanliness, entertainer and stuck-ride features are on by default, because a 10-park test showed they make parks cleaner at a small cost ([#51](https://github.com/MatthewT1/matts-openrct2-plugins/issues/51)). Marketing and ride operation tuning stay off until you opt in. None of it does anything you couldn't do yourself by hand — it just does it continuously, from measured park data, instead of you having to notice and act on it.
+This is a suite of seven plugins that take over the repetitive parts of running a park — staffing, cleanliness, ride tuning, facility placement, entertainers, and marketing — so you can spend your time designing rides and the park itself instead of babysitting numbers. Every plugin is independent (use one, use all seven, doesn't matter) and every toggle can be switched off. The cleanliness, entertainer and stuck-ride features are on by default, because a 10-park test showed they make parks cleaner at a small cost ([#51](https://github.com/MatthewT1/matts-openrct2-plugins/issues/51)). Marketing and ride operation tuning stay off until you opt in. None of it does anything you couldn't do yourself by hand — it just does it continuously, from measured park data, instead of you having to notice and act on it.
 
-**Trash Manager** — Keeps the park clean and comfortable. Adjusts handyman headcount to match how dirty the park actually is, places benches and bins where they're measurably needed (benches specifically stop guests from vomiting in the first place), and can build toilets, food stalls and first-aid rooms where guests keep going without.
+**Trash Manager** — Keeps the park clean. Adjusts handyman headcount to match how dirty the park actually is and sweeps litter each day.
+
+**Auto-Builder** — Places benches and bins where they're measurably needed (benches specifically stop guests from vomiting in the first place), and builds toilets, food stalls and first-aid rooms where guests keep going without. These toggles were in Trash Manager before 1.5 (#84); a save keeps the choices it had there.
 
 **Mechanic Manager** — Keeps rides running. Adjusts mechanic headcount to match real breakdowns, keeps inspection intervals from silently resetting, and clears patrol zones so mechanics can reach any ride. A separate cheat toggle exists for the rare ride no mechanic can physically path to.
 
@@ -25,11 +27,12 @@ The rest of this guide covers every toggle across the five automated plugins in 
 | Auto-hire / fire handymen | Trash Manager | **ON** | No | Adjusts handyman count to keep the park clean; adapts the formula's recommendation downward while the park stays clean, hires back if litter starts costing rating |
 | Auto-sweep all litter each day | Trash Manager | **ON** | No | Removes every piece of litter at the end of each in-game day; automates what you would do manually with the Sweep All button |
 | Adaptive staffing (learn the right number) | Trash Manager | **ON** | No | Works with auto-hire to reduce overstaffing on a small/stable park; also enforces a rising minimum tied to guest count so headcount can't get stuck low as the park grows |
-| Auto-place benches & bins where needed | Trash Manager | **ON** | **Yes** | Places benches near nauseating ride exits and vomit hotspots (benches stop guests vomiting), and bins near food/drink stalls; costs money |
-| ...and remove ones no longer needed | Trash Manager | **ON** | No | Works with auto-place to remove benches and bins that are no longer serving a purpose; **only ever removes amenities this plugin placed itself**; anything you placed by hand is never touched |
-| Auto-build toilets, first aid & food stalls | Trash Manager | **ON** | **Yes** | Watches where guests have unmet needs and builds facilities once a gap persists across many samples; costs real money and **never demolishes anything** |
+| Auto-place benches & bins where needed | Auto-Builder | **ON** | **Yes** | Places benches near nauseating ride exits and vomit hotspots (benches stop guests vomiting), and bins near food/drink stalls; costs money |
+| ...and remove ones no longer needed | Auto-Builder | **ON** | No | Works with auto-place to remove benches and bins that are no longer serving a purpose; **only ever removes amenities this plugin placed itself**; anything you placed by hand is never touched |
+| Auto-build toilets, first aid & food stalls | Auto-Builder | **ON** | **Yes** | Watches where guests have unmet needs and builds facilities once a gap persists across many samples; costs real money and **never demolishes anything** |
 | Max handymen cap | Trash Manager | (spinner) | No | Hard upper limit on auto-hired handymen (manual hires are unaffected); allows you to cap the formula's recommendation |
 | Diagnostics: stream timings to log sink | Trash Manager | **OFF** | No | Streams telemetry to a local log sink on 127.0.0.1:7777 for performance analysis; costs nothing when off |
+| Diagnostics: stream timings to log sink | Auto-Builder | **OFF** | No | Streams telemetry to a local log sink on 127.0.0.1:7777 for performance analysis; costs nothing when off |
 | Auto-manage daily (intervals + hiring + zones) | Mechanic Manager | **ON** | No | Re-applies inspection intervals daily (opening a ride's construction window silently resets them) and clears mechanic patrol zones, which lets mechanics reach **any** ride — OpenRCT2 dispatches the nearest mechanic to each breakdown automatically, and a patrol zone blocks that |
 | Adaptive staffing (learn the right number) | Mechanic Manager | **ON** | No | Adjusts mechanic count downward while no rides are breaking down, hires back immediately if breakdowns go unattended |
 | Emergency repair stuck rides (cheat) | Mechanic Manager | **ON** | No | **This is a cheat**: clears the breakdown on any ride broken for 3+ days with no mechanic able to fix it (a pathfinding problem in the game itself); adds zero reliability and no mechanic travels |
@@ -119,7 +122,8 @@ Each log entry is newline-delimited JSON with per-plugin timings, staff counts, 
 
 Open the in-game console (see the [OpenRCT2 documentation](https://github.com/OpenRCT2/OpenRCT2/wiki/Scripting) for how) and look for plugin messages. Each plugin logs its decisions:
 
-- **Trash Manager** reports when it hires/fires handymen, places amenities, or finds unmet needs.
+- **Trash Manager** reports when it hires/fires handymen or finds a litter hotspot.
+- **Auto-Builder** reports when it places or removes amenities, builds a facility, or finds unmet needs.
 - **Mechanic Manager** reports when it hires/fires mechanics, or when a ride is stuck broken beyond reach.
 - **Wait Time Optimizer** is silent in normal operation; it just applies settings.
 - **Staff Extras** reports when it hires/fires entertainers or reassigns their patrol area.
@@ -127,7 +131,7 @@ Open the in-game console (see the [OpenRCT2 documentation](https://github.com/Op
 
 ### Status Line in Each Plugin Window
 
-Each plugin has a status line at the bottom of its window showing the current state. Trash Manager shows handyman/litter counts. Mechanic Manager shows mechanic count and wages saved. Wait Time Optimizer shows queue and capacity statistics. Staff Extras shows entertainer count and coverage. Marketing Manager shows whether auto-manage is on and its daily spending budget.
+Each plugin has a status line at the bottom of its window showing the current state. Trash Manager shows handyman/litter counts. Auto-Builder shows how many benches/bins it placed and the facility counts. Mechanic Manager shows mechanic count and wages saved. Wait Time Optimizer shows queue and capacity statistics. Staff Extras shows entertainer count and coverage. Marketing Manager shows whether auto-manage is on and its daily spending budget.
 
 ### Diagnostics Log
 
@@ -153,6 +157,9 @@ If you enable **Diagnostics** and run the log sink, the file `tools/rct-debug.lo
 
 - Handymen will be hired or fired roughly every 1-2 in-game weeks as the park grows or shrinks, and the minimum headcount rises with guest count as the park grows, not just with path tile count
 - If adaptive staffing is on, the number will drop below the formula's recommendation on a small/stable park (and stay there), but won't get stuck low as the park grows
+
+#### Auto-Builder
+
 - Benches appear near exits of nauseating rides and near stalls; bench/bin placement runs every in-game day regardless of game speed
 - Vomit hotspots are reported in the console with the ride name and the distance to the nearest facility
 

@@ -13,6 +13,7 @@ const plugins = [
 	"path-connector",
 	"staff-extras",
 	"marketing-manager",
+	"auto-builder",
 ];
 
 const build = process.env.BUILD || "development";

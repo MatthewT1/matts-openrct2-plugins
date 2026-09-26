@@ -152,7 +152,7 @@ Nothing here is required. In rough order of value:
    ([#14](https://github.com/MatthewT1/matts-openrct2-plugins/issues/14)): queue tiles were
    0.3-4.4% of rejected sites across 4 park loads, every search still accepted sites, and
    14 facilities were built. Queueing guests are still sampled as demand
-   (`src/trash/facilities.ts`), which is harmless on that evidence. Reopen only if a gap
+   (`src/builder/facilities.ts`), which is harmless on that evidence. Reopen only if a gap
    confirms (8 sweeps), then builds nothing while `siteRejectQueuePath` is the top reason.
 
 2. **The queue attribution question.** `queueAttribution` rows record per-ride

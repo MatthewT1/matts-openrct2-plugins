@@ -23,9 +23,6 @@ export interface TrashWindowDeps {
     clearAllZones(): void;
     getMaxHandymen(): number;
     isAdaptiveStaffing(): boolean;
-    isAutoAmenities(): boolean;
-    isAmenityRemoval(): boolean;
-    isAutoFacilities(): boolean;
     /** Re-seed the adaptive controller from the live roster on the next day. */
     resetStaffingSeed(): void;
     requestSweepAll(): void;
@@ -36,7 +33,7 @@ export interface TrashWindowDeps {
 export function createTrashWindow(deps: TrashWindowDeps) {
     const {
         storage, settings, scan, staffing, hireHandyman, clearHandymanZone, clearAllZones, getMaxHandymen,
-        isAdaptiveStaffing, isAutoAmenities, isAmenityRemoval, isAutoFacilities,
+        isAdaptiveStaffing,
         resetStaffingSeed, requestSweepAll, requestSweepOld, requestFixOrders,
     } = deps;
     const { cache, updateCache, forceTileScan } = scan;
@@ -52,7 +49,7 @@ export function createTrashWindow(deps: TrashWindowDeps) {
             classification: "trash-manager",
             title: "Trash Manager v" + __PLUGIN_VERSION__,
             width: 300,
-            height: 462,
+            height: 408,
             widgets: [
                 // --- Rating Impact ---
                 { type: "groupbox", x: 6, y: 16, width: 288, height: 66, text: "Rating Impact" },
@@ -68,7 +65,7 @@ export function createTrashWindow(deps: TrashWindowDeps) {
                 { type: "label", name: "lblTiles",    x: 14, y: 150, width: 276, height: 14, text: "Path tiles: --  /  owned land: --" },
 
                 // --- Automation ---
-                { type: "groupbox", x: 6, y: 176, width: 288, height: 146, text: "Automation  (runs each in-game day)" },
+                { type: "groupbox", x: 6, y: 176, width: 288, height: 92, text: "Automation  (runs each in-game day)" },
                 {
                     type: "checkbox", name: "chkAutoHire",
                     x: 14, y: 190, width: 276, height: 14,
@@ -95,34 +92,10 @@ export function createTrashWindow(deps: TrashWindowDeps) {
                         resetStaffingSeed(); // re-seed from the live roster
                     },
                 },
-                {
-                    type: "checkbox", name: "chkAmenities",
-                    x: 14, y: 244, width: 276, height: 14,
-                    text: "Auto-place benches & bins where needed",
-                    tooltip: "Each in-game day, place benches near nauseating ride exits and vomit hotspots, and bins near stalls. Benches stop guests vomiting (a seated guest sheds nausea); handymen only clean up afterwards. Costs money; on by default (#51).",
-                    isChecked: isAutoAmenities(),
-                    onChange: function(v: boolean): void { settings.autoAmenities.set(v); },
-                },
-                {
-                    type: "checkbox", name: "chkAmenityRemoval",
-                    x: 26, y: 262, width: 264, height: 14,
-                    text: "...and remove ones no longer needed",
-                    tooltip: "Remove benches and bins that are no longer near any stall, nauseating ride exit or vomit hotspot. ONLY removes amenities this plugin placed itself - anything you placed is never touched.",
-                    isChecked: isAmenityRemoval(),
-                    onChange: function(v: boolean): void { settings.amenityRemoval.set(v); },
-                },
-                {
-                    type: "checkbox", name: "chkFacilities",
-                    x: 14, y: 280, width: 276, height: 14,
-                    text: "Auto-build toilets, first aid & food stalls",
-                    tooltip: "Watches where guests actually go hungry, thirsty or need a toilet, and builds a facility there once the same gap has persisted across many samples. Costs real money and needs Diagnostics-quality sampling, which it turns on for itself. Never demolishes anything, caps how many of each kind it will build, and builds at most one at a time. On by default (#51).",
-                    isChecked: isAutoFacilities(),
-                    onChange: function(v: boolean): void { settings.autoFacilities.set(v); },
-                },
-                { type: "label", x: 14, y: 300, width: 116, height: 14, text: "Max handymen cap:" },
+                { type: "label", x: 14, y: 246, width: 116, height: 14, text: "Max handymen cap:" },
                 {
                     type: "spinner", name: "spnMaxHandymen",
-                    x: 134, y: 298, width: 48, height: 16,
+                    x: 134, y: 244, width: 48, height: 16,
                     text: String(getMaxHandymen()),
                     tooltip: "Hard upper limit on auto-hired handymen; 1-99  (manual hires are unaffected)",
                     onIncrement: function(): void {
@@ -140,21 +113,21 @@ export function createTrashWindow(deps: TrashWindowDeps) {
                 },
 
                 // --- Actions ---
-                { type: "groupbox", x: 6, y: 328, width: 288, height: 102, text: "Actions" },
+                { type: "groupbox", x: 6, y: 274, width: 288, height: 102, text: "Actions" },
                 {
-                    type: "button", x: 14, y: 342, width: 86, height: 16,
+                    type: "button", x: 14, y: 288, width: 86, height: 16,
                     text: "Sweep All",
                     tooltip: "Immediately remove every litter item from the park",
                     onClick: function(): void { requestSweepAll(); },
                 },
                 {
-                    type: "button", x: 106, y: 342, width: 90, height: 16,
+                    type: "button", x: 106, y: 288, width: 90, height: 16,
                     text: "Sweep Old Only",
                     tooltip: "Remove only litter aged 7680+ ticks — the pieces currently costing rating points",
                     onClick: function(): void { requestSweepOld(); },
                 },
                 {
-                    type: "button", x: 202, y: 342, width: 86, height: 16,
+                    type: "button", x: 202, y: 288, width: 86, height: 16,
                     text: "Hire Handyman",
                     tooltip: "Hire one handyman and assign them a patrol zone",
                     onClick: function(): void {
@@ -164,26 +137,26 @@ export function createTrashWindow(deps: TrashWindowDeps) {
                     },
                 },
                 {
-                    type: "button", x: 14, y: 362, width: 134, height: 16,
+                    type: "button", x: 14, y: 308, width: 134, height: 16,
                     text: "Clear All Patrol Zones",
                     tooltip: "Remove every handyman's patrol area so they can reach any path in the park. OpenRCT2 dispatches the nearest handyman to each piece of litter automatically, so a zone only gets in the way.",
                     onClick: function(): void { clearAllZones(); },
                 },
                 {
-                    type: "button", x: 154, y: 362, width: 134, height: 16,
+                    type: "button", x: 154, y: 308, width: 134, height: 16,
                     text: "Fix Orders (No Mow)",
                     tooltip: "Enable sweep + empty bins on all handymen; disables grass mowing which causes handymen to abandon path sweeping",
                     onClick: function(): void { requestFixOrders(); },
                 },
                 {
-                    type: "button", x: 14, y: 382, width: 274, height: 16,
+                    type: "button", x: 14, y: 328, width: 274, height: 16,
                     text: "Force Full Scan & Refresh",
                     tooltip: "Re-scan all tiles and entities to update displayed counts",
                     onClick: function(): void { forceTileScan(); updateCache(); refreshWindow(); },
                 },
 
-                { type: "label", name: "lblStatus", x: 14, y: 402, width: 276, height: 14, text: "" },
-                diagnosticsCheckbox(14, 422, 276),
+                { type: "label", name: "lblStatus", x: 14, y: 348, width: 276, height: 14, text: "" },
+                diagnosticsCheckbox(14, 368, 276),
             ],
             onClose: function(): void {
                 win = null;
