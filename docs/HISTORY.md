@@ -66,7 +66,7 @@ No code changes.
 Repository prep for GitHub: git history reconstructed, README, LICENSE, CI, `.gitignore`
 (excludes the ~400 MB `gamesrc/` clone and debug logs), `TODO.md` backlog.
 
-## On GitHub: v1.0.0 to v1.5.0 (2026-09-24 to 2026-09-26)
+## On GitHub: v1.0.0 to v1.6.0 (2026-09-24 to 2026-09-26)
 
 From here the work is in pull requests and issues on
 [GitHub](https://github.com/MatthewT1/matts-openrct2-plugins). Session notes are local only.
@@ -124,3 +124,17 @@ This entry covers the main points.
   - **Docs**: walk-out needs a long wait and low happiness (#68, #107), ride-settings
     research (#38, #91), facility facts (#90), social preview image (#4, #95), npm scripts
     (#13, #103).
+- **v1.6.0**:
+  - **Info kiosks (#81)**: at the park entrance, the back of big parks and where guests get
+    lost; maps priced at 50p (#109).
+  - **Umbrella stall (#105)**: by the entrance (and the back of big parks) for rainy days (#110).
+  - **Queue TVs (#104, #116)**: on every 2nd empty queue tile of every ride, front first,
+    paid from a monthly extras budget (5% of the cash above £1,000) (#111, #118).
+  - **Repairs (#115)**: broken benches, bins and lamps are re-placed gradually, entrance
+    first, from the same budget (#119).
+  - **Benches/bins (#117)**: one step more generous, and less eager removal of our own (#120).
+  - **Food courts (#83)**: new food/drink stalls go into a nearby court (#112).
+  - **Entertainer stations (#68)**: one at the entrance and one per food court (#113).
+  - **Stall sites**: a tile the game refuses is skipped next time, so needed toilets get
+    built (Ivory Towers) (#121).
+  - **Harness**: parallel pool and per-PR soak test; headless cooldowns in game time (#114).
