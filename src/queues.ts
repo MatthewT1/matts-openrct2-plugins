@@ -12,7 +12,8 @@
  *   ([#16841](https://github.com/OpenRCT2/OpenRCT2/discussions/16841)). In a real
  *   queueing system a long line is self-limiting because people balk; here nothing
  *   balks, so arrival rate is independent of queue length and a ride whose throughput
- *   is below its arrival rate grows without bound until the 15-minute walk-out.
+ *   is below its arrival rate grows without bound until the walk-out (~15 min in
+ *   the queue and happiness <= 65, Guest.cpp:5729).
  *
  *   So the queue is not a level that settles, it is an integral that diverges. Waiting
  *   for it to cross a threshold means always acting after the divergence has started.

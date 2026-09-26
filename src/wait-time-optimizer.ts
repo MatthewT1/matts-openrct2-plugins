@@ -18,7 +18,7 @@ interface RideCacheEntry {
     recMax: number;
     isWarning: boolean;
     isHighIntensity: boolean;
-    /** Queue at or past the 15-minute walk-out threshold's danger zone. */
+    /** Queue near the walk-out point (~15 min and happiness <= 65, Guest.cpp:5729). */
     isCritical: boolean;
     /**
      * True when the queue has stayed long for several days despite the recommended
@@ -43,7 +43,7 @@ registerPlugin({
     targetApiVersion: 87,
     main(): void {
         const PLUGIN_VERSION = __PLUGIN_VERSION__;
-        // Guests begin complaining at 5 min queue wait and walk out at 15 min.
+        // Guests begin complaining at 5 min queue wait; unhappy ones may walk out at ~15 min.
         // Trigger emergency dispatch mode at 5 min so trains push out faster
         // before guests start leaving the queue.
         const QUEUE_WARN_MINUTES = 5;
@@ -838,7 +838,7 @@ registerPlugin({
                     {
                         type: "label",
                         x: 8, y: 264, width: 384, height: 14,
-                        text: "[C]=needs capacity  [!!]=near 15min walk-out  [!]=queue  [~]=intense"
+                        text: "[C]=needs capacity  [!!]=near walk-out  [!]=queue  [~]=intense"
                     },
                     {
                         type: "label",
