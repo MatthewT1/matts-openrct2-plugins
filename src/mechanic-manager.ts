@@ -6,6 +6,8 @@ import { MECHANIC_THRESHOLDS, createStaffingController, StaffingDecision } from 
 import { createStaffHirer, HIRE_BACKOFF_DAYS } from "./staff-hiring";
 import { createDeferredActions } from "./deferred";
 import { createBreakdownTracer, RideSnapshot, MechanicSnapshot } from "./breakdown-trace";
+import { createParkNews, newsCheckbox } from "./park-news";
+import { MECHANIC_PHRASES } from "./news";
 
 registerPlugin({
     name: "Mechanic Manager",
@@ -46,10 +48,12 @@ registerPlugin({
             autoManage: boolSetting(storage, "autoManage", true),
             emergencyRepair: boolSetting(storage, "emergencyRepair", true),
             adaptiveMechanics: boolSetting(storage, "adaptiveMechanics", true),
+            news: boolSetting(storage, "newsSummaries", true),
         };
 
         // Debug channel; off unless the shared-storage debug flag is set (see debug.ts).
         const dbg = createDebugChannel("mechanic-manager");
+        const news = createParkNews("Mechanic Manager", settings.news, MECHANIC_PHRASES, dbg);
 
         /** Auto-manage toggle, persisted per save file (was reset on every load). */
         function getAutoManage(): boolean {
@@ -400,14 +404,19 @@ registerPlugin({
                 // several rides finishing construction in one day - would otherwise fire
                 // `diff` executeAction calls synchronously in a single tick.
                 const hireCount = Math.min(3, diff);
-                for (let i = 0; i < hireCount; i++) hirer.hire();
+                for (let i = 0; i < hireCount; i++) {
+                    hirer.hire((peepId: number) => news.add("hired", undefined, { type: "peep", id: peepId }));
+                }
                 return true;
             } else if (diff < 0) {
                 // Release whoever has been idle longest. Firing an active mechanic would
                 // leave the idle ones behind and keep the window signal firing.
                 const ids: number[] = [];
                 mechanics.forEach((m: Mechanic) => { if (m.id !== null) ids.push(m.id); });
-                activity.releaseOrder(ids).slice(0, -diff).forEach((id: number) => hirer.fire(id));
+                activity.releaseOrder(ids).slice(0, -diff).forEach((id: number) => {
+                    hirer.fire(id);
+                    news.add("fired");
+                });
                 return true;
             }
             return false;
@@ -590,6 +599,7 @@ registerPlugin({
         }
 
         context.subscribe("interval.day", () => {
+            news.flush(); // yesterday's hires/fires (#124)
             const mechanics = dbg.time("day.updateCache", updateCache);
             dbg.time("day.activity", () => checkActivity(mechanics));
             if (!getAutoManage()) { dbg.flushStats(parkContext()); return; }
@@ -666,7 +676,7 @@ registerPlugin({
                 classification: "mechanic-manager",
                 title: "Mechanic Manager v" + PLUGIN_VERSION,
                 width: 280,
-                height: 390,
+                height: 394,
                 widgets: [
                     // Stats bar
                     {
@@ -754,7 +764,8 @@ registerPlugin({
                     },
                     // Status feedback
                     { type: "label", name: "lblStatus", x: 8, y: 334, width: 264, height: 14, text: "" },
-                    diagnosticsCheckbox(8, 354, 264)
+                    diagnosticsCheckbox(8, 354, 264),
+                    newsCheckbox(settings.news, 8, 372, 264)
                 ],
                 onClose: () => {
                     pluginWindow = null;

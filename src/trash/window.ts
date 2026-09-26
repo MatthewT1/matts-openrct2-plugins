@@ -5,6 +5,7 @@
  */
 
 import { diagnosticsCheckbox } from "../debug";
+import { newsCheckbox } from "../park-news";
 import {
     LITTER_PENALTY_CAP, FREE_ROAMING_BUFFER, GUESTS_PER_HANDYMAN,
     PATH_TILES_PER_HANDYMAN, computeRatingPenalty, computeNeededHandymen, TrashSettings,
@@ -157,6 +158,7 @@ export function createTrashWindow(deps: TrashWindowDeps) {
 
                 { type: "label", name: "lblStatus", x: 14, y: 348, width: 276, height: 14, text: "" },
                 diagnosticsCheckbox(14, 368, 276),
+                newsCheckbox(settings.news, 14, 386, 276),
             ],
             onClose: function(): void {
                 win = null;

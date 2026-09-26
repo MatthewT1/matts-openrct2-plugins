@@ -28,6 +28,8 @@ import { createExtrasBudget } from "./extras-budget";
 import { createRepairManager } from "./builder/repairs";
 import { createCourtExtrasManager, createCourtStats } from "./builder/court-extras";
 import { createBuilderWindow } from "./builder/window";
+import { createParkNews } from "./park-news";
+import { BUILDER_PHRASES } from "./news";
 
 registerPlugin({
     name: "Auto-Builder",
@@ -54,7 +56,11 @@ function autoBuilderMain(): void {
     // planner works from. Trash Manager keeps its own for staffing.
     const scan = createMapScan(dbg);
     const { reportVomit, manageAmenities, amenityObjectIndex } = createAmenityManager(storage, settings, dbg, scan);
-    const stalls = createStallBuilder(dbg);
+    const news = createParkNews("Auto-Builder", settings.news, BUILDER_PHRASES, dbg);
+    const stalls = createStallBuilder(dbg, function (rideId: number): void {
+        const ride = map.getRide(rideId);
+        news.add("stall", ride !== null ? ride.name : "a stall", { type: "attraction", id: rideId });
+    });
     const cheap = createCheapBuilder(settings, dbg, stalls);
     const courtStats = createCourtStats(storage);
     const facilities = createFacilityManager(settings, dbg, stalls, cheap.listener, courtStats);
@@ -111,6 +117,9 @@ function autoBuilderMain(): void {
     }
 
     context.subscribe("interval.day", function(): void {
+        news.flush(); // yesterday's builds (#124)
+        const amenitiesBefore = placedCount();
+        const tvsBefore = queueTvs.placedCount();
         dbg.time("day.tileCache", scan.updateTileCache); // no-op until its cooldown elapses
         // Empty roster: this scan only needs litter; Trash Manager counts handymen.
         dbg.time("day.entityCache", function(): void { scan.updateEntityCache([]); });
@@ -123,6 +132,9 @@ function autoBuilderMain(): void {
         dbg.time("day.repairs", repairs.manage); // before TVs: fixing what guests broke comes first
         dbg.time("day.queueTvs", queueTvs.manage);
         dbg.time("day.courtExtras", courtExtras.manage);
+        // Counts, not hooks: placedCount also shrinks when we remove, so only growth counts.
+        for (let i = placedCount() - amenitiesBefore; i > 0; i--) news.add("amenities");
+        for (let i = queueTvs.placedCount() - tvsBefore; i > 0; i--) news.add("queueTvs");
         dbg.flushStats(parkContext());
     });
 

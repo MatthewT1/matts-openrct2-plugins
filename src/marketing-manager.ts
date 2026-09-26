@@ -25,6 +25,8 @@ import {
     autoStartHold, dailyIncomeRate, judgeBatch, moodHold, entranceFeePenalty, createFeeWatch, FEE_WARNING_HOLD_DAYS,
 } from "./marketing";
 import { spendGate } from "./cash-gate";
+import { createParkNews, newsCheckbox } from "./park-news";
+import { MARKETING_PHRASES, NewsSubject } from "./news";
 
 registerPlugin({
     name: "Marketing Manager",
@@ -39,7 +41,13 @@ registerPlugin({
         const storage: Configuration = context.getParkStorage();
         const settings = {
             autoManage: boolSetting(storage, "autoManage", false),
+            news: boolSetting(storage, "newsSummaries", true),
         };
+        const news = createParkNews("Marketing Manager", settings.news, MARKETING_PHRASES, dbg);
+        /** A ride campaign links to its ride; the rest have nothing to point at. */
+        function campaignSubject(item: number | null): NewsSubject | undefined {
+            return item !== null && map.getRide(item) !== null ? { type: "attraction", id: item } : undefined;
+        }
 
         // Starting point only - no telemetry has justified a specific figure yet.
         // Same reserve-floor pattern as AMENITY_MIN_CASH/FACILITY_MIN_CASH in
@@ -209,6 +217,7 @@ registerPlugin({
                 const daysRemaining = entry.daysRemaining - 1;
                 if (daysRemaining <= 0) {
                     dbg.count("campaignCompleted");
+                    news.add("completed", CAMPAIGN_NAMES[type], campaignSubject(entry.item));
                     continue; // finished its run; dropped
                 }
                 next[type] = { item: entry.item, daysRemaining };
@@ -348,6 +357,7 @@ registerPlugin({
                     attribution.recordStart(type, dayCounter);
                     persistAttribution();
                     dbg.count("campaignStarted");
+                    news.add("started", CAMPAIGN_NAMES[type], campaignSubject(item));
                     console.log("[Marketing Manager] Started " + CAMPAIGN_NAMES[type] + " for " + weeks + " week(s).");
                     refreshWindow();
                 });
@@ -550,7 +560,7 @@ registerPlugin({
                 title: "Marketing Manager v" + PLUGIN_VERSION,
                 // 320, not 300: "Half-price entry vouchers - £34.87/guest" was cut off (#24).
                 width: 320,
-                height: rowsBottom + 100,
+                height: rowsBottom + 104,
                 widgets: [
                     {
                         type: "label", name: "lblStatus",
@@ -603,6 +613,7 @@ registerPlugin({
                         text: "",
                         tooltip: "The game cuts new guest arrivals to 1/4 when the entrance fee is above your open rides' total value, and to 1/16 above twice it. Checked daily; a news message is posted once it has lasted " + FEE_WARNING_HOLD_DAYS + " days.",
                     },
+                    newsCheckbox(settings.news, 8, rowsBottom + 80, 304),
                 ],
                 onClose: () => { pluginWindow = null; },
             });
@@ -611,6 +622,7 @@ registerPlugin({
         }
 
         context.subscribe("interval.day", () => {
+            news.flush(); // yesterday's campaign starts/ends (#124)
             dayCounter++;
             attribution.observe(dayCounter, park.guests);
             persistAttribution();
