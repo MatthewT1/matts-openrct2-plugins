@@ -100,8 +100,5 @@ export function createTrashSettings(storage: SettingsStore) {
         adaptiveStaffing: boolSetting(storage, "adaptiveStaffing", true),
         autoSweep:        boolSetting(storage, "autoSweepEnabled", true),
         autoHire:         boolSetting(storage, "autoHireEnabled", true),
-        autoAmenities:    boolSetting(storage, "autoAmenities", true),
-        amenityRemoval:   boolSetting(storage, "autoAmenityRemoval", true),
-        autoFacilities:   boolSetting(storage, "autoFacilities", true),
     };
 }

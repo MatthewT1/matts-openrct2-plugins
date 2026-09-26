@@ -57,7 +57,7 @@ export function createCooldown(minTicks: number, minMs: number): Cooldown {
 export const TILE_SCAN_TICKS = 2.5 * TICKS_PER_DAY;
 /** Entertainer queue census (staff-extras.ts): every 2 days (old 15 s at speed 1). */
 export const ENTERTAINER_CENSUS_TICKS = 1.5 * TICKS_PER_DAY;
-/** Guest-need sampling (trash/facilities.ts): daily (old 2.5 s at speed 1). */
+/** Guest-need sampling (builder/facilities.ts): daily (old 2.5 s at speed 1). */
 export const NEED_SAMPLE_TICKS = TICKS_PER_DAY / 2;
-/** Facility build watchdog (trash/facilities.ts): 5 days (old 60 s at speed 1). */
+/** Facility build watchdog (builder/facilities.ts): 5 days (old 60 s at speed 1). */
 export const BUILD_WATCHDOG_TICKS = 4.5 * TICKS_PER_DAY;

@@ -1,6 +1,6 @@
 # OpenRCT2 Plugin Project
 
-Six TypeScript plugins for OpenRCT2, built with rollup and deployed straight into the
+Seven TypeScript plugins for OpenRCT2, built with rollup and deployed straight into the
 game's plugin folder.
 
 ## Documentation
@@ -43,9 +43,13 @@ openrct2 plugin/
 │   │   ├── shared.ts           # constants, types, litter helpers
 │   │   ├── map-scan.ts         # tile/entity scans, hotspots, coverage tiles
 │   │   ├── handymen.ts         # hire/fire, orders, patrol zones, activity
+│   │   └── window.ts           # the Trash Manager window
+│   ├── auto-builder.ts         # entry point: benches/bins + facilities (#84), settings migration
+│   ├── builder/                # Auto-Builder by job
+│   │   ├── settings.ts         # its toggles + the keys moved from Trash Manager
 │   │   ├── amenities.ts        # benches/bins, vomit attribution
 │   │   ├── facilities.ts       # guest-need sampling, facility placement
-│   │   └── window.ts           # the Trash Manager window
+│   │   └── window.ts           # the Auto-Builder window
 │   ├── wait-time-optimizer.ts
 │   ├── mechanic-manager.ts
 │   ├── marketing-manager.ts    # campaign ranking + auto-run

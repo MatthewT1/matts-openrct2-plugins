@@ -37,8 +37,6 @@ import {
 } from "./trash/shared";
 import { createMapScan } from "./trash/map-scan";
 import { createHandymen } from "./trash/handymen";
-import { createAmenityManager } from "./trash/amenities";
-import { createFacilityManager } from "./trash/facilities";
 import { createTrashWindow } from "./trash/window";
 
 registerPlugin({
@@ -62,16 +60,13 @@ function trashManagerMain(): void {
     const settings = createTrashSettings(storage);
     const scan = createMapScan(dbg);
     const {
-        cache, hotspots, updateTileCache, updateEntityCache, updateCache, reportHotspots, getCoverageTiles,
+        cache, hotspots, updateTileCache, updateEntityCache, updateCache, reportHotspots,
     } = scan;
     const {
         hiringBlocked, hireHandyman, fireHandyman, enforceOrders, clearHandymanZone, clearAllZones,
         syncZones, checkActivity,
     } = createHandymen(dbg, cache);
-    const { isAutoAmenities, isAmenityRemoval, reportVomit, manageAmenities } =
-        createAmenityManager(storage, settings, dbg, scan);
-    const facilities = createFacilityManager(settings, dbg);
-    const { isAutoFacilities, sampleGuestNeeds, manageFacilities, facilityTracker } = facilities;
+    // Bins/benches, facilities and guest-need sampling moved to the Auto-Builder plugin (#84).
 
     /** Returns the user-configured max handymen cap (stored per save file, default 20). */
     function getMaxHandymen(): number {
@@ -141,34 +136,11 @@ function trashManagerMain(): void {
             handymen:    cache.handymanCount,
             needed:      computeNeededHandymen(cache.pathTiles, cache.guests),
             adaptive:    isAdaptiveStaffing(),
-            autoAmenities: isAutoAmenities(),
-            coverageTiles: getCoverageTiles().length,
-            needs: facilities.getLastNeedCounts(),
-            problems: facilities.getLastProblems().map(function (t): Record<string, unknown> {
-                return { category: t.category, count: t.count, topType: t.topType };
-            }),
             // Source-verified wage (Staff.cpp:2645): handymen are GBP 50/month. With park
             // rating usually pinned at its maximum, wages are the only lever the staffing
             // controller still moves, so the saving is worth making visible.
             handymanWagesPerMonth: cache.handymanCount * 50,
             formulaWagesPerMonth: computeNeededHandymen(cache.pathTiles, cache.guests) * 50,
-            facilities: facilities.getFacilityCounts(),
-            autoFacilities: isAutoFacilities(),
-            facilityConfirmed: facilities.getLastFacilityPlans(),
-            facilityPending: facilityTracker.pending().slice(0, 4).map(function (g): Record<string, unknown> {
-                return { kind: g.kind, x: g.x, y: g.y, guests: g.guests, distance: g.distance, sweeps: g.sweeps };
-            }),
-            needGaps: facilities.getLastNeedGaps().slice(0, 4).map(function (g): Record<string, unknown> {
-                return {
-                    kind: g.cluster.kind,
-                    x: g.cluster.x,
-                    y: g.cluster.y,
-                    guests: g.cluster.count,
-                    distance: g.distance,
-                    nearest: g.nearest !== null ? g.nearest.name : null,
-                };
-            }),
-            amenityRemoval: isAmenityRemoval(),
             adaptiveTarget: staffing.target(),
             staffingFloor: staffingFloor(),
             discoveredFloor: lastDecision !== null ? lastDecision.discoveredFloor : 0,
@@ -206,21 +178,20 @@ function trashManagerMain(): void {
         // One staff scan and one litter scan for the whole day's work — every helper
         // below takes these arrays rather than re-running getAllEntities itself.
         const handymen = dbg.time("day.staffScan", getHandymen);
-        const litter   = dbg.time("day.entityCache", () => updateEntityCache(handymen));
+        dbg.time("day.entityCache", () => updateEntityCache(handymen));
 
         dbg.time("day.enforceOrders", () => enforceOrders(handymen));
         const snap = dbg.time("day.activity", () => checkActivity(handymen));
         reportHotspots();
-        reportVomit();
-        dbg.time("day.amenities", manageAmenities);
-        dbg.time("day.needSample", sampleGuestNeeds);
-        dbg.time("day.facilities", manageFacilities);
 
         const autoHire  = settings.autoHire.get();
         const autoSweep = settings.autoSweep.get();
 
         if (autoSweep) {
-            litter.forEach(function(e: Litter): void { e.remove(); });
+            // Removed on the next tick, not now (#84): Auto-Builder places benches from the
+            // day's vomit clusters in its own interval.day handler, and plugins run their
+            // handlers in load order, so sweeping here could hide the vomit from it.
+            requestDailySweep();
             cache.oldLitter = 0;
             cache.trash     = 0;
             cache.vomit     = 0;
@@ -311,6 +282,10 @@ function trashManagerMain(): void {
      * Per-tick: process deferred sweep requests from UI buttons.
      * entity.remove() is only safe in this context (game state is mutable here).
      */
+    const requestDailySweep = deferred.define(function(): void {
+        map.getAllEntities("litter").forEach(function(e: Litter): void { e.remove(); });
+    });
+
     // enforceOrders writes directly to entity properties; must run on the tick, not in onClick.
     const requestFixOrders = deferred.define(function(): void { enforceOrders(); });
 
@@ -356,7 +331,7 @@ function trashManagerMain(): void {
 
     const { openWindow } = createTrashWindow({
         storage, settings, scan, staffing, hireHandyman, clearHandymanZone, clearAllZones, getMaxHandymen,
-        isAdaptiveStaffing, isAutoAmenities, isAmenityRemoval, isAutoFacilities,
+        isAdaptiveStaffing,
         resetStaffingSeed: function(): void { staffingSeeded = false; },
         requestSweepAll: function(): void { requestSweep(false); },
         requestSweepOld: function(): void { requestSweep(true); },
