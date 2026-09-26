@@ -51,11 +51,16 @@ registerPlugin({
         var THOUGHTS_POS = {
             thGoodValue: ["good_value"], thVeryClean: ["very_clean"], thScenery: ["scenery"], thWasGreat: ["was_great"]
         };
+        // Tallied as columns but NOT counted in thoughtsNeg/thoughtsPos, so adding one keeps
+        // those totals comparable with older runs.
+        //   #82: "running out of cash" is what sends a guest to an ATM (Guest.cpp:1052).
+        var THOUGHTS_INFO = { thRunningOut: ["running_out"] };
         var thoughtCol = {};
         (function () {
             var c, i;
             for (c in THOUGHTS_NEG) for (i = 0; i < THOUGHTS_NEG[c].length; i++) thoughtCol[THOUGHTS_NEG[c][i]] = c;
             for (c in THOUGHTS_POS) for (i = 0; i < THOUGHTS_POS[c].length; i++) thoughtCol[THOUGHTS_POS[c][i]] = c;
+            for (c in THOUGHTS_INFO) for (i = 0; i < THOUGHTS_INFO[c].length; i++) thoughtCol[THOUGHTS_INFO[c][i]] = c;
         })();
 
         // #63 money: cumulative since start per expenditure type. The game keeps a monthly table
@@ -121,6 +126,7 @@ registerPlugin({
             var out = { thoughtsNeg: 0, thoughtsPos: 0 };
             for (c in THOUGHTS_NEG) out[c] = 0;
             for (c in THOUGHTS_POS) out[c] = 0;
+            for (c in THOUGHTS_INFO) out[c] = 0;
             for (var i = 0; i < guests.length; i++) {
                 if (!guests[i].isInPark) continue;
                 inPark++;
@@ -131,7 +137,7 @@ registerPlugin({
                     if (!col) continue;
                     out[col]++;
                     if (THOUGHTS_NEG[col]) out.thoughtsNeg++;
-                    else out.thoughtsPos++;
+                    else if (THOUGHTS_POS[col]) out.thoughtsPos++;
                 }
             }
             out.avgHappiness = inPark > 0 ? Math.round(happy / inPark) : 0;
