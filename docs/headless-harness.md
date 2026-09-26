@@ -47,7 +47,7 @@ Money in `summary.md` is in currency units. The CSV and JSON keep the game's raw
 
 Each day row also records (#63): ride reliability/downtime (mean of open rides), rides broken
 now, breakdowns that day, vomit, a tally of selected guest thoughts (`th*`, plus negative and
-positive totals), and money totals since day 1 (`*Cum`: income, expenses, entrance, ride
+positive totals; `thLost` counts every lost/can't-find thought), the Most Confusing Layout award rule (#93: `lostFresh` = guests whose newest thought is lost or cant_find with freshness <= 5, and `confusingAward` = 1 when that is >= 10 and >= guests/64, `Award.cpp:539-556`; slightly approximate because the API hides freshness-0 thoughts), and money totals since day 1 (`*Cum`: income, expenses, entrance, ride
 tickets, sales, stock, wages, running costs, build, marketing; costs negative).
 
 ## Viability study (#63)
