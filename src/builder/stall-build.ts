@@ -140,6 +140,14 @@ export function createStallBuilder(dbg: DebugChannel) {
      * Bounded by the centre list, which callers keep to a handful, so this never walks
      * the whole map.
      */
+    /**
+     * Tiles where every track rotation was refused. The planners pick the same best
+     * site every pass, so without this one bad tile blocked a gap for good: in Ivory
+     * Towers two toilet gaps passed 5 sweeps with 67 sites accepted per pass, and every
+     * build ended in `facilityOrphanDiscarded` on the same tile. Kept for the park session.
+     */
+    const failedSites: Record<string, true> = {};
+
     function collectSites(centres: Array<{ x: number; y: number }>, radius: number): FacilitySite[] {
         const size = map.size;
         const seen: Record<string, true> = {};
@@ -154,6 +162,10 @@ export function createStallBuilder(dbg: DebugChannel) {
                     const key = x + "," + y;
                     if (seen[key]) continue;
                     seen[key] = true;
+                    if (failedSites[key]) {
+                        dbg.count("siteRejectFailedBefore");
+                        continue;
+                    }
 
                     // Every rejection is counted. `facilityNoSite` fired 7 times in
                     // the measured session and there was no way to tell WHICH condition
@@ -254,6 +266,7 @@ export function createStallBuilder(dbg: DebugChannel) {
 
         function tryNext(): void {
             if (attempt >= order.length) {
+                failedSites[site.x + "," + site.y] = true;
                 discardOrphanRide(prefix, rideId);
                 return;
             }
@@ -269,6 +282,7 @@ export function createStallBuilder(dbg: DebugChannel) {
 
             context.queryAction("trackplace", args, function (q: GameActionResult): void {
                 if (q.error && q.error !== 0) {
+                    dbg.count(prefix + "TrackRefused_" + q.error);
                     tryNext();
                     return;
                 }
