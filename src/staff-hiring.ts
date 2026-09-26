@@ -135,3 +135,19 @@ export function createStaffHirer(opts: StaffHirerOptions): StaffHirer {
         },
     };
 }
+
+/**
+ * Staff needed before the Best Staff award is possible (`Award.cpp:294-296`): at least 20
+ * staff, at least one per 32 guests, and all four types, security included (#92).
+ */
+export const BEST_STAFF_MIN_STAFF = 20;
+
+/**
+ * True when hiring one security guard is what stands between the park and the Best Staff
+ * award's staff-type rule: 20+ staff and none of them security. No plugin hires security
+ * otherwise, so without this the award can never be granted. Takes the roster's
+ * `staffType`s so it runs under node.
+ */
+export function wantsAwardGuard(staffTypes: string[]): boolean {
+    return staffTypes.length >= BEST_STAFF_MIN_STAFF && staffTypes.indexOf("security") < 0;
+}

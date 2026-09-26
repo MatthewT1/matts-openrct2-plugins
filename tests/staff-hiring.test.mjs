@@ -1,4 +1,4 @@
-import { createStaffHirer, HIRE_BACKOFF_DAYS } from "./build/staff-hiring.mjs";
+import { createStaffHirer, HIRE_BACKOFF_DAYS, wantsAwardGuard } from "./build/staff-hiring.mjs";
 let pass = 0, fail = 0;
 const ok = (c, m) => { c ? pass++ : (fail++, console.log("FAIL:", m)); };
 
@@ -67,6 +67,15 @@ function rig(result, backoffDays = HIRE_BACKOFF_DAYS) {
     f.hirer.fire(9);
     ok(f.counts.mechanicFireFailed === 1, "refused fire counted");
     ok(f.logs[0] === "[Mechanic Manager] Could not fire mechanic #9: Staff not found", "fire log: " + f.logs[0]);
+}
+
+// --- wantsAwardGuard (#92: Best Staff needs a security guard)
+{
+    const roster = (n, extra = []) => [...Array(n - extra.length).fill("handyman"), ...extra];
+    ok(wantsAwardGuard(roster(20, ["mechanic", "entertainer"])) === true, "20 staff, no security -> hire");
+    ok(wantsAwardGuard(roster(19, ["mechanic", "entertainer"])) === false, "19 staff -> not yet");
+    ok(wantsAwardGuard(roster(25, ["security"])) === false, "already has a guard -> no");
+    ok(wantsAwardGuard([]) === false, "empty roster -> no");
 }
 
 console.log(`${pass} passed, ${fail} failed`); if (fail) process.exitCode = 1;
