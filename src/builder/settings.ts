@@ -14,7 +14,8 @@ export function createBuilderSettings(storage: SettingsStore) {
         autoAmenities:  boolSetting(storage, "autoAmenities", true),
         amenityRemoval: boolSetting(storage, "autoAmenityRemoval", true),
         autoFacilities: boolSetting(storage, "autoFacilities", true),
-        // #81: info kiosks at the park front/back and where guests get lost. New key,
+        // #81/#82: info kiosks and ATMs at the park front/back and where guests get lost
+        // or run out of cash. New key,
         // nothing to migrate from Trash Manager.
         autoCheapBuilds: boolSetting(storage, "autoCheapBuilds", true),
     };

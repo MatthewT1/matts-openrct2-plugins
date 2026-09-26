@@ -142,6 +142,27 @@ export function uncoveredAnchors(anchors: Anchor[], built: Tile[], options: Chea
     });
 }
 
+const ROLE_RANK: Record<AnchorRole, number> = { front: 0, back: 1, cluster: 2 };
+
+/**
+ * Every (kind, anchor) pair to try, fronts of every kind first, then backs, then
+ * clusters; kinds keep their given order within a role. So a park gets a kiosk and an
+ * ATM at the entrance before either goes to the back (#82).
+ */
+export function buildQueue<K>(perKind: Array<{ kind: K; anchors: Anchor[] }>): Array<{ kind: K; anchor: Anchor }> {
+    const out: Array<{ kind: K; anchor: Anchor; order: number }> = [];
+    let order = 0;
+    for (let i = 0; i < perKind.length; i++) {
+        for (let a = 0; a < perKind[i].anchors.length; a++) {
+            out.push({ kind: perKind[i].kind, anchor: perKind[i].anchors[a], order: order++ });
+        }
+    }
+    out.sort(function (x, y): number {
+        return ROLE_RANK[x.anchor.role] - ROLE_RANK[y.anchor.role] || x.order - y.order;
+    });
+    return out.map(function (e): { kind: K; anchor: Anchor } { return { kind: e.kind, anchor: e.anchor }; });
+}
+
 /**
  * The best site for an anchor: flat ground first (a sloped tile only works when the
  * game's own query says so), then the closest. Null when none is within `siteRadius`.

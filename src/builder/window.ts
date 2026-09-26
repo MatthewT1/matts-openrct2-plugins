@@ -57,8 +57,8 @@ export function createBuilderWindow(deps: BuilderWindowDeps) {
                 {
                     type: "checkbox", name: "chkCheapBuilds",
                     x: 14, y: 84, width: 276, height: 14,
-                    text: "Auto-build info kiosks (front, back, lost guests)",
-                    tooltip: "Once the park has 3 rides, builds an information kiosk near the park entrance, one at the far end of the paths, and one where guests say they are lost, unless one is already within 12 tiles. Maps are priced at 50p so guests never refuse them. Cheap (about 250 each), at most 4, never demolishes anything. On by default (#81).",
+                    text: "Auto-build info kiosks & ATMs (front, back, clusters)",
+                    tooltip: "Once the park has 3 rides, builds an information kiosk and an ATM near the park entrance, one of each at the far end of the paths, a kiosk where guests say they are lost and an ATM where they are running out of cash, unless one is already within 12 tiles. Maps are priced at 50p so guests never refuse them. No ATMs in parks without money. Cheap (200-250 each), at most 4 of each, never demolishes anything. On by default (#81, #82).",
                     isChecked: settings.autoCheapBuilds.get(),
                     onChange: function(v: boolean): void { settings.autoCheapBuilds.set(v); },
                 },

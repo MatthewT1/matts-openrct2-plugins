@@ -7,8 +7,8 @@
  *   - benches and bins where guests vomit, near nauseating ride exits and stalls, and
  *     across the path network (and removes ones it placed that are no longer needed);
  *   - toilets, first aid and food/drink stalls where sampled guest needs go unmet;
- *   - cheap "just in case" buildings (info kiosks) at the park front, back and where
- *     guests get lost (#81).
+ *   - cheap "just in case" buildings (info kiosks, ATMs) at the park front, back and
+ *     where guests get lost or run out of cash (#81, #82).
  *
  * The settings used to live in Trash Manager's park storage; they are moved across on
  * load (see migrateKeys), so a save keeps whatever the player had chosen.
