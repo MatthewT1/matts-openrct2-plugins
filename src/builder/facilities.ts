@@ -18,6 +18,7 @@ import {
 } from "../facilities";
 import { createThoughtAccumulator, describeThoughts, ThoughtTally } from "../thoughts";
 import { StallBuilder } from "./stall-build";
+import { CourtStatsStore } from "./court-extras";
 import { pickSite, DEFAULT_CHEAP_BUILD_OPTIONS } from "../cheap-builds";
 
 /**
@@ -33,7 +34,7 @@ export interface GuestThoughtListener {
 }
 
 export function createFacilityManager(settings: BuilderSettings, dbg: DebugChannel, stalls: StallBuilder,
-                                      listener?: GuestThoughtListener) {
+                                      listener?: GuestThoughtListener, courtStats?: CourtStatsStore) {
 
 
     // --- Guest-need instrumentation (Phase 1: measure, do not act) ------------
@@ -361,6 +362,7 @@ export function createFacilityManager(settings: BuilderSettings, dbg: DebugChann
                 // It exists now, so the cluster must prove itself all over again
                 // before anything else gets built for it.
                 facilityTracker.clear(plan.gap.kind, plan.gap.x, plan.gap.y);
+                if (plan.reason.indexOf(COURT_REASON) >= 0 && courtStats) courtStats.bump("stalls");
                 console.log("[Auto-Builder] " + describePlan(plan));
             });
     }
@@ -438,6 +440,8 @@ export function createFacilityManager(settings: BuilderSettings, dbg: DebugChann
         siteRadius: DEFAULT_COURT_OPTIONS.siteRadius,
     };
 
+    const COURT_REASON = ", built in the food court";
+
     function toCourt(plan: FacilityPlan): FacilityPlan {
         if (plan.kind !== "hunger" && plan.kind !== "thirst") return plan;
         const stallTiles: Array<{ x: number; y: number }> = [];
@@ -457,7 +461,7 @@ export function createFacilityManager(settings: BuilderSettings, dbg: DebugChann
         dbg.count("facilityCourt");
         return {
             kind: plan.kind, gap: plan.gap, site: site,
-            reason: plan.reason + ", built in the food court at (" + court.x + ", " + court.y + ")",
+            reason: plan.reason + COURT_REASON + " at (" + court.x + ", " + court.y + ")",
         };
     }
 

@@ -32,6 +32,7 @@ The rest of this guide covers every toggle across the five automated plugins in 
 | Auto-build toilets, first aid & food stalls | Auto-Builder | **ON** | **Yes** | Watches where guests have unmet needs and builds facilities once a gap persists across many samples; costs real money and **never demolishes anything** |
 | Auto-place TVs on long queues | Auto-Builder | **ON** | **Yes** | A queue TV on every 2nd empty queue tile of every ride, front first, a few queues a day; paid from the monthly extras budget (5% of cash above £1,000); needs the TV researched; never replaces anything |
 | Repair broken benches, bins & lamps | Auto-Builder | **ON** | **Yes** | Re-places the same item on a broken tile, ~28% of the broken ones the first day, 20% a day after (at least 1), nearest the entrance first; same monthly budget; never adds new items |
+| Dress up food courts (benches, bins, toilet) | Auto-Builder | **ON** | **Yes** | Around each food court (2+ food/drink stalls within 6 tiles), fills free path tiles within 3 tiles with benches and bins in a checkerboard, up to 6 a court a day, and builds toilets next to it (£225) if none is within 8 tiles; same monthly budget; never replaces or removes anything |
 | Auto-build info kiosks & umbrella stall | Auto-Builder | **ON** | **Yes** | Once the park has 3 rides: an umbrella stall near the entrance (and the back of a big park); an information kiosk near the entrance, one at the far end of the paths, and one where guests say they're lost, unless one is already within 12 tiles; maps at 50p; at most 4 kiosks |
 | Max handymen cap | Trash Manager | (spinner) | No | Hard upper limit on auto-hired handymen (manual hires are unaffected); allows you to cap the formula's recommendation |
 | Diagnostics: stream timings to log sink | Trash Manager | **OFF** | No | Streams telemetry to a local log sink on 127.0.0.1:7777 for performance analysis; costs nothing when off |
@@ -179,6 +180,7 @@ If you enable **Diagnostics** and run the log sink, the file `tools/rct-debug.lo
 - Vomit hotspots are reported in the console with the ride name and the distance to the nearest facility
 - TVs appear on every 2nd tile of each queue, front first, a few queues a day (the console says "Placed a queue TV on ...'s queue"); the status line counts them since the park was loaded
 - In a park with vandalised items (Ivory Towers starts with some), broken benches/bins get fixed over a few days, entrance first (console: "Repairing N broken path item(s)")
+- Around a food court, benches and bins fill the paths over a few days and a toilet appears next to it if none was near (console: "Placed a bench at the food court", "Built toilets next to the food court"); the status line counts court stalls, benches/bins and toilets
 - An information kiosk and then an umbrella stall (if researched) appear near the entrance soon after the park has 3 rides (the console says "Built an information kiosk at the park front"), then one of each at the back of big parks
 
 #### Mechanic Manager

@@ -21,6 +21,8 @@ export function createBuilderSettings(storage: SettingsStore) {
         autoQueueTvs: boolSetting(storage, "autoQueueTvs", true),
         // #115: re-place broken benches/bins/lamps, a share a day, from the extras budget.
         autoRepairs: boolSetting(storage, "autoRepairs", true),
+        // #83: dense benches/bins and a toilet at food courts, from the extras budget.
+        autoCourtExtras: boolSetting(storage, "autoCourtExtras", true),
     };
 }
 

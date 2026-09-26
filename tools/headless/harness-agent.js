@@ -218,7 +218,10 @@ registerPlugin({
         // End-of-run build census for the soak test (#81 kiosks, #105 umbrella stall, #104
         // queue TVs): counted from the map, so it needs no debug channel.
         function census() {
-            var out = { kiosks: 0, umbrellaStalls: 0, stalls: 0, queueTvs: 0 };
+            var out = { kiosks: 0, umbrellaStalls: 0, stalls: 0, queueTvs: 0, courtStalls: 0, courtAmenities: 0, courtToilets: 0 };
+            // Food court builds (#83): Auto-Builder keeps cumulative counts in park storage.
+            var cs = context.getParkStorage("Auto-Builder").get("courtStats");
+            if (cs) { out.courtStalls = cs.stalls || 0; out.courtAmenities = cs.amenities || 0; out.courtToilets = cs.toilets || 0; }
             var rides = map.rides;
             for (var i = 0; i < rides.length; i++) {
                 var r = rides[i];
