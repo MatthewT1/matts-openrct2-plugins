@@ -98,9 +98,10 @@ The **Tune ride operation settings** toggle discovers the legal range for each r
 
 Unlike most other automation in these plugins, marketing campaigns aren't mutually exclusive: up to five or six different campaign types (the game allows one of each type) can run at the same time, each independently generating extra guests. The ranked list in the Marketing Manager window shows every campaign currently worth starting, cheapest cost-per-extra-guest first — general park/ride advertising is almost always poor value compared to the voucher campaigns (free/half-price entry, free food or drink), so don't be surprised if it's ranked last or missing from the list.
 
-Two things the plugin checks that aren't obvious from playing normally:
+Three things the plugin checks that aren't obvious from playing normally:
 - **Free/half-price entry and free-ride vouchers are far less effective if your entrance fee (or that ride's price) is already very low** — the game itself cuts their effectiveness to an eighth in that case, and the plugin accounts for this when ranking.
 - **The plugin won't recommend or auto-start anything while the park is already at its guest capacity** — unless your scenario's objective specifically calls for more guests than the park currently supports, in which case it knows to keep going.
+- **Entrance fee above your rides' value.** The game cuts new guest arrivals to 1/4 when the entrance fee is above the total value of your open rides, and to 1/16 above twice it. The window shows a line when this is happening, and a news message is posted once it has lasted 3 days (short dips while a ride is broken down are ignored). This is info only: the plugin never changes your fee, and it works with auto-start off.
 
 Because the game gives plugins no way to check which campaigns are currently running, the Marketing Manager window is the only place that information lives — it's tracked and saved with your park, so reloading doesn't lose it.
 
