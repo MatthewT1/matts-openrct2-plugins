@@ -27,9 +27,9 @@ export function createBuilderWindow(deps: BuilderWindowDeps) {
             classification: "auto-builder",
             title: "Auto-Builder v" + __PLUGIN_VERSION__,
             width: 300,
-            height: 164,
+            height: 182,
             widgets: [
-                { type: "groupbox", x: 6, y: 16, width: 288, height: 74, text: "Automation  (runs each in-game day)" },
+                { type: "groupbox", x: 6, y: 16, width: 288, height: 92, text: "Automation  (runs each in-game day)" },
                 {
                     type: "checkbox", name: "chkAmenities",
                     x: 14, y: 30, width: 276, height: 14,
@@ -54,11 +54,19 @@ export function createBuilderWindow(deps: BuilderWindowDeps) {
                     isChecked: settings.autoFacilities.get(),
                     onChange: function(v: boolean): void { settings.autoFacilities.set(v); },
                 },
+                {
+                    type: "checkbox", name: "chkCheapBuilds",
+                    x: 14, y: 84, width: 276, height: 14,
+                    text: "Auto-build info kiosks (front, back, lost guests)",
+                    tooltip: "Once the park has 3 rides, builds an information kiosk near the park entrance, one at the far end of the paths, and one where guests say they are lost, unless one is already within 12 tiles. Maps are priced at 50p so guests never refuse them. Cheap (about 250 each), at most 4, never demolishes anything. On by default (#81).",
+                    isChecked: settings.autoCheapBuilds.get(),
+                    onChange: function(v: boolean): void { settings.autoCheapBuilds.set(v); },
+                },
 
-                { type: "groupbox", x: 6, y: 96, width: 288, height: 44, text: "Status" },
-                { type: "label", name: "lblPlaced",     x: 14, y: 110, width: 276, height: 14, text: "" },
-                { type: "label", name: "lblFacilities", x: 14, y: 124, width: 276, height: 14, text: "" },
-                diagnosticsCheckbox(14, 146, 276),
+                { type: "groupbox", x: 6, y: 114, width: 288, height: 44, text: "Status" },
+                { type: "label", name: "lblPlaced",     x: 14, y: 128, width: 276, height: 14, text: "" },
+                { type: "label", name: "lblFacilities", x: 14, y: 142, width: 276, height: 14, text: "" },
+                diagnosticsCheckbox(14, 164, 276),
             ],
             onClose: function(): void {
                 win = null;

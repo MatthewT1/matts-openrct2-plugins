@@ -49,11 +49,14 @@ openrct2 plugin/
 │   │   ├── settings.ts         # its toggles + the keys moved from Trash Manager
 │   │   ├── amenities.ts        # benches/bins, vomit attribution
 │   │   ├── facilities.ts       # guest-need sampling, facility placement
+│   │   ├── stall-build.ts      # shared site search + ridecreate/trackplace chain
+│   │   ├── cheap-builds.ts     # info kiosks at front/back/lost clusters (#81)
 │   │   └── window.ts           # the Auto-Builder window
 │   ├── wait-time-optimizer.ts
 │   ├── mechanic-manager.ts
 │   ├── marketing-manager.ts    # campaign ranking + auto-run
 │   ├── marketing.ts            # campaign value model (pure, unit-tested)
+│   ├── cheap-builds.ts         # front/back/cluster placement rules (pure, unit-tested)
 │   ├── staff-extras.ts         # entertainers (security measured zero demand, closed)
 │   ├── path-connector.ts
 │   ├── debug.ts                # shared opt-in telemetry channel

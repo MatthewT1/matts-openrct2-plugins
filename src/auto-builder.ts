@@ -6,7 +6,9 @@
  *
  *   - benches and bins where guests vomit, near nauseating ride exits and stalls, and
  *     across the path network (and removes ones it placed that are no longer needed);
- *   - toilets, first aid and food/drink stalls where sampled guest needs go unmet.
+ *   - toilets, first aid and food/drink stalls where sampled guest needs go unmet;
+ *   - cheap "just in case" buildings (info kiosks) at the park front, back and where
+ *     guests get lost (#81).
  *
  * The settings used to live in Trash Manager's park storage; they are moved across on
  * load (see migrateKeys), so a save keeps whatever the player had chosen.
@@ -18,6 +20,8 @@ import { createMapScan } from "./trash/map-scan";
 import { createBuilderSettings, MIGRATED_KEYS } from "./builder/settings";
 import { createAmenityManager } from "./builder/amenities";
 import { createFacilityManager } from "./builder/facilities";
+import { createStallBuilder } from "./builder/stall-build";
+import { createCheapBuilder } from "./builder/cheap-builds";
 import { createBuilderWindow } from "./builder/window";
 
 registerPlugin({
@@ -45,7 +49,9 @@ function autoBuilderMain(): void {
     // planner works from. Trash Manager keeps its own for staffing.
     const scan = createMapScan(dbg);
     const { reportVomit, manageAmenities } = createAmenityManager(storage, settings, dbg, scan);
-    const facilities = createFacilityManager(settings, dbg);
+    const stalls = createStallBuilder(dbg);
+    const cheap = createCheapBuilder(settings, dbg, stalls);
+    const facilities = createFacilityManager(settings, dbg, stalls, cheap.listener);
     const { sampleGuestNeeds, manageFacilities, facilityTracker } = facilities;
 
     function placedCount(): number {
@@ -59,6 +65,7 @@ function autoBuilderMain(): void {
             autoAmenities: settings.autoAmenities.get(),
             amenityRemoval: settings.amenityRemoval.get(),
             autoFacilities: settings.autoFacilities.get(),
+            autoCheapBuilds: settings.autoCheapBuilds.get(),
             placedAmenities: placedCount(),
             coverageTiles: scan.getCoverageTiles().length,
             vomit: scan.cache.vomit,
@@ -92,6 +99,7 @@ function autoBuilderMain(): void {
         dbg.time("day.amenities", manageAmenities);
         dbg.time("day.needSample", sampleGuestNeeds);
         dbg.time("day.facilities", manageFacilities);
+        dbg.time("day.cheapBuilds", cheap.manage);
         dbg.flushStats(parkContext());
     });
 
