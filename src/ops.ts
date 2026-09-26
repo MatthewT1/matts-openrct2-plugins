@@ -4,7 +4,8 @@
  * ## What "operation value" is, and why this module has to be so careful
  *
  * `Ride::operationOption` is a single byte with different meanings per ride type — maze
- * time limit, number of laps, launch speed, speed, or rotation/swing count. It is changed
+ * max guests (no-vehicle rides), number of laps, launch speed, speed, or rotation/swing
+ * count (docs/ride-settings.md). It is changed
  * through the `ridesetsetting` game action (`setting: 4`). Three source-verified facts
  * shape everything below:
  *

@@ -92,7 +92,7 @@ registerPlugin({
 
         // --- Ride operation tuning -------------------------------------------
         //
-        // `Ride::operationOption` covers maze time limit, lap count, launch speed and
+        // `Ride::operationOption` covers maze max guests, lap count, launch speed and
         // rotation/swing count — one field, meaning set by ride type. It is set via
         // `ridesetsetting` setting 4 but CANNOT be read back, so the controller in
         // ops.ts remembers what it wrote and discovers each ride's legal maximum by
