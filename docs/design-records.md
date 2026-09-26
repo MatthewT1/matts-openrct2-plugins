@@ -717,12 +717,12 @@ missed sweep does not discard a fortnight of evidence.
 
 | Bound | Value | Why |
 |---|---|---|
-| `confirmSweeps` | 8 | ~a fortnight of agreement before building |
+| `confirmSweeps` | 8 (now 5) | ~a fortnight of agreement before building. Lowered to 5 after measurement; since #80 a sweep is one day on every park |
 | `minGuests` | 5 | above the noise floor; measured clusters peak at 8-29 |
 | `minDistance` | 12 tiles | a cluster *next to* a facility is a capacity problem, not a coverage one |
 | `maxPerKind` | 8 | a cluster a facility cannot fix can't spiral into fifty toilets |
 | `maxPlacements` | 1/pass | a bad decision costs one building and shows up in telemetry before it repeats |
-| cash floor | £20,000 | a stall costs far more than a bench |
+| cash floor | £20,000 (now £2,000) | a stall costs far more than a bench. Lowered after the floor blocked starting parks; skipped entirely in no-money parks (#44) |
 
 **Never demolishes.** `facilities.ts` has no removal output type at all. The "only touch
 what we placed" rule that makes bench removal safe is *not* sufficient for a ride: removal
