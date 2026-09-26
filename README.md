@@ -1,6 +1,6 @@
 # OpenRCT2 Park Management Plugins
 
-Six plugins for [OpenRCT2](https://openrct2.io/) that handle the routine parts of running a
+Seven plugins for [OpenRCT2](https://openrct2.io/) that handle the routine parts of running a
 park: hiring the right number of staff, keeping paths clean, tuning ride wait times, and a
 few jobs the game leaves entirely to you.
 
@@ -15,7 +15,8 @@ If the park is clean with 20 handymen, the plugin won't hire 40 because a formul
 
 | Plugin | In one line | Spends money by default? |
 |---|---|---|
-| [Trash Manager](#trash-manager) | Keeps paths clean and guests comfortable | Yes: benches, bins and stalls where needed (#51) |
+| [Trash Manager](#trash-manager) | Keeps paths clean | Yes: handyman wages |
+| [Auto-Builder](#auto-builder) | Builds benches, bins and stalls where guests need them | Yes: benches, bins and stalls where needed (#51) |
 | [Mechanic Manager](#mechanic-manager) | Keeps rides running | No |
 | [Wait Time Optimizer](#wait-time-optimizer) | Keeps queues from getting out of hand | No |
 | [Staff Extras](#staff-extras) | Puts entertainers where queues need them | Yes: entertainer wages (#51) |
@@ -26,7 +27,7 @@ Each one adds an entry to the map menu in the top toolbar, which opens its windo
 
 ### Trash Manager
 
-Handles handymen, litter, benches, bins and guest facilities.
+Handles handymen and litter.
 
 <img src="docs/images/trash-manager.png" alt="Trash Manager window" width="320">
 
@@ -37,15 +38,21 @@ Handles handymen, litter, benches, bins and guest facilities.
 - **Vomit tracking.** On most parks nearly all litter is vomit, not dropped rubbish. The
   plugin works out which ride is making guests sick and whether that ride needs benches
   near its exit. Guests sitting on a bench recover from nausea, so benches prevent most of
-  that mess before it happens.
+  that mess before it happens. (Auto-Builder does this; see below.)
+
+### Auto-Builder
+
+Places benches and bins and builds guest facilities. Split out of Trash Manager in 1.5
+(#84); a save keeps the choices it had in Trash Manager.
+
 - **Benches and bins** *(on by default, can be switched off)*. Places benches at nauseating ride exits and vomit
   hotspots, bins near food stalls, and a light spread of both across the rest of the path
   network.
 - **Toilets, first aid and food stalls** *(on by default, can be switched off)*. Builds a facility only when guests
-  in one area have kept going without one across eight full passes over the park, so a
+  in one area have kept going without one across five full passes over the park, so a
   crowd that happens to be passing through doesn't trigger a build.
 
-<img src="docs/images/plugin-built-amenities.png" alt="Toilet, benches and bins placed by Trash Manager along the path below the Woodchip coaster" width="480">
+<img src="docs/images/plugin-built-amenities.png" alt="Toilet, benches and bins placed by Auto-Builder along the path below the Woodchip coaster" width="480">
 
 *Everything here was placed by the plugin: the toilet, the benches and the bins along the
 path below the Woodchip coaster.*
@@ -147,7 +154,7 @@ runs in the background.
 
 ## Install
 
-1. Download the `.js` files from the [latest release](../../releases/latest). Take all six,
+1. Download the `.js` files from the [latest release](../../releases/latest). Take all seven,
    or only the ones you want. Each plugin works on its own.
 2. Put them in your OpenRCT2 `plugin` folder:
 
@@ -179,13 +186,13 @@ npm run typecheck
 
 The decision-making code is kept apart from the code that talks to the game. Files such as
 `staffing.ts`, `needs.ts` and `marketing.ts` take plain numbers in and return decisions,
-so they can be tested without the game running. The six plugin files connect those
+so they can be tested without the game running. The seven plugin files connect those
 decisions to the game. Their behaviour in a real park is checked with an optional
 diagnostics feed: tick **Diagnostics** in any plugin window, run `node tools/log-sink.mjs`,
 and timings and counters are written to `tools/rct-debug.log`.
 
 Every push is type-checked, tested and built by GitHub Actions. Pushing a tag such as
-`v1.0.0` publishes a release with the six plugin files attached.
+`v1.0.0` publishes a release with the seven plugin files attached.
 
 Start with [NOTES.md](NOTES.md) for the project layout, build details and a list of API
 traps found along the way. Deeper material:

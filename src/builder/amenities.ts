@@ -1,18 +1,18 @@
 /**
  * Bench and bin placement, and vomit attribution.
  *
- * Split out of trash-manager.ts (#6) with no behaviour change.
+ * Split out of trash-manager.ts (#6); moved to the Auto-Builder plugin (#84).
  */
 
 import { attributeVomit, describeDiagnosis, NauseaSource, MIN_NAUSEA } from "../vomit";
 import { planAmenities, AmenityDemand, AmenityKind, AmenitySite } from "../amenities";
 import { DebugChannel } from "../debug";
-import { MapScan } from "./map-scan";
-import { TrashSettings } from "./shared";
+import { MapScan } from "../trash/map-scan";
+import { BuilderSettings } from "./settings";
 import { spendGate } from "../cash-gate";
 
 export function createAmenityManager(
-    storage: Configuration, settings: TrashSettings, dbg: DebugChannel, scan: MapScan,
+    storage: Configuration, settings: BuilderSettings, dbg: DebugChannel, scan: MapScan,
 ) {
     const { hotspots, getCoverageTiles } = scan;
 
@@ -248,7 +248,7 @@ export function createAmenityManager(
             : countBenchesNear(d.x, d.y, BENCH_SEARCH_RADIUS);
 
         dbg.count("vomitHotspotsReported");
-        console.log("[Trash Manager] " + describeDiagnosis(d, benches));
+        console.log("[Auto-Builder] " + describeDiagnosis(d, benches));
     }
 
     /**
@@ -500,7 +500,7 @@ export function createAmenityManager(
                     placed[a.x + "," + a.y] = a.kind;
                     changed = true;
                     dbg.count("amenityPlaced");
-                    console.log("[Trash Manager] Placed " + a.kind + " at (" + a.x + ", " +
+                    console.log("[Auto-Builder] Placed " + a.kind + " at (" + a.x + ", " +
                         a.y + ") for " + a.reason + ".");
                 });
             });
@@ -543,7 +543,7 @@ export function createAmenityManager(
                     delete unjustifiedPasses[key];
                     changed = true;
                     dbg.count("amenityRemoved");
-                    console.log("[Trash Manager] Removed " + a.kind + " at (" + a.x + ", " +
+                    console.log("[Auto-Builder] Removed " + a.kind + " at (" + a.x + ", " +
                         a.y + "): " + a.reason + ".");
                 });
             });
