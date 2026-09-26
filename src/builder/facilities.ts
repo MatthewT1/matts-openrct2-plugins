@@ -13,7 +13,7 @@ import {
     CLUSTER_MIN_GUESTS, NeedKind, NeedCounts, NeedGap, Facility,
 } from "../needs";
 import {
-    createFacilityTracker, planFacilities, describePlan, findCourts, courtForGap, DEFAULT_FACILITY_OPTIONS,
+    createFacilityTracker, planFacilities, describePlan, findCourts, courtForGap, courtTried, DEFAULT_FACILITY_OPTIONS,
     DEFAULT_COURT_OPTIONS, FacilityPlan, GapObservation,
 } from "../facilities";
 import { createThoughtAccumulator, describeThoughts, ThoughtTally } from "../thoughts";
@@ -428,8 +428,8 @@ export function createFacilityManager(settings: BuilderSettings, dbg: DebugChann
     /**
      * Food courts (#83): a food or drink stall whose gap has a court (2+ food/drink
      * stalls together) within reach is built in the court rather than at the gap. The
-     * gap chosen is unchanged; only where the stall goes moves. See DEFAULT_COURT_OPTIONS
-     * for why the gap still resolves.
+     * gap chosen is unchanged; only where the stall goes moves. If the gap comes back
+     * after a court build, the next stall goes to the gap (courtTried).
      */
     const COURT_PICK = {
         coverRadius: DEFAULT_CHEAP_BUILD_OPTIONS.coverRadius,
@@ -441,6 +441,8 @@ export function createFacilityManager(settings: BuilderSettings, dbg: DebugChann
     };
 
     const COURT_REASON = ", built in the food court";
+    /** Gaps a court stall was built for this session, newest last (at most 8). */
+    const courtTries: Array<{ kind: NeedKind; x: number; y: number }> = [];
 
     function toCourt(plan: FacilityPlan): FacilityPlan {
         if (plan.kind !== "hunger" && plan.kind !== "thirst") return plan;
@@ -452,6 +454,10 @@ export function createFacilityManager(settings: BuilderSettings, dbg: DebugChann
         }
         const court = courtForGap(plan.gap, findCourts(stallTiles, DEFAULT_COURT_OPTIONS), DEFAULT_COURT_OPTIONS);
         if (court === null) return plan;
+        if (courtTried(plan.gap, courtTries, DEFAULT_FACILITY_OPTIONS.mergeRadius)) {
+            dbg.count("facilityCourtRepeatGap");
+            return plan;
+        }
         const radius = DEFAULT_COURT_OPTIONS.siteRadius;
         const site = pickSite(court, stalls.collectSites([court], radius), COURT_PICK);
         if (site === null) {
@@ -459,6 +465,8 @@ export function createFacilityManager(settings: BuilderSettings, dbg: DebugChann
             return plan;
         }
         dbg.count("facilityCourt");
+        courtTries.push({ kind: plan.kind, x: plan.gap.x, y: plan.gap.y });
+        if (courtTries.length > 8) courtTries.shift();
         return {
             kind: plan.kind, gap: plan.gap, site: site,
             reason: plan.reason + COURT_REASON + " at (" + court.x + ", " + court.y + ")",
