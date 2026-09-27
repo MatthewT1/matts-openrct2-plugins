@@ -106,6 +106,10 @@ Out of scope by request: **Path Connector** (never reviewed this round, no test 
 839 lines — noted so a future session knows it was excluded deliberately, not missed) and
 **pricing** (see below).
 
+Next measurement: **queue TV payback** (#141). TVs are 27% of Auto-Builder's spend and earn
+nothing directly; a probe counts how many serve a long-waiting guest, then a 90 d A/B decides
+whether to keep today's every-2nd-tile placement or trim it to long queues.
+
 ---
 
 ### Project status: feature-complete
@@ -182,6 +186,8 @@ trigger fires):
   is in [M2](design-records.md#m2--small-patrol-zones-for-mechanics).
 - **Bin placement as a headline feature** — measured irrelevant; vomit dominates litter.
 - **Security guards** — no signal, twice measured.
+- **Capping auto benches/bins by money** — measured in #134; judge Auto-Builder's cash at
+  90 d, not 30 d (the spend is front-loaded).
 - **Path Connector** — excluded by request, never reviewed, no test coverage. Deliberate,
   not an oversight.
 
@@ -192,6 +198,7 @@ trigger fires):
 | Item | Reason |
 |---|---|
 | **Small patrol zones for mechanics (M2)** | Mechanics already do ~100% of the available work; the apparent deficit was an arithmetic error on our side. See [M2](design-records.md#m2--small-patrol-zones-for-mechanics). |
+| Monthly cap on auto benches/bins (#134) | Tested at 5% and 10% of cash: closes only 8-13% of Auto-Builder's cash gap, since benches/bins are 14% of its spend. The build pays back by 90 d. See [AM](design-records.md#am--automatic-bench-and-bin-management). |
 | Park-sized patrol rectangles | Measured at 440ms for 29 staff. Behaviourally identical to no zone. See [performance.md](performance.md#patrol-areas). |
 | Forcing a mechanic inspection from script | Not exposed by the API. Only the interval can be set. |
 | Path Connector features | Out of scope for the current round by request. |

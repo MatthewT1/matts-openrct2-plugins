@@ -307,6 +307,7 @@ Each of these caused a real, silent failure. They are documented in full in
 | Inspection "every 10 minutes" | **~38 in-game days** per ride. Compute expected workload before calling anything an anomaly. |
 | Litter penalty kicks in after ~3 min | True in *real* time, but **14.5 in-game days**. |
 | Money is in hundredths | **Tenths** of a pound. A cash floor was 10× too high and silently disabled a feature. |
+| Auto-Builder costs too much cash | At 30 d it looks that way (-£1.4k); by 90 d the spend has paid back on 3 of 4 parks (#134). Judge build spend at 90 d. |
 | Patrol areas are cheap | Cost scales with rectangle **area**; a park-sized one cost 440ms for 29 staff. |
 | Idle staff means stuck staff | Only if their *peers* are working. Fleet-wide idleness is an overstaffing signal. |
 | A game action will succeed if the obvious checks pass | Footpath additions are refused for **five** reasons, two of which the API cannot see. `queryAction` first, then `executeAction`. |
