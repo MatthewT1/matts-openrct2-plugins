@@ -46,6 +46,8 @@ import {
 import { findCourts, DEFAULT_COURT_OPTIONS } from "./facilities";
 import { createStaffingController, StaffingDecision } from "./staffing";
 import { createStaffHirer, wantsAwardGuard, HIRE_BACKOFF_DAYS } from "./staff-hiring";
+import { createParkNews, newsCheckbox } from "./park-news";
+import { EXTRAS_PHRASES } from "./news";
 import { createDeferredActions } from "./deferred";
 import { createCooldown, ENTERTAINER_CENSUS_TICKS, TICKS_PER_DAY } from "./cooldown";
 
@@ -81,8 +83,10 @@ registerPlugin({
         const settings = {
             autoManage: boolSetting(storage, "autoManageEntertainers", true),
             awardGuard: boolSetting(storage, "hireAwardGuard", true),
+            news: boolSetting(storage, "newsSummaries", true),
         };
         const dbg = createDebugChannel("staff-extras");
+        const news = createParkNews("Staff Extras", settings.news, EXTRAS_PHRASES, dbg);
 
         // Shared hire/fire; see staff-hiring.ts. No backoff: an entertainer refusal is a
         // costume problem (see entertainerCostume below), not the entity budget.
@@ -115,8 +119,9 @@ registerPlugin({
             if (!settings.awardGuard.get()) return;
             const types = map.getAllEntities("staff").map((s: Staff) => s.staffType);
             if (!wantsAwardGuard(types) || guardHirer.blocked()) return;
-            guardHirer.hire(() => {
+            guardHirer.hire((peepId: number) => {
                 dbg.count("guardHired");
+                news.add("guardHired", undefined, { type: "peep", id: peepId });
                 console.log("[Staff Extras] Hired a security guard (" + formatMoney(SECURITY_WAGE_PER_MONTH) +
                     "/month) so the Best Staff award becomes possible: it needs every staff type.");
             });
@@ -448,6 +453,7 @@ registerPlugin({
                             // that lies is worse than no counter, because it sends the
                             // next investigation in the wrong direction.
                             dbg.count("entertainersHired");
+                            news.add("entertainerHired", undefined, { type: "peep", id: peepId });
                             // Remember what we hired, so we know what we may fire later.
                             const owned2 = loadOwned();
                             owned2[String(peepId)] = true;
@@ -468,6 +474,7 @@ registerPlugin({
             const remaining = loadOwned();
             for (let i = 0; i < plan.fireIds.length; i++) {
                 hirer.fire(plan.fireIds[i]);
+                news.add("entertainerFired");
                 delete remaining[String(plan.fireIds[i])];
             }
             saveOwned(remaining);
@@ -530,6 +537,7 @@ registerPlugin({
         const requestAssignPatrols = deferred.define(() => assignPatrols(getEntertainers(), cache.targets));
 
         context.subscribe("interval.day", () => {
+            news.flush(); // yesterday's hires/fires (#124)
             dbg.time("day.awardGuard", manageAwardGuard);
             // Check the toggle FIRST. The cache refresh is by far the most expensive
             // thing this plugin does, and a switched-off plugin must cost nothing —
@@ -650,7 +658,8 @@ registerPlugin({
                         onChange: (checked: boolean) => { settings.awardGuard.set(checked); }
                     },
                     { type: "label", name: "lblStatus", x: 8, y: 214, width: 264, height: 14, text: "" },
-                    diagnosticsCheckbox(8, 234, 264)
+                    diagnosticsCheckbox(8, 234, 264),
+                    newsCheckbox(settings.news, 8, 252, 264)
                 ],
                 onClose: () => {
                     pluginWindow = null;

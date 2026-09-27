@@ -29,6 +29,8 @@
  */
 
 import { createDebugChannel } from "./debug";
+import { createParkNews } from "./park-news";
+import { TRASH_PHRASES } from "./news";
 import { createStaffingController, StaffingDecision } from "./staffing";
 import { createDeferredActions } from "./deferred";
 import {
@@ -59,6 +61,7 @@ function trashManagerMain(): void {
     // The work is split by job into src/trash/ (#6). Each factory keeps its own state;
     // this function wires them together and owns the staffing decision and the hooks.
     const settings = createTrashSettings(storage);
+    const news = createParkNews("Trash Manager", settings.news, TRASH_PHRASES, dbg);
     // #100: path tiles and bin counts change slowly; a 10-day scan keeps the split from
     // doubling the tile-walk cost (Auto-Builder keeps the 2.5-day one for placement).
     const scan = createMapScan(dbg, 4 * TILE_SCAN_TICKS);
@@ -176,6 +179,7 @@ function trashManagerMain(): void {
      * Expensive tile scan runs at most once per ten in-game days (tileScanCooldown, #100).
      */
     context.subscribe("interval.day", function(): void {
+        news.flush(); // yesterday's hires/fires (#124)
         dbg.time("day.tileCache", updateTileCache); // no-op if cooldown hasn't elapsed
 
         // One staff scan and one litter scan for the whole day's work — every helper
@@ -249,6 +253,7 @@ function trashManagerMain(): void {
                 for (let i = 0; i < hireCount; i++) {
                     hireHandyman(function(peepId: number): void {
                         clearHandymanZone(peepId);
+                        news.add("hired", undefined, { type: "peep", id: peepId });
                     });
                 }
             } else if (handymen.length > cap + (isAdaptiveStaffing() ? 0 : 3)) {
@@ -256,6 +261,7 @@ function trashManagerMain(): void {
                 // staffing is on we converge straight to its target. The fixed formula
                 // has none, hence the +3 dead band in that mode.
                 fireHandyman(handymen);
+                news.add("fired");
                 rosterChanged = true;
             }
         }

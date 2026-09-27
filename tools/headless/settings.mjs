@@ -30,6 +30,13 @@ export const TOGGLES = [
     { plugin: "Marketing Manager", key: "autoManage", defaultOn: false },
     { plugin: "Staff Extras", key: "autoManageEntertainers", defaultOn: true },
     { plugin: "Staff Extras", key: "hireAwardGuard", defaultOn: true },
+    // #124: one "News summaries" toggle per plugin (Path Connector has none).
+    { plugin: "Trash Manager", key: "newsSummaries", defaultOn: true },
+    { plugin: "Auto-Builder", key: "newsSummaries", defaultOn: true },
+    { plugin: "Wait Time Optimizer", key: "newsSummaries", defaultOn: true },
+    { plugin: "Mechanic Manager", key: "newsSummaries", defaultOn: true },
+    { plugin: "Marketing Manager", key: "newsSummaries", defaultOn: true },
+    { plugin: "Staff Extras", key: "newsSummaries", defaultOn: true },
 ];
 
 export const PRESETS = ["save", "defaults", "all"];

@@ -4,6 +4,7 @@
  */
 
 import { diagnosticsCheckbox } from "../debug";
+import { newsCheckbox } from "../park-news";
 import { BuilderSettings } from "./settings";
 import { ExtrasBudget } from "../extras-budget";
 import { formatMoney } from "../money";
@@ -35,7 +36,7 @@ export function createBuilderWindow(deps: BuilderWindowDeps) {
             classification: "auto-builder",
             title: "Auto-Builder v" + __PLUGIN_VERSION__,
             width: 300,
-            height: 278,
+            height: 298,
             widgets: [
                 { type: "groupbox", x: 6, y: 16, width: 288, height: 146, text: "Automation  (runs each in-game day)" },
                 {
@@ -102,6 +103,7 @@ export function createBuilderWindow(deps: BuilderWindowDeps) {
                 { type: "label", name: "lblRepairs",    x: 14, y: 224, width: 276, height: 14, text: "" },
                 { type: "label", name: "lblCourts",     x: 14, y: 238, width: 276, height: 14, text: "" },
                 diagnosticsCheckbox(14, 260, 276),
+                newsCheckbox(settings.news, 14, 278, 276),
             ],
             onClose: function(): void {
                 win = null;

@@ -3,6 +3,8 @@ import { boolSetting } from "./settings";
 import { createDeferredActions } from "./deferred";
 import { createOpsController, RideOpsState, OpsAction } from "./ops";
 import { isKnownRideType, operationRange } from "./op-ranges";
+import { createParkNews, newsCheckbox } from "./park-news";
+import { WTO_PHRASES } from "./news";
 import { createQueueTrendTracker, QueuePressure, FLOOR_MINUTES,
     createInterventionTracker, InterventionTracker } from "./queues";
 
@@ -88,7 +90,10 @@ registerPlugin({
         const settings = {
             autoOps: boolSetting(storage, "autoOperationTuning", false),
             autoManage: boolSetting(storage, "autoManage", true),
+            news: boolSetting(storage, "newsSummaries", true),
         };
+        // Rides currently on rush settings, so news fires once per rush, not daily (#124).
+        const rushing: Record<number, boolean> = {};
 
         // --- Ride operation tuning -------------------------------------------
         //
@@ -124,6 +129,7 @@ registerPlugin({
 
         // Debug channel; off unless the shared-storage debug flag is set (see debug.ts).
         const dbg = createDebugChannel("wait-time-optimizer");
+        const news = createParkNews("Wait Time Optimizer", settings.news, WTO_PHRASES, dbg);
 
         /** Auto-manage toggle, persisted per save file (was reset on every load). */
         function getAutoManage(): boolean {
@@ -424,6 +430,8 @@ registerPlugin({
             // would have received a day or two later anyway.
             const isWarning = pressure !== "normal";
             if (pressure === "rising") dbg.count("queuePreemptive");
+            if (isWarning && !rushing[ride.id]) news.add("rush", ride.name, { type: "attraction", id: ride.id });
+            rushing[ride.id] = isWarning;
             const rec = calcRecommended(ride, queueTime, isWarning);
             const flags = calcDepartFlags(ride, isWarning);
 
@@ -641,6 +649,7 @@ registerPlugin({
 
         // Daily: refresh cache and optionally auto-apply wait times.
         context.subscribe("interval.day", () => {
+            news.flush(); // yesterday's rush-hour calls (#124)
             dayCounter++;
             dbg.time("day.updateCache", updateCache);
             reportCapacityBound();
@@ -763,7 +772,7 @@ registerPlugin({
                 classification: "wait-time-optimizer",
                 title: "Wait Time Optimizer v" + PLUGIN_VERSION,
                 width: 400,
-                height: 346,
+                height: 364,
                 widgets: [
                     // Summary line
                     {
@@ -853,7 +862,8 @@ registerPlugin({
                         isChecked: isAutoOps(),
                         onChange: (checked: boolean) => { settings.autoOps.set(checked); }
                     },
-                    diagnosticsCheckbox(8, 316, 384)
+                    diagnosticsCheckbox(8, 316, 384),
+                    newsCheckbox(settings.news, 8, 334, 384)
                 ],
                 onClose: () => {
                     pluginWindow = null;

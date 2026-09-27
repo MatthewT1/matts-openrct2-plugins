@@ -24,7 +24,8 @@ export const DIR_DY = [0, 1, 0, -1];
 
 export type StallBuilder = ReturnType<typeof createStallBuilder>;
 
-export function createStallBuilder(dbg: DebugChannel) {
+/** `onAnyPlaced` hears every stall this builder finishes (#124: news). */
+export function createStallBuilder(dbg: DebugChannel, onAnyPlaced?: (rideId: number) => void) {
 
     /**
      * Base height of a WALKABLE footpath at this tile, or -1. Queue lines do not count.
@@ -333,7 +334,10 @@ export function createStallBuilder(dbg: DebugChannel) {
                     dbg.count(prefix + "CreateFailed");
                     return;
                 }
-                placeTrack(prefix, site, r.ride, rideType, onPlaced);
+                placeTrack(prefix, site, r.ride, rideType, function (rideId: number): void {
+                    onPlaced(rideId);
+                    if (onAnyPlaced) onAnyPlaced(rideId);
+                });
             });
         });
     }
