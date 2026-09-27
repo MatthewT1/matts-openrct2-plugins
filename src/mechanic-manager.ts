@@ -349,6 +349,8 @@ registerPlugin({
             // "Invalid parameter / Staff not found" (StaffSetPatrolAreaAction.cpp:69)
             // and pops an error toast. Zone clearing is rare, so verify the sprite first.
             if (map.getEntity(m.id) === null) return;
+            // Fired this tick but not removed yet under a server (#136).
+            if (hirer.firePending(m.id)) { dbg.count("zoneSkippedFirePending"); return; }
             dbg.count(manualClear ? "patrolActionsManual" : "patrolActionsDaily");
             context.executeAction("staffsetpatrolarea", {
                 id: m.id, x1: 0, y1: 0, x2: 0, y2: 0, mode: 2

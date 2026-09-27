@@ -151,6 +151,11 @@ export function createHandymen(dbg: DebugChannel, cache: TileCache, storage: Own
             dbg.count("zoneSkippedDeadPeep");
             return;
         }
+        // Fired this tick but not removed yet under a server (#136).
+        if (hirer.firePending(peepId)) {
+            dbg.count("zoneSkippedFirePending");
+            return;
+        }
         dbg.count(manualClear ? "patrolActionsManual" : "patrolActionsDaily");
         context.executeAction("staffsetpatrolarea", {
             id: peepId, x1: 0, y1: 0, x2: 0, y2: 0, mode: 2,

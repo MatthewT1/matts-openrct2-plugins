@@ -489,12 +489,15 @@ registerPlugin({
          * that no longer qualifies.
          */
         function assignPatrols(entertainers: Entertainer[], targets: EntertainerTarget[]): void {
+            // `hirer.firePending`: an entertainer fired this tick still exists under a
+            // server, where actions run next tick; patrolling it fails (#136).
             const n = Math.min(entertainers.length, targets.length);
             for (let i = 0; i < n; i++) {
                 const e = entertainers[i];
                 const t = targets[i];
                 if (e.id === null) continue;
                 if (map.getEntity(e.id) === null) continue;
+                if (hirer.firePending(e.id)) { dbg.count("patrolSkippedFirePending"); continue; }
                 context.executeAction("staffsetpatrolarea", {
                     id: e.id,
                     x1: t.patrol.x1, y1: t.patrol.y1, x2: t.patrol.x2, y2: t.patrol.y2,
@@ -506,6 +509,7 @@ registerPlugin({
                 const e = entertainers[i];
                 if (e.id === null) continue;
                 if (map.getEntity(e.id) === null) continue;
+                if (hirer.firePending(e.id)) { dbg.count("patrolSkippedFirePending"); continue; }
                 context.executeAction("staffsetpatrolarea", {
                     id: e.id, x1: 0, y1: 0, x2: 0, y2: 0, mode: PATROL_MODE_CLEAR_ALL,
                 }, () => {});

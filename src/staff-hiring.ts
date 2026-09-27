@@ -73,6 +73,14 @@ export interface StaffHirer {
     hire(onHired?: (peepId: number) => void, costumeIndex?: number): void;
     /** Fires one staff member. A refusal is counted and logged, never silent. */
     fire(peepId: number): void;
+    /**
+     * True while a fire for this id is issued but has not run yet. Under a server (the
+     * headless harness runs `host`, and multiplayer) plugin actions are queued to the next
+     * tick (`GameActionRunner.cpp:315-323`), so the staff entity still exists when a patrol
+     * action for it is issued and is gone when that runs: "Staff entity not found" (#136).
+     * Single player runs actions at once, so this is only ever true under a server.
+     */
+    firePending(peepId: number): boolean;
     /** Days of backoff left. For tests and telemetry. */
     backoffLeft(): number;
 }
@@ -84,6 +92,7 @@ function failed(result: HireResult): boolean {
 export function createStaffHirer(opts: StaffHirerOptions): StaffHirer {
     const log = opts.log !== undefined ? opts.log : (m: string): void => console.log(m);
     let backoff = 0;
+    const pendingFires: Record<number, true> = {};
 
     return {
         blocked(): boolean {
@@ -120,7 +129,9 @@ export function createStaffHirer(opts: StaffHirerOptions): StaffHirer {
         },
 
         fire(peepId: number): void {
+            pendingFires[peepId] = true;
             opts.execute("stafffire", { id: peepId }, (result: HireResult): void => {
+                delete pendingFires[peepId];
                 if (!failed(result)) return;
                 // Firing a stale or already-gone peep id should show up in telemetry,
                 // not vanish.
@@ -128,6 +139,10 @@ export function createStaffHirer(opts: StaffHirerOptions): StaffHirer {
                 log("[" + opts.plugin + "] Could not fire " + opts.noun + " #" + peepId + ": " +
                     (result.errorMessage || "error code " + result.error));
             });
+        },
+
+        firePending(peepId: number): boolean {
+            return pendingFires[peepId] === true;
         },
 
         backoffLeft(): number {
