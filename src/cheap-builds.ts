@@ -52,6 +52,15 @@ export const DEFAULT_CHEAP_BUILD_OPTIONS: CheapBuildOptions = {
     minRides: 3,
 };
 
+/**
+ * ATMs allowed for a park with this many walkable path tiles: one per 250, 1 to 6.
+ * Soak parks run 129-3,866 tiles, so small parks get 1-2 and Magic Mountain 6. One ATM
+ * covers 12 tiles either way, so a big park needs more to be within reach.
+ */
+export function atmCap(pathTiles: number): number {
+    return Math.max(1, Math.min(6, Math.ceil(pathTiles / 250)));
+}
+
 // Map sizes top out at 1001 tiles (MAXIMUM_MAP_SIZE_TECHNICAL), so 4096 leaves room.
 const KEY_SCALE = 4096;
 
