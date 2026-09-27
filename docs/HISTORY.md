@@ -66,7 +66,7 @@ No code changes.
 Repository prep for GitHub: git history reconstructed, README, LICENSE, CI, `.gitignore`
 (excludes the ~400 MB `gamesrc/` clone and debug logs), `TODO.md` backlog.
 
-## On GitHub: v1.0.0 to v1.6.0 (2026-09-24 to 2026-09-26)
+## On GitHub: v1.0.0 to v1.7.0 (2026-09-24 to 2026-09-27)
 
 From here the work is in pull requests and issues on
 [GitHub](https://github.com/MatthewT1/matts-openrct2-plugins). Session notes are local only.
@@ -138,3 +138,16 @@ This entry covers the main points.
   - **Stall sites**: a tile the game refuses is skipped next time, so needed toilets get
     built (Ivory Towers) (#121).
   - **Harness**: parallel pool and per-PR soak test; headless cooldowns in game time (#114).
+- **v1.7.0**:
+  - **Park news (#124)**: a short, slightly odd ticker line about what the plugins did the day
+    before, at most 2 a day across all plugins, the most important first; a checkbox per
+    plugin (#129, #131).
+  - **Starter builds**: a restroom by the entrance and the back, and a drinks and a food stall
+    by the entrance, as a player would; young parks never trigger the need-gap builder.
+    Young-park A/B: shop sales +13% (#130).
+  - **ATMs (#82)**: at the entrance, the back and where guests run out of cash, only once they
+    do; 1 per 250 path tiles, up to 6 (#128, #130).
+  - **Info kiosks (#81)**: also at the east and west sides of wide parks (#126).
+  - **Food courts (#83)**: dressed with benches, bins and a toilet; court stalls now actually
+    get built (#123, #127).
+  - **Performance (#100)**: Trash Manager scans the map every 10 days, not 2.5 (#125).
