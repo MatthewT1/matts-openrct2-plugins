@@ -51,7 +51,7 @@ The rest of this guide covers every toggle across the five automated plugins in 
 | Duration for next start (spinner) | Marketing Manager | 2 weeks | No | Sets how many weeks the *next* campaign you start (manually or automatically) runs, from 2 to 12 |
 | Auto-start eligible campaigns | Marketing Manager | **OFF** | **Yes** | Starts campaigns automatically from the ranked list, best value-per-guest first, up to a daily spending budget and never below a cash reserve; never starts a second campaign of a type already running |
 | Diagnostics: stream timings to log sink | Marketing Manager | **OFF** | No | Streams telemetry to a local log sink on 127.0.0.1:7777 for performance analysis; costs nothing when off |
-| News summaries | each plugin except Path Connector | **ON** | No | At most one news-ticker message per plugin per day about what it just did (hires/fires, stalls and benches built, rush-hour calls, campaigns); click it to jump to the ride or staff member |
+| News summaries | each plugin except Path Connector | **ON** | No | At most 2 news-ticker messages a day across all plugins about what they just did (hires/fires, stalls and benches built, rush-hour calls, campaigns); click it to jump to the ride or staff member |
 
 ---
 
@@ -137,7 +137,7 @@ Each log entry is newline-delimited JSON with per-plugin timings, staff counts, 
 
 ### News Ticker
 
-Each plugin posts at most one short, slightly odd news message a day summing up what it did the day before: "Trash Manager: Hired 2 handymen. Each was issued one broom and a stern talking-to about crisps." Messages about a ride or a hire link to it. Untick **News summaries** in a plugin's window to silence just that plugin. The same line is printed to the console.
+Each plugin sums up what it did the day before in one short, slightly odd line, and all the plugins together post at most 2 a day, the most important first (a new stall beats a few benches; small busywork is skipped): "Trash Manager: Hired 2 handymen. Each was issued one broom and a stern talking-to about crisps." Messages about a ride or a hire link to it. Untick **News summaries** in a plugin's window to silence just that plugin. The same line is printed to the console.
 
 
 ### In-Game Console
