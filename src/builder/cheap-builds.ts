@@ -10,7 +10,7 @@ import { spendGate } from "../cash-gate";
 import { createCooldown, TICKS_PER_DAY, BUILD_WATCHDOG_TICKS } from "../cooldown";
 import {
     createSpotAccumulator, farthestPathTile, sidePathTiles, buildAnchors, uncoveredAnchors, pickSite, tileKey, buildQueue,
-    DEFAULT_CHEAP_BUILD_OPTIONS, CheapBuildOptions, Tile, Anchor,
+    DEFAULT_CHEAP_BUILD_OPTIONS, CheapBuildOptions, atmCap, Tile, Anchor,
 } from "../cheap-builds";
 import { StallBuilder, DIR_DX, DIR_DY } from "./stall-build";
 import { GuestThoughtListener } from "./facilities";
@@ -32,6 +32,16 @@ interface CheapKind {
     sides?: boolean;
     /** Overrides DEFAULT_CHEAP_BUILD_OPTIONS.maxPerKind. */
     maxPerKind?: number;
+    /** Cap from the park's walkable path tiles; wins over maxPerKind. */
+    maxFor?: (pathTiles: number) => number;
+    /**
+     * Sampled guests with one of `thoughts` in the last needs sweep before ANY of this
+     * kind is built, front and back included. Without it, a new park got 4 ATMs before
+     * anyone was short of cash.
+     */
+    minDemand?: number;
+    /** Only at the park entrance, never the back, sides or clusters. */
+    frontOnly?: boolean;
 }
 
 /** ShopItem::umbrella (ride/ShopItem.h:28). */
@@ -68,6 +78,39 @@ const KINDS: CheapKind[] = [
         maxPerKind: 6,
     },
     {
+        // What a player builds first: a restroom by the entrance and one at the back.
+        // Need-gap toilets (facilities.ts) wait for 3+ needy guests on one 8-tile patch
+        // across several sweeps, which a young, spread-out park may never produce, so a
+        // month-3 park still had none. GBP 225 (ride/rtd/shops/Toilets.h BuildCosts),
+        // cheaper than a kiosk. Any restroom within 12 tiles, the player's included, counts.
+        key: "toilet",
+        label: "restroom",
+        rideType: 36, // RIDE_TYPE_TOILETS
+        thoughts: [],
+        maxPerKind: 2,
+    },
+    {
+        // A drinks stall and a food stall by the entrance, as a player would. Guests arrive
+        // fed (hunger/thirst ~200, Park.cpp:297) and buy only at <= 75 (Guest.cpp:1483-1489),
+        // so the thought-driven builder (3+ guests, 12+ tiles out, 5 sweeps) never fires in a
+        // young park. One each; later growth stays with facilities.ts. Any stall of the type
+        // within 12 tiles, the player's included, counts.
+        key: "drink",
+        label: "drinks stall",
+        rideType: 30, // RIDE_TYPE_DRINK_STALL
+        thoughts: [],
+        maxPerKind: 1,
+        frontOnly: true,
+    },
+    {
+        key: "food",
+        label: "food stall",
+        rideType: 28, // RIDE_TYPE_FOOD_STALL
+        thoughts: [],
+        maxPerKind: 1,
+        frontOnly: true,
+    },
+    {
         // #82. A guest thinking "running out of cash" heads for the nearest ATM the way
         // a hungry one heads for food (Guest.cpp:1052-1054). Withdrawing adds GBP 50 to
         // the guest and costs the park nothing (Guest.cpp:3320-3325).
@@ -77,6 +120,8 @@ const KINDS: CheapKind[] = [
         thoughts: ["running_out"],
         // Guests never withdraw in a no-money park (PeepShouldUseCashMachine, Guest.cpp:3270).
         skip: function (): boolean { return park.getFlag("noMoney"); },
+        minDemand: DEFAULT_CHEAP_BUILD_OPTIONS.clusterMinGuests,
+        maxFor: atmCap,
     },
     {
         // #105. In rain guests only ride sheltered rides unless they hold an umbrella
@@ -97,11 +142,17 @@ const KINDS: CheapKind[] = [
 export function createCheapBuilder(settings: BuilderSettings, dbg: DebugChannel, stalls: StallBuilder) {
     const spots: Record<string, ReturnType<typeof createSpotAccumulator>> = {};
     const lastClusters: Record<string, Tile[]> = {};
+    // Thoughts per kind in the current / last complete needs sweep (minDemand).
+    const demand: Record<string, number> = {};
+    const lastDemand: Record<string, number> = {};
+    let pathTiles = 0;
     const thoughtKind: Record<string, string> = {};
     for (let i = 0; i < KINDS.length; i++) {
         const k = KINDS[i];
         spots[k.key] = createSpotAccumulator(8); // same 8-tile grid as needs.ts
         lastClusters[k.key] = [];
+        demand[k.key] = 0;
+        lastDemand[k.key] = 0;
         for (let t = 0; t < k.thoughts.length; t++) thoughtKind[k.thoughts[t]] = k.key;
     }
 
@@ -116,10 +167,11 @@ export function createCheapBuilder(settings: BuilderSettings, dbg: DebugChannel,
     const buildWatchdog = createCooldown(BUILD_WATCHDOG_TICKS, 5_000);
 
     function optionsOf(kind: CheapKind): CheapBuildOptions {
-        if (kind.maxPerKind === undefined) return OPTIONS;
+        const cap = kind.maxFor !== undefined ? kind.maxFor(pathTiles) : kind.maxPerKind;
+        if (cap === undefined) return OPTIONS;
         const o: CheapBuildOptions = {
             coverRadius: OPTIONS.coverRadius, minBackSteps: OPTIONS.minBackSteps,
-            clusterMinGuests: OPTIONS.clusterMinGuests, maxPerKind: kind.maxPerKind,
+            clusterMinGuests: OPTIONS.clusterMinGuests, maxPerKind: cap,
             siteRadius: OPTIONS.siteRadius, minRides: OPTIONS.minRides,
         };
         return o;
@@ -127,9 +179,11 @@ export function createCheapBuilder(settings: BuilderSettings, dbg: DebugChannel,
 
     /** Anchors of this kind with none of it nearby yet. */
     function uncoveredOf(kind: CheapKind, built: Tile[]): Anchor[] {
+        if (kind.minDemand !== undefined && lastDemand[kind.key] < kind.minDemand) return [];
         const opts = optionsOf(kind);
-        return uncoveredAnchors(
-            buildAnchors(fronts, back, kind.sides === true ? sides : [], lastClusters[kind.key], opts), built, opts);
+        let anchors = buildAnchors(fronts, back, kind.sides === true ? sides : [], lastClusters[kind.key], opts);
+        if (kind.frontOnly === true) anchors = anchors.filter(function (a): boolean { return a.role === "front"; });
+        return uncoveredAnchors(anchors, built, opts);
     }
 
     function isOn(): boolean {
@@ -140,11 +194,15 @@ export function createCheapBuilder(settings: BuilderSettings, dbg: DebugChannel,
         wantsSamples: isOn,
         thought(type: string, tileX: number, tileY: number): void {
             const key = thoughtKind[type];
-            if (key !== undefined) spots[key].add(tileX, tileY);
+            if (key === undefined) return;
+            spots[key].add(tileX, tileY);
+            demand[key]++;
         },
         sweepComplete(): void {
             for (const key in spots) {
                 lastClusters[key] = spots[key].top(OPTIONS.clusterMinGuests, 2);
+                lastDemand[key] = demand[key];
+                demand[key] = 0;
                 spots[key].reset();
             }
         },
@@ -198,6 +256,7 @@ export function createCheapBuilder(settings: BuilderSettings, dbg: DebugChannel,
                 if (graph[n] !== undefined) starts.push(n);
             }
         }
+        pathTiles = Object.keys(edges).length;
         fronts = centres;
         back = farthestPathTile(starts, graph);
         sides = back !== null && centres.length > 0
