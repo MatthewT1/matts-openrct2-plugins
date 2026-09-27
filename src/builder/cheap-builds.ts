@@ -76,6 +76,18 @@ const KINDS: CheapKind[] = [
         maxPerKind: 6,
     },
     {
+        // What a player builds first: a restroom by the entrance and one at the back.
+        // Need-gap toilets (facilities.ts) wait for 3+ needy guests on one 8-tile patch
+        // across several sweeps, which a young, spread-out park may never produce, so a
+        // month-3 park still had none. GBP 225 (ride/rtd/shops/Toilets.h BuildCosts),
+        // cheaper than a kiosk. Any restroom within 12 tiles, the player's included, counts.
+        key: "toilet",
+        label: "restroom",
+        rideType: 36, // RIDE_TYPE_TOILETS
+        thoughts: [],
+        maxPerKind: 2,
+    },
+    {
         // #82. A guest thinking "running out of cash" heads for the nearest ATM the way
         // a hungry one heads for food (Guest.cpp:1052-1054). Withdrawing adds GBP 50 to
         // the guest and costs the park nothing (Guest.cpp:3320-3325).
