@@ -179,6 +179,7 @@ If you enable **Diagnostics** and run the log sink, the file `tools/rct-debug.lo
 
 - Handymen will be hired or fired roughly every 1-2 in-game weeks as the park grows or shrinks, and the minimum headcount rises with guest count as the park grows, not just with path tile count
 - If adaptive staffing is on, the number will drop below the formula's recommendation on a small/stable park (and stay there), but won't get stuck low as the park grows
+- Only handymen the plugin hired are ever fired or have their orders changed; ones you hire yourself (say, to mow) are left alone, but still count toward the headcount. Handymen already in a park from before this version count as yours, so an overstaffed older park slims down more slowly
 
 #### Auto-Builder
 
@@ -192,6 +193,7 @@ If you enable **Diagnostics** and run the log sink, the file `tools/rct-debug.lo
 #### Mechanic Manager
 
 - Mechanics are hired or fired slowly (over days, not hours) to avoid thrashing
+- Only mechanics the plugin hired are ever fired or have their orders changed; ones you place yourself stay
 - If a ride stays broken for 3 days and emergency repair is on, it will be fixed immediately (and the console will say so)
 - Inspection intervals are re-applied daily (you won't see this, but it ensures mechanics do their job)
 
