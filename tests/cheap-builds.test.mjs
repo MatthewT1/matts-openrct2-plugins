@@ -1,5 +1,5 @@
 import { tileKey, keyTile, farthestPathTile, sidePathTiles, buildAnchors, uncoveredAnchors, pickSite,
-         createSpotAccumulator, buildQueue, DEFAULT_CHEAP_BUILD_OPTIONS } from "./build/cheap-builds.mjs";
+         createSpotAccumulator, buildQueue, DEFAULT_CHEAP_BUILD_OPTIONS, atmCap } from "./build/cheap-builds.mjs";
 let pass=0, fail=0; const ok=(c,m)=>{ c?pass++:(fail++,console.log("FAIL:",m)); };
 const OPT = DEFAULT_CHEAP_BUILD_OPTIONS;
 
@@ -97,5 +97,8 @@ const q = buildQueue([
 ok(q.map((e) => e.kind + ":" + e.anchor.role).join() === "kiosk:front,atm:front,kiosk:back,kiosk:cluster,atm:cluster",
    "queue order, got " + q.map((e) => e.kind + ":" + e.anchor.role).join());
 ok(buildQueue([]).length === 0, "empty queue");
+
+// ATM cap scales with walkable path tiles (1 per 250, 1..6).
+for (const [t, want] of [[0, 1], [129, 1], [251, 2], [420, 2], [1119, 5], [3866, 6]]) ok(atmCap(t) === want, "atmCap(" + t + ") = " + atmCap(t));
 
 console.log(`${pass} passed, ${fail} failed`);

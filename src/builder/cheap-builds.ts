@@ -10,7 +10,7 @@ import { spendGate } from "../cash-gate";
 import { createCooldown, TICKS_PER_DAY, BUILD_WATCHDOG_TICKS } from "../cooldown";
 import {
     createSpotAccumulator, farthestPathTile, sidePathTiles, buildAnchors, uncoveredAnchors, pickSite, tileKey, buildQueue,
-    DEFAULT_CHEAP_BUILD_OPTIONS, CheapBuildOptions, Tile, Anchor,
+    DEFAULT_CHEAP_BUILD_OPTIONS, CheapBuildOptions, atmCap, Tile, Anchor,
 } from "../cheap-builds";
 import { StallBuilder, DIR_DX, DIR_DY } from "./stall-build";
 import { GuestThoughtListener } from "./facilities";
@@ -32,6 +32,14 @@ interface CheapKind {
     sides?: boolean;
     /** Overrides DEFAULT_CHEAP_BUILD_OPTIONS.maxPerKind. */
     maxPerKind?: number;
+    /** Cap from the park's walkable path tiles; wins over maxPerKind. */
+    maxFor?: (pathTiles: number) => number;
+    /**
+     * Sampled guests with one of `thoughts` in the last needs sweep before ANY of this
+     * kind is built, front and back included. Without it, a new park got 4 ATMs before
+     * anyone was short of cash.
+     */
+    minDemand?: number;
 }
 
 /** ShopItem::umbrella (ride/ShopItem.h:28). */
@@ -77,6 +85,8 @@ const KINDS: CheapKind[] = [
         thoughts: ["running_out"],
         // Guests never withdraw in a no-money park (PeepShouldUseCashMachine, Guest.cpp:3270).
         skip: function (): boolean { return park.getFlag("noMoney"); },
+        minDemand: DEFAULT_CHEAP_BUILD_OPTIONS.clusterMinGuests,
+        maxFor: atmCap,
     },
     {
         // #105. In rain guests only ride sheltered rides unless they hold an umbrella
@@ -97,11 +107,17 @@ const KINDS: CheapKind[] = [
 export function createCheapBuilder(settings: BuilderSettings, dbg: DebugChannel, stalls: StallBuilder) {
     const spots: Record<string, ReturnType<typeof createSpotAccumulator>> = {};
     const lastClusters: Record<string, Tile[]> = {};
+    // Thoughts per kind in the current / last complete needs sweep (minDemand).
+    const demand: Record<string, number> = {};
+    const lastDemand: Record<string, number> = {};
+    let pathTiles = 0;
     const thoughtKind: Record<string, string> = {};
     for (let i = 0; i < KINDS.length; i++) {
         const k = KINDS[i];
         spots[k.key] = createSpotAccumulator(8); // same 8-tile grid as needs.ts
         lastClusters[k.key] = [];
+        demand[k.key] = 0;
+        lastDemand[k.key] = 0;
         for (let t = 0; t < k.thoughts.length; t++) thoughtKind[k.thoughts[t]] = k.key;
     }
 
@@ -116,10 +132,11 @@ export function createCheapBuilder(settings: BuilderSettings, dbg: DebugChannel,
     const buildWatchdog = createCooldown(BUILD_WATCHDOG_TICKS, 5_000);
 
     function optionsOf(kind: CheapKind): CheapBuildOptions {
-        if (kind.maxPerKind === undefined) return OPTIONS;
+        const cap = kind.maxFor !== undefined ? kind.maxFor(pathTiles) : kind.maxPerKind;
+        if (cap === undefined) return OPTIONS;
         const o: CheapBuildOptions = {
             coverRadius: OPTIONS.coverRadius, minBackSteps: OPTIONS.minBackSteps,
-            clusterMinGuests: OPTIONS.clusterMinGuests, maxPerKind: kind.maxPerKind,
+            clusterMinGuests: OPTIONS.clusterMinGuests, maxPerKind: cap,
             siteRadius: OPTIONS.siteRadius, minRides: OPTIONS.minRides,
         };
         return o;
@@ -127,6 +144,7 @@ export function createCheapBuilder(settings: BuilderSettings, dbg: DebugChannel,
 
     /** Anchors of this kind with none of it nearby yet. */
     function uncoveredOf(kind: CheapKind, built: Tile[]): Anchor[] {
+        if (kind.minDemand !== undefined && lastDemand[kind.key] < kind.minDemand) return [];
         const opts = optionsOf(kind);
         return uncoveredAnchors(
             buildAnchors(fronts, back, kind.sides === true ? sides : [], lastClusters[kind.key], opts), built, opts);
@@ -140,11 +158,15 @@ export function createCheapBuilder(settings: BuilderSettings, dbg: DebugChannel,
         wantsSamples: isOn,
         thought(type: string, tileX: number, tileY: number): void {
             const key = thoughtKind[type];
-            if (key !== undefined) spots[key].add(tileX, tileY);
+            if (key === undefined) return;
+            spots[key].add(tileX, tileY);
+            demand[key]++;
         },
         sweepComplete(): void {
             for (const key in spots) {
                 lastClusters[key] = spots[key].top(OPTIONS.clusterMinGuests, 2);
+                lastDemand[key] = demand[key];
+                demand[key] = 0;
                 spots[key].reset();
             }
         },
@@ -198,6 +220,7 @@ export function createCheapBuilder(settings: BuilderSettings, dbg: DebugChannel,
                 if (graph[n] !== undefined) starts.push(n);
             }
         }
+        pathTiles = Object.keys(edges).length;
         fronts = centres;
         back = farthestPathTile(starts, graph);
         sides = back !== null && centres.length > 0
