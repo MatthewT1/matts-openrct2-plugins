@@ -25,6 +25,11 @@ If the park is clean with 20 handymen, the plugin won't hire 40 because a formul
 
 Each one adds an entry to the map menu in the top toolbar, which opens its window.
 
+**Park news.** The plugins post a short, slightly odd line to the news ticker about what they
+did the day before ("Auto-Builder: Opened Burger Bar 1. Nobody asked how it knew. It just
+knew."). At most 2 a day across all plugins, the most important first; each plugin has a
+"News summaries" checkbox to turn its own off (#124).
+
 ### Trash Manager
 
 Handles handymen and litter.
@@ -51,10 +56,16 @@ Places benches and bins and builds guest facilities. Split out of Trash Manager 
 - **Toilets, first aid and food stalls** *(on by default, can be switched off)*. Builds a facility only when guests
   in one area have kept going without one across five full passes over the park, so a
   crowd that happens to be passing through doesn't trigger a build.
-- **Info kiosks and an umbrella stall** *(on by default, can be switched off)*. Once the park
-  has 3 rides: an information kiosk by the entrance and at the far end of the paths, another
-  where guests say they're lost, and an umbrella stall by the entrance for rainy days. Skips
-  any spot that already has one within 12 tiles, including yours (#81, #105).
+- **Starter builds** *(on by default, can be switched off)*. What a good player puts down by
+  hand. Once the park has 3 rides: information kiosks by the entrance, at the far end of the
+  paths, at the east and west sides and where guests say they're lost; a restroom by the
+  entrance and at the back; a drinks stall and a food stall by the entrance; an umbrella stall
+  for rainy days; and, once guests start running out of cash, ATMs at the entrance, the back
+  and where they're short (1 per 250 path tiles, up to 6). Skips any spot that already has
+  one within 12 tiles, including yours (#81, #82, #105, #130).
+- **Food courts** *(on by default, can be switched off)*. Where 2+ food or drink stalls stand
+  together, fills the nearby paths with benches and bins and adds a toilet if none is close,
+  from the same monthly budget as queue TVs (#83).
 - **Queue TVs** *(on by default, can be switched off)*. Once the TV is researched, puts a TV
   on every 2nd empty queue tile of every ride, front first: long-waiting guests only stop
   losing happiness on a tile with a TV. Paid from a monthly extras budget (5% of the cash
