@@ -114,6 +114,16 @@ node tools/headless/ablation.mjs --plugin-dir dist --seed 133 --parks 18 --k 8
 
 ## Things to know
 
+- **Judge build spend at 90 d, not 30 d.** Auto-Builder's cash gap vs no builder is
+  mostly up-front building; on 3 of 4 young parks it stops growing after month 1 and
+  company value turns positive by day 90 (#134). Cash also varies by about £1-3k between
+  runs at 90 d, so a cash-only difference below ~£1k is a tie.
+- **Counters from parallel runs need one sink per worker.** `--debug` sends to port 7777,
+  so for pooled runs copy the built plugins per worker, rewrite `7777` to a private port
+  (#134 used 7811+ and 7821+), and have each worker's sink write `counters.json` into the
+  current job's out dir. Never use 7777 or `tools/log-sink.mjs` from a script. A probe that
+  opens its own `network.createSocket()` must connect before its first write: a write
+  before the connect completes is silently dropped.
 - **Only `.park` saves are deterministic.** With the same save and plugins, two 60-day
   runs of Thunder Rock gave byte-identical CSVs, for both the off arm and the on arm
   (2026-09-25), and so did Mel's World (2026-09-26, also 2 runs at once). Scenarios are

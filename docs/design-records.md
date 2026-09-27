@@ -142,6 +142,23 @@ bins. `amenities.ts` plans placements against the footpath tiles around each dem
   seconds, and skipped entirely below a cash floor so it cannot bankrupt a park.
 - Both placement and removal are **off by default**; removal is a separate nested toggle.
 
+#### Spend check (#134, 2026-09-27): no monthly cap
+
+The #133 ablation flagged Auto-Builder's cash (-£1,392 median at 30 d vs no builder). We
+split the spend by builder (12 parks, 30 d, counters x unit cost, which matched the
+harness `buildCum` within 2%): stalls 57%, queue TVs 27%, benches/bins 14%, food-court
+items 2%, repairs <1%. Benches and bins are cheap everywhere except the big Six Flags
+scenarios (0-51 placed a month on 10 of 12 parks, 384 on Magic Mountain), and
+`amenityRemoved` was 0 on every park, so it is coverage, not churn.
+
+A monthly cap for benches and bins (own pot, 5% or 10% of cash above £1,000) failed the
+rule we set (close at least half the cash gap, keep 75% of the gains). It closed 8-13% of
+the gap at 30 d and did no better at 90 d. At 90 d on 4 young parks the whole builder
+pays back on 3 of 4 (the gap stops growing after month 1): company value +£1,645,
+happiness +3, guests +44. So benches and bins stay uncapped (they are cheap happiness),
+the amenity pass keeps only its £1,000 cash floor, and Auto-Builder's cash is judged at
+90 d. Queue TVs, the one spend line with no direct return, moved to #141.
+
 ### C — Bin placement advisor
 
 **Status: SUPERSEDED by [AM](#am--automatic-bench-and-bin-management)** · **Basis:** research says yes, measurement says no
