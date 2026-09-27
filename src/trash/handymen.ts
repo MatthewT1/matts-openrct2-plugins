@@ -8,8 +8,13 @@ import { createActivityTracker, ActivitySnapshot } from "../staff-activity";
 import { createStaffHirer, HIRE_BACKOFF_DAYS } from "../staff-hiring";
 import { HANDYMAN_ORDERS, getHandymen, TileCache } from "./shared";
 import { DebugChannel } from "../debug";
+import { createOwnedStaff, OwnedStore, pickOwnedToFire } from "../staff-ownership";
 
-export function createHandymen(dbg: DebugChannel, cache: TileCache) {
+export function createHandymen(dbg: DebugChannel, cache: TileCache, storage: OwnedStore) {
+
+    // Handymen this plugin hired (#135). Only these are ever fired or have their
+    // orders changed; the player's own handymen (say, hired to mow) are left alone.
+    const owned = createOwnedStaff(storage, "ourHandymen");
 
 
     // Handymen whose patrol area we have already cleared. Re-issuing the action for
@@ -47,15 +52,35 @@ export function createHandymen(dbg: DebugChannel, cache: TileCache) {
 
     /** Hires one handyman with correct orders. Calls onHired(peepId) on success. */
     function hireHandyman(onHired: ((peepId: number) => void) | undefined): void {
-        hirer.hire(onHired);
+        hirer.hire(function(peepId: number): void {
+            owned.add(peepId);
+            if (onHired) onHired(peepId);
+        });
     }
 
-    function fireHandyman(handymen?: Handyman[]): void {
-        const h = handymen !== undefined ? handymen : getHandymen();
-        if (h.length > 0) {
-            const id = h[h.length - 1].id;
-            if (id !== null) hirer.fire(id);
+    function liveIds(handymen: Handyman[]): number[] {
+        const ids: number[] = [];
+        for (let i = 0; i < handymen.length; i++) {
+            const id = handymen[i].id;
+            if (id !== null) ids.push(id);
         }
+        return ids;
+    }
+
+    /**
+     * Fires the newest handyman this plugin hired. Returns false when every handyman
+     * left is the player's, so the caller can stop there rather than fire one of theirs.
+     */
+    function fireHandyman(handymen?: Handyman[]): boolean {
+        const ids = liveIds(handymen !== undefined ? handymen : getHandymen());
+        const pick = pickOwnedToFire(ids.reverse(), owned.prune(ids), 1);
+        if (pick.fireIds.length === 0) {
+            dbg.count("handymanFireSkippedPlayerStaff");
+            return false;
+        }
+        hirer.fire(pick.fireIds[0]);
+        owned.remove(pick.fireIds[0]);
+        return true;
     }
 
     /**
@@ -68,8 +93,17 @@ export function createHandymen(dbg: DebugChannel, cache: TileCache) {
         }
     }
 
-    function enforceOrders(handymen?: Handyman[]): void {
-        (handymen !== undefined ? handymen : getHandymen()).forEach(enforceHandymanOrders);
+    /** Daily: fixes orders on our own handymen only (#135). */
+    function enforceOrders(handymen: Handyman[]): void {
+        const mine = owned.prune(liveIds(handymen));
+        handymen.forEach(function(h: Handyman): void {
+            if (h.id !== null && mine[String(h.id)]) enforceHandymanOrders(h);
+        });
+    }
+
+    /** The "fix orders" button: the player asked, so every handyman. */
+    function enforceAllOrders(): void {
+        getHandymen().forEach(enforceHandymanOrders);
     }
 
     // -------------------------------------------------------------------------
@@ -193,6 +227,7 @@ export function createHandymen(dbg: DebugChannel, cache: TileCache) {
         hireHandyman,
         fireHandyman,
         enforceOrders,
+        enforceAllOrders,
         clearHandymanZone,
         clearAllZones,
         syncZones,
