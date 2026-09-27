@@ -78,4 +78,27 @@ function rig(result, backoffDays = HIRE_BACKOFF_DAYS) {
     ok(wantsAwardGuard([]) === false, "empty roster -> no");
 }
 
+// #136: under a server, actions run next tick. A fire is pending until its callback
+// runs, so patrol actions can skip that id; single player (immediate callback) never is.
+{
+    const queued = [];
+    const hirer = createStaffHirer({
+        staffType: 0, orders: 7, noun: "handyman", plugin: "Trash Manager",
+        counterPrefix: "handyman", backoffDays: HIRE_BACKOFF_DAYS,
+        execute: (action, args, cb) => queued.push(() => cb({ error: 0 })),
+        count: () => {}, log: () => {},
+    });
+    hirer.fire(12);
+    ok(hirer.firePending(12), "queued fire is pending");
+    ok(!hirer.firePending(13), "other ids are not");
+    queued.forEach((run) => run());
+    ok(!hirer.firePending(12), "pending clears once the fire runs");
+    const r = rig(() => ({ error: 0 }));
+    r.hirer.fire(5);
+    ok(!r.hirer.firePending(5), "immediate (single player) fire is never pending");
+    const f = rig(() => ({ error: 1, errorMessage: "x" }));
+    f.hirer.fire(6);
+    ok(!f.hirer.firePending(6), "refused fire clears pending too");
+}
+
 console.log(`${pass} passed, ${fail} failed`); if (fail) process.exitCode = 1;
