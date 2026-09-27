@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 932 200" width="932" height="200" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif">
+<style>
+  .bg{fill:#ffffff} .ax{stroke:#d0d7de} .tx{fill:#57606a;font-size:11px} .tt{fill:#1f2328;font-size:13px;font-weight:600}
+  .on{stroke:#1a7f37;fill:none;stroke-width:2.5} .off{stroke:#8c959f;fill:none;stroke-width:2;stroke-dasharray:5 4}
+  .lon{fill:#1a7f37} .loff{fill:#8c959f}
+  @media (prefers-color-scheme: dark){ .bg{fill:#0d1117} .ax{stroke:#30363d} .tx{fill:#8b949e} .tt{fill:#e6edf3}
+    .on{stroke:#3fb950} .lon{fill:#3fb950} .off{stroke:#6e7681} .loff{fill:#6e7681} }
+</style>
+<rect class="bg" width="100%" height="100%" rx="8"/>
+<text class="tt" x="44" y="20">Guest happiness</text>
+<line class="ax" x1="44" x2="288" y1="142.0" y2="142.0"/>
+<text class="tx" x="38" y="146.0" text-anchor="end">82%</text>
+<line class="ax" x1="44" x2="288" y1="88.0" y2="88.0"/>
+<text class="tx" x="38" y="92.0" text-anchor="end">85%</text>
+<line class="ax" x1="44" x2="288" y1="34.0" y2="34.0"/>
+<text class="tx" x="38" y="38.0" text-anchor="end">88%</text>
+<text class="tx" x="44" y="162">day 0</text><text class="tx" x="288" y="162" text-anchor="end">day 30</text>
+<path class="off" d="M44.0,133.0L52.1,131.3L60.3,130.8L68.4,128.0L76.5,128.0L84.7,125.8L92.8,124.2L100.9,124.2L109.1,122.0L117.2,122.0L125.3,120.3L133.5,119.2L141.6,119.2L149.7,120.3L157.9,120.3L166.0,119.2L174.1,119.2L182.3,117.5L190.4,116.4L198.5,117.0L206.7,115.9L214.8,115.9L222.9,115.3L231.1,116.4L239.2,117.0L247.3,117.0L255.5,115.9L263.6,114.2L271.7,113.7L279.9,111.5L288.0,113.7"/><path class="on" d="M44.0,133.0L52.1,131.3L60.3,125.8L68.4,122.5L76.5,117.5L84.7,110.9L92.8,107.6L100.9,103.2L109.1,98.8L117.2,94.9L125.3,89.9L133.5,86.1L141.6,82.8L149.7,78.9L157.9,78.3L166.0,75.6L174.1,72.8L182.3,70.6L190.4,65.6L198.5,63.4L206.7,62.3L214.8,60.1L222.9,56.8L231.1,53.5L239.2,53.5L247.3,51.3L255.5,49.6L263.6,48.5L271.7,46.3L279.9,44.1L288.0,43.0"/>
+<text class="tt" x="360" y="20">Litter on paths</text>
+<line class="ax" x1="360" x2="604" y1="142.0" y2="142.0"/>
+<text class="tx" x="354" y="146.0" text-anchor="end">0</text>
+<line class="ax" x1="360" x2="604" y1="88.0" y2="88.0"/>
+<text class="tx" x="354" y="92.0" text-anchor="end">11</text>
+<line class="ax" x1="360" x2="604" y1="34.0" y2="34.0"/>
+<text class="tx" x="354" y="38.0" text-anchor="end">22</text>
+<text class="tx" x="360" y="162">day 0</text><text class="tx" x="604" y="162" text-anchor="end">day 30</text>
+<path class="off" d="M360.0,64.7L368.1,62.6L376.3,61.0L384.4,60.6L392.5,56.0L400.7,56.9L408.8,53.1L416.9,51.5L425.1,52.3L433.2,54.4L441.3,52.3L449.5,50.7L457.6,53.5L465.7,56.9L473.9,56.9L482.0,58.1L490.1,56.4L498.3,55.2L506.4,56.0L514.5,54.8L522.7,56.0L530.8,52.3L538.9,49.0L547.1,47.8L555.2,46.5L563.3,44.5L571.5,45.7L579.6,45.3L587.7,47.4L595.9,47.4L604.0,43.6"/><path class="on" d="M360.0,64.7L368.1,65.5L376.3,137.0L384.4,136.2L392.5,137.0L400.7,138.3L408.8,138.3L416.9,138.3L425.1,138.3L433.2,137.0L441.3,138.3L449.5,139.1L457.6,137.9L465.7,139.1L473.9,135.4L482.0,137.9L490.1,138.7L498.3,139.1L506.4,138.3L514.5,137.5L522.7,137.9L530.8,136.2L538.9,139.9L547.1,135.4L555.2,139.1L563.3,139.5L571.5,138.3L579.6,138.3L587.7,135.8L595.9,139.9L604.0,139.1"/>
+<text class="tt" x="676" y="20">Park rating</text>
+<line class="ax" x1="676" x2="920" y1="142.0" y2="142.0"/>
+<text class="tx" x="670" y="146.0" text-anchor="end">912</text>
+<line class="ax" x1="676" x2="920" y1="88.0" y2="88.0"/>
+<text class="tx" x="670" y="92.0" text-anchor="end">928</text>
+<line class="ax" x1="676" x2="920" y1="34.0" y2="34.0"/>
+<text class="tx" x="670" y="38.0" text-anchor="end">944</text>
+<text class="tx" x="676" y="162">day 0</text><text class="tx" x="920" y="162" text-anchor="end">day 30</text>
+<path class="off" d="M676.0,115.6L684.1,114.2L692.3,115.1L700.4,115.3L708.5,122.5L716.7,123.6L724.8,127.2L732.9,133.0L741.1,127.2L749.2,120.9L757.3,116.2L765.5,121.4L773.6,117.5L781.7,110.6L789.9,106.5L798.0,103.2L806.1,102.4L814.3,106.2L822.4,110.1L830.5,110.4L838.7,113.1L846.8,118.6L854.9,125.3L863.1,124.7L871.2,124.2L879.3,125.3L887.5,128.0L895.6,125.3L903.7,126.1L911.9,128.0L920.0,125.3"/><path class="on" d="M676.0,115.6L684.1,114.2L692.3,62.0L700.4,62.6L708.5,60.4L716.7,59.8L724.8,58.2L732.9,57.9L741.1,57.6L749.2,53.8L757.3,52.9L765.5,52.1L773.6,51.3L781.7,51.0L789.9,50.5L798.0,49.6L806.1,49.3L814.3,48.2L822.4,48.5L830.5,48.0L838.7,47.7L846.8,47.7L854.9,46.3L863.1,46.0L871.2,45.2L879.3,45.2L887.5,44.4L895.6,43.8L903.7,43.3L911.9,43.3L920.0,43.0"/>
+<rect class="lon" x="44" y="177" width="18" height="4" rx="2"/><text class="tx" x="68" y="183">plugins on (defaults)</text>
+<rect class="loff" x="204" y="177" width="18" height="4" rx="2"/><text class="tx" x="228" y="183">plugins off</text>
+<text class="tx" x="920" y="183" text-anchor="end">mean of 12 parks, headless runs, same parks and seeds</text>
+</svg>

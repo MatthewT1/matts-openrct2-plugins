@@ -84,6 +84,17 @@ fired (kiosks, umbrella stalls, queue TVs and stalls built, from an end-of-run c
 agent takes off the map) and a sign test of each arm against the previous one, with the
 fail limits at the top of the script.
 
+`ablation.mjs` (#133) asks whether each plugin does what we claim: one build, 7 arms per park
+(all default-on plugins, all minus one plugin via a per-job `--settings` JSON, all off). The draw
+is the whole viability pool minus the parks #63 skipped, and each job skips parks with fewer than
+5 open rides (`minOpenRides` in `pool.mjs`). `results.md` gives each plugin a verdict (works /
+no effect / harms / silent) by the rules in the script header. `tools/readme-chart.mjs` turns
+the full and all-off arms into the README chart.
+
+```
+node tools/headless/ablation.mjs --plugin-dir dist --seed 133 --parks 18 --k 8
+```
+
 ## How it works
 
 1. For each arm, `run.mjs` makes a user-data folder: a copied `config.ini`, a copy of the

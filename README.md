@@ -1,11 +1,24 @@
 # OpenRCT2 Park Management Plugins
 
+[![Latest release](https://img.shields.io/github/v/release/MatthewT1/matts-openrct2-plugins?label=release)](https://github.com/MatthewT1/matts-openrct2-plugins/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/MatthewT1/matts-openrct2-plugins/total)](https://github.com/MatthewT1/matts-openrct2-plugins/releases)
+[![CI](https://github.com/MatthewT1/matts-openrct2-plugins/actions/workflows/ci.yml/badge.svg)](https://github.com/MatthewT1/matts-openrct2-plugins/actions/workflows/ci.yml)
+[![OpenRCT2 plugin API](https://img.shields.io/badge/OpenRCT2%20plugin%20API-87-orange)](https://openrct2.io/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](src/)
+[![Last commit](https://img.shields.io/github/last-commit/MatthewT1/matts-openrct2-plugins)](https://github.com/MatthewT1/matts-openrct2-plugins/commits/main)
+[![License: MIT](https://img.shields.io/github/license/MatthewT1/matts-openrct2-plugins)](LICENSE)
+
 Seven plugins for [OpenRCT2](https://openrct2.io/) that handle the routine parts of running a
 park: hiring the right number of staff, keeping paths clean, tuning ride wait times, and a
 few jobs the game leaves entirely to you.
 
 Every decision is based on what's actually happening in your park, not on a fixed ratio.
 If the park is clean with 20 handymen, the plugin won't hire 40 because a formula says so.
+
+![Plugins on vs off: guest happiness, litter and park rating over 30 days, mean of 12 parks](docs/img/plugins-on-vs-off.svg)
+
+<sub>Headless test runs: the same 12 parks for 30 days with the plugins on (defaults) and off.
+Regenerate with `node tools/readme-chart.mjs` after a trial (`tools/headless/ablation.mjs`).</sub>
 
 [Download the latest release](../../releases/latest) · [User guide](docs/user-guide.md) · [MIT license](LICENSE)
 

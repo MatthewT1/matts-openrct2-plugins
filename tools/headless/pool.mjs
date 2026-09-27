@@ -26,6 +26,7 @@ function runArgs(job, worker) {
         "--game-port", String(11800 + 10 * worker), "--agent-port", String(47820 + worker)];
     if (job.pluginDir) args.push("--plugin-dir", job.pluginDir);
     if (job.speed) args.push("--speed", String(job.speed));
+    if (job.minOpenRides) args.push("--min-open-rides", String(job.minOpenRides));
     return args;
 }
 
