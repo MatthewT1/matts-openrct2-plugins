@@ -69,9 +69,9 @@ function trashManagerMain(): void {
         cache, hotspots, updateTileCache, updateEntityCache, updateCache, reportHotspots,
     } = scan;
     const {
-        hiringBlocked, hireHandyman, fireHandyman, enforceOrders, clearHandymanZone, clearAllZones,
-        syncZones, checkActivity,
-    } = createHandymen(dbg, cache);
+        hiringBlocked, hireHandyman, fireHandyman, enforceOrders, enforceAllOrders, clearHandymanZone,
+        clearAllZones, syncZones, checkActivity,
+    } = createHandymen(dbg, cache, storage);
     // Bins/benches, facilities and guest-need sampling moved to the Auto-Builder plugin (#84).
 
     /** Returns the user-configured max handymen cap (stored per save file, default 20). */
@@ -260,9 +260,12 @@ function trashManagerMain(): void {
                 // The controller already has its own hysteresis, so when adaptive
                 // staffing is on we converge straight to its target. The fixed formula
                 // has none, hence the +3 dead band in that mode.
-                fireHandyman(handymen);
-                news.add("fired");
-                rosterChanged = true;
+                // Only our own hires are fired (#135); if all that is left is the
+                // player's, the surplus stays and is counted.
+                if (fireHandyman(handymen)) {
+                    news.add("fired");
+                    rosterChanged = true;
+                }
             }
         }
 
@@ -296,7 +299,7 @@ function trashManagerMain(): void {
     });
 
     // enforceOrders writes directly to entity properties; must run on the tick, not in onClick.
-    const requestFixOrders = deferred.define(function(): void { enforceOrders(); });
+    const requestFixOrders = deferred.define(function(): void { enforceAllOrders(); });
 
     // Sweep All and Sweep Old share one queued sweep. If both are pressed before the
     // tick, the full sweep wins: `oldOnly` stays true only if every request was "old".

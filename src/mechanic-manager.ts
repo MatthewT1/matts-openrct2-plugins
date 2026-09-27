@@ -3,6 +3,7 @@ import { boolSetting } from "./settings";
 import { formatMoney } from "./money";
 import { createActivityTracker } from "./staff-activity";
 import { MECHANIC_THRESHOLDS, createStaffingController, StaffingDecision } from "./staffing";
+import { createOwnedStaff, pickOwnedToFire } from "./staff-ownership";
 import { createStaffHirer, HIRE_BACKOFF_DAYS } from "./staff-hiring";
 import { createDeferredActions } from "./deferred";
 import { createBreakdownTracer, RideSnapshot, MechanicSnapshot } from "./breakdown-trace";
@@ -313,9 +314,20 @@ registerPlugin({
             });
         }
 
+        // Mechanics this plugin hired (#135). Only these are ever fired or have their
+        // orders changed; a mechanic the player placed by hand is left alone.
+        const owned = createOwnedStaff(storage, "ourMechanics");
+
+        function mechanicIds(mechanics: Mechanic[]): number[] {
+            const ids: number[] = [];
+            mechanics.forEach((m: Mechanic) => { if (m.id !== null) ids.push(m.id); });
+            return ids;
+        }
+
         function enforceOrders(mechanics: Mechanic[]): void {
+            const mine = owned.prune(mechanicIds(mechanics));
             mechanics.forEach((m: Mechanic) => {
-                if (m.orders !== MECHANIC_ORDERS) m.orders = MECHANIC_ORDERS;
+                if (m.id !== null && mine[String(m.id)] && m.orders !== MECHANIC_ORDERS) m.orders = MECHANIC_ORDERS;
             });
         }
 
@@ -405,19 +417,25 @@ registerPlugin({
                 // `diff` executeAction calls synchronously in a single tick.
                 const hireCount = Math.min(3, diff);
                 for (let i = 0; i < hireCount; i++) {
-                    hirer.hire((peepId: number) => news.add("hired", undefined, { type: "peep", id: peepId }));
+                    hirer.hire((peepId: number) => {
+                        owned.add(peepId);
+                        news.add("hired", undefined, { type: "peep", id: peepId });
+                    });
                 }
                 return true;
             } else if (diff < 0) {
                 // Release whoever has been idle longest. Firing an active mechanic would
-                // leave the idle ones behind and keep the window signal firing.
-                const ids: number[] = [];
-                mechanics.forEach((m: Mechanic) => { if (m.id !== null) ids.push(m.id); });
-                activity.releaseOrder(ids).slice(0, -diff).forEach((id: number) => {
+                // leave the idle ones behind and keep the window signal firing. Only our
+                // own hires are candidates (#135); the player's surplus stays, counted.
+                const ids = mechanicIds(mechanics);
+                const pick = pickOwnedToFire(activity.releaseOrder(ids), owned.prune(ids), -diff);
+                if (pick.protectedCount > 0) dbg.count("mechanicFireSkippedPlayerStaff", pick.protectedCount);
+                pick.fireIds.forEach((id: number) => {
                     hirer.fire(id);
+                    owned.remove(id);
                     news.add("fired");
                 });
-                return true;
+                return pick.fireIds.length > 0;
             }
             return false;
         }
