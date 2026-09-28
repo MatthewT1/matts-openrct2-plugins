@@ -39,13 +39,14 @@ const CHARTS = [
         { title: "Average ride downtime", unit: "%", get: (r) => r.avgDowntime },
     ] },
     { file: "staff-extras", panels: [
-        { title: "Entertainers on staff", get: (r) => r.entertainers },
+        { title: "Guest happiness", unit: "%", get: (r) => (r.avgHappiness / 255) * 100 },
+        { title: "Guests fed up with queuing", get: (r) => r.thQueuingAges },
         { title: "Guests upset by vandalism", get: (r) => r.thVandalism },
     ] },
 ];
 const ARMS = [
     { key: "off", label: "plugins off", path: ["defaults", "off"] },
-    { key: "def", label: "plugins on (defaults)", path: ["defaults", "on"] },
+    { key: "def", label: "defaults", path: ["defaults", "on"] },
     { key: "all", label: "every feature on", path: ["all", "on"] },
 ];
 
@@ -78,7 +79,7 @@ const table = [];
 
 for (const chart of CHARTS) {
     const total = chart.panels.length * W + (chart.panels.length - 1) * GAP;
-    const svg = [`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${total} ${H + 30}" width="${total}" height="${H + 30}" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif">`,
+    const svg = [`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${total} ${H + 46}" width="${total}" height="${H + 46}" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif">`,
         `<style>
   .bg{fill:#ffffff} .ax{stroke:#d0d7de} .tx{fill:#57606a;font-size:11px} .tt{fill:#1f2328;font-size:13px;font-weight:600}
   .def{stroke:#1a7f37;fill:none;stroke-width:2.5} .all{stroke:#0969da;fill:none;stroke-width:2;stroke-dasharray:1 3;stroke-linecap:round}
@@ -109,9 +110,9 @@ for (const chart of CHARTS) {
     let lx = 12;
     for (const a of ARMS) {
         svg.push(`<rect class="l${a.key}" x="${lx}" y="${ly - 9}" width="18" height="4" rx="2"/><text class="tx" x="${lx + 24}" y="${ly - 3}">${a.label}</text>`);
-        lx += 24 + a.label.length * 6 + 18;
+        lx += 24 + a.label.length * 6 + 14;
     }
-    svg.push(`<text class="tx" x="${total - PAD.r}" y="${ly - 3}" text-anchor="end">mean of ${n} runs (${parks.size} parks)</text>`, `</svg>`);
+    svg.push(`<text class="tx" x="12" y="${ly + 15}">mean of ${n} runs (${parks.size} parks, 90 days)</text>`, `</svg>`);
     writeFileSync(join(OUT, `${chart.file}.svg`), svg.join("\n") + "\n");
 }
 console.log(`${n} runs, ${parks.size} parks, ${days} days -> ${OUT}\n`);
