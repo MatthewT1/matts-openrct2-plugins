@@ -19,7 +19,8 @@ If the park is clean with 20 handymen, the plugin won't hire 40 because a formul
 
 <sub>Headless test runs: Six Flags Magic Mountain, over Texas, Great Adventure, Holland and
 Belgium, 3 runs each, 90 days, with the plugins off, on with their defaults, and with every
-feature on. Regenerate with `node tools/showcase-charts.mjs` (#140).</sub>
+feature on. Each plugin's chart below shows its own measure with all the plugins running, so a shared
+measure like queuing reflects more than one plugin. Regenerate with `node tools/showcase-charts.mjs` (#140).</sub>
 
 <table><tr>
 <td><img src="docs/img/showcase/holland-90d-off.png" alt="Six Flags Holland after 90 days without the plugins"></td>
@@ -176,7 +177,7 @@ entertainers it hired itself, so the ones you placed by a themed ride stay put.
 Once the park has 20 or more staff and no security guard, it also hires one guard. The Best
 Staff award (+25% new guests while held) needs every staff type on the roster (#92).
 
-![Entertainers on staff and guests upset by vandalism, over 90 days: plugins off vs defaults vs every feature on](docs/img/showcase/staff-extras.svg)
+![Guest happiness, guests fed up with queuing and guests upset by vandalism, over 90 days: plugins off vs defaults vs every feature on](docs/img/showcase/staff-extras.svg)
 
 ### Marketing Manager
 
