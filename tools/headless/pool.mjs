@@ -5,7 +5,7 @@
  *
  *   node tools/headless/pool.mjs <jobs.json> [--k 4]
  *
- * jobs.json is an array of { save, out, days?, perturb?, pluginDir?, settings?, arms? }.
+ * jobs.json is an array of { save, out, days?, perturb?, pluginDir?, settings?, arms?, capture? }.
  * A job whose out/summary.json exists is skipped (resume); a failed job is retried once;
  * exit code 3 (park skipped by --min-open-rides) is not retried. Each job's console output
  * goes to <out>/run.log. Also importable: runPool(jobs, k) -> [{ job, status, seconds }].
@@ -27,6 +27,7 @@ function runArgs(job, worker) {
     if (job.pluginDir) args.push("--plugin-dir", job.pluginDir);
     if (job.speed) args.push("--speed", String(job.speed));
     if (job.minOpenRides) args.push("--min-open-rides", String(job.minOpenRides));
+    if (job.capture) args.push("--capture");
     return args;
 }
 

@@ -65,6 +65,10 @@ function parseArgs(argv) {
             // Turns on the plugins' Diagnostics channel (on arm). Start the log sink first:
             // node tools/log-sink.mjs (127.0.0.1:7777 -> tools/rct-debug.log).
             case "--debug": a.debug = true; break;
+            // #140: README images. --capture frames the end of the run where the plugins changed
+            // the map most; --capture-at X,Y (tiles) fixes the frame and adds a day-1 "start" image.
+            case "--capture": a.capture = {}; break;
+            case "--capture-at": { const [x, y] = v.split(",").map(Number); a.capture = { at: { x, y } }; i++; break; }
             // #44: make the park a no-money park (game cheat) on BOTH arms before day 0.
             case "--no-money": a.noMoney = true; break;
             // #63: the game is deterministic, so replicates draw the scenario RNG N times first.
@@ -205,7 +209,7 @@ async function runArm(a, arm) {
     const rows = [];
     let hello = null;
     let settings = null;
-    let census = null;
+    let census = null, capture = null;
     try {
         const sock = await connectAgent(a.agentPort, 120000, game);
         const next = lineReader(sock);
@@ -236,7 +240,7 @@ async function runArm(a, arm) {
             console.log(`[${arm}] settings (${a.settings}) on: ${on.join(", ")}`);
         }
 
-        sock.write(JSON.stringify({ cmd: "start", days: a.days, speed: a.speed, perturb: a.perturb }) + "\n");
+        sock.write(JSON.stringify({ cmd: "start", days: a.days, speed: a.speed, perturb: a.perturb, capture: a.capture ?? null }) + "\n");
         for (;;) {
             // A day is ~530 ticks: ~13 s at speed 1, ~1.6 s at speed 4. Allow for a slow park.
             const msg = await next(60000);
@@ -245,6 +249,7 @@ async function runArm(a, arm) {
                 if (msg.day % 10 === 0) console.log(`[${arm}] day ${msg.day}/${a.days}: rating ${msg.rating}, guests ${msg.guests}, cash ${(msg.cash / 10).toFixed(0)}`);
             } else if (msg.type === "done") {
                 census = { start: msg.census0 ?? null, end: msg.census ?? null };
+                if (a.capture) capture = { focus: msg.focus ?? null, shots: msg.shots ?? [] };
                 break;
             } else if (msg.type === "error") {
                 throw new Error(`agent error: ${msg.error}`);
@@ -258,9 +263,24 @@ async function runArm(a, arm) {
 
     const seconds = (Date.now() - started) / 1000;
     writeFileSync(join(armDir, "days.csv"), toCsv(rows));
+    if (capture && capture.focus) {
+        // #140: render each saved park, centred on the focus tile, 1:1 zoom. The screenshot
+        // command takes no --user-data-path, so it uses the default OpenRCT2 folder's config.
+        const { x, y } = capture.focus;
+        capture.images = [];
+        for (const shot of capture.shots) {
+            const park = join(ud, "save", `capture-${shot}.park`), png = join(armDir, `${shot}.png`);
+            if (!existsSync(park)) continue;
+            try {
+                execFileSync(a.game, ["screenshot", park, png, "960", "540", String(x * 32 + 16), String(y * 32 + 16), "0", "0"],
+                    { stdio: "ignore", windowsHide: true, timeout: 120000 });
+                capture.images.push(basename(png));
+            } catch (e) { console.log(`[${arm}] screenshot ${shot} failed: ${e.message}`); }
+        }
+    }
     const errors = countLogErrors(readFileSync(logPath, "utf8"));
     console.log(`[${arm}] done: ${rows.length - 1} days in ${seconds.toFixed(0)} s`);
-    return { arm, hello, settings, rows, seconds, provenance, errors, census, summary: summariseRun(rows) };
+    return { arm, hello, settings, rows, seconds, provenance, errors, census, capture, summary: summariseRun(rows) };
 }
 
 async function main() {
@@ -271,7 +291,12 @@ async function main() {
     console.log(`output: ${a.out}`);
 
     const results = {};
-    for (const arm of a.arms) results[arm] = await runArm(a, arm);
+    // #140: with --capture the on arm runs first and picks the frame; the off arm reuses it.
+    const order = a.capture && !a.capture.at ? [...a.arms].sort((x, y) => (x === "on" ? -1 : y === "on" ? 1 : 0)) : a.arms;
+    for (const arm of order) {
+        results[arm] = await runArm(a, arm);
+        if (a.capture && !a.capture.at && results[arm].capture?.focus) a.capture = { at: results[arm].capture.focus };
+    }
 
     const summaries = {};
     for (const arm of a.arms) summaries[arm] = results[arm].summary;
@@ -304,7 +329,7 @@ async function main() {
         settings: results.on?.settings ?? null,
         arms: Object.fromEntries(a.arms.map((arm) => [arm, {
             start: results[arm].hello, seconds: results[arm].seconds, pluginFiles: results[arm].provenance,
-            errors: results[arm].errors, census: results[arm].census, summary: results[arm].summary,
+            errors: results[arm].errors, census: results[arm].census, capture: results[arm].capture, summary: results[arm].summary,
         }])),
         comparison: results.on && results.off ? compareRuns(results.on.summary, results.off.summary) : null,
     }, null, 2));
