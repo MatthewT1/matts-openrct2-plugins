@@ -15,10 +15,19 @@ few jobs the game leaves entirely to you.
 Every decision is based on what's actually happening in your park, not on a fixed ratio.
 If the park is clean with 20 handymen, the plugin won't hire 40 because a formula says so.
 
-![Plugins on vs off: guest happiness, litter and park rating over 30 days, mean of 12 parks](docs/img/plugins-on-vs-off.svg)
+![Plugins off vs on: guest happiness, guests and park rating over 90 days, mean of 15 runs on 5 Six Flags parks](docs/img/showcase/overview.svg)
 
-<sub>Headless test runs: the same 12 parks for 30 days with the plugins on (defaults) and off.
-Regenerate with `node tools/readme-chart.mjs` after a trial (`tools/headless/ablation.mjs`).</sub>
+<sub>Headless test runs: Six Flags Magic Mountain, over Texas, Great Adventure, Holland and
+Belgium, 3 runs each, 90 days, with the plugins off, on with their defaults, and with every
+feature on. Regenerate with `node tools/showcase-charts.mjs` (#140).</sub>
+
+<table><tr>
+<td><img src="docs/img/showcase/holland-90d-off.png" alt="Six Flags Holland after 90 days without the plugins"></td>
+<td><img src="docs/img/showcase/holland-90d-on.png" alt="The same spot in Six Flags Holland after 90 days with the plugins"></td>
+</tr><tr>
+<td align="center"><sub>Six Flags Holland, 90 days, plugins off</sub></td>
+<td align="center"><sub>Same spot, same 90 days, plugins on: new stalls by the exit, TVs along the El Condor queue, benches and bins</sub></td>
+</tr></table>
 
 [Download the latest release](../../releases/latest) · [User guide](docs/user-guide.md) · [MIT license](LICENSE)
 
@@ -43,11 +52,19 @@ did the day before ("Auto-Builder: Opened Burger Bar 1. Nobody asked how it knew
 knew."). At most 2 a day across all plugins, the most important first; each plugin has a
 "News summaries" checkbox to turn its own off (#124).
 
+> **From the ticker** (Six Flags Holland, one 90-day run)
+> - Auto-Builder: Built Hot Chocolate Stall 1 (and 1 more stall) right where guests were milling about looking wistful.
+> - Wait Time Optimizer: Goliath's queue was swelling like a soufflé, so the trains now leave sooner.
+> - Staff Extras: Deployed 1 entertainer to the queues. It is surprisingly hard to stay cross at a panda.
+> - Trash Manager: Hired 1 handyman. HR notes that one of them has already named the litter.
+> - Auto-Builder: Lemonade Stall 2 appeared overnight. The guests act as if it was always there.
+> - Wait Time Optimizer: Told Robin Hood to stop dawdling at the station. The queue has been informed.
+
 ### Trash Manager
 
 Handles handymen and litter.
 
-<img src="docs/images/trash-manager.png" alt="Trash Manager window" width="320">
+<img src="docs/img/windows/trash-manager.png" alt="Trash Manager window" width="300">
 
 - **Handyman staffing.** It starts from the usual guests-and-paths estimate, then works
   down while the park stays clean and hires back quickly once litter starts to hurt the
@@ -58,10 +75,14 @@ Handles handymen and litter.
   near its exit. Guests sitting on a bench recover from nausea, so benches prevent most of
   that mess before it happens. (Auto-Builder does this; see below.)
 
+![Litter and vomit on paths, and guests put off by dirty paths, over 90 days: plugins off vs defaults vs every feature on](docs/img/showcase/trash-manager.svg)
+
 ### Auto-Builder
 
 Places benches and bins and builds guest facilities. Split out of Trash Manager in 1.5
 (#84); a save keeps the choices it had in Trash Manager.
+
+<img src="docs/img/windows/auto-builder.png" alt="Auto-Builder window" width="300">
 
 - **Benches and bins** *(on by default, can be switched off)*. Places benches at nauseating ride exits and vomit
   hotspots, bins near food stalls, and a light spread of both across the rest of the path
@@ -97,11 +118,15 @@ path below the Woodchip coaster.*
 
 *A food stall the plugin built on a raised walkway. It is placed at the height of the path it serves.*
 
+![Guests who are hungry, thirsty or need a toilet, and guests who are lost, over 90 days: plugins off vs defaults vs every feature on](docs/img/showcase/auto-builder.svg)
+
+<sub>Needs thoughts drop by about half. Lost guests go up with the plugins on (53 -> 73); we haven't worked out why yet.</sub>
+
 ### Mechanic Manager
 
 Handles mechanics, inspections and breakdowns.
 
-<img src="docs/images/mechanic-manager.png" alt="Mechanic Manager window" width="290">
+<img src="docs/img/windows/mechanic-manager.png" alt="Mechanic Manager window" width="280">
 
 - **Mechanic staffing.** Works the same way as the handyman controller. The main signal is a
   ride that has been broken for two days or more: one that breaks and gets fixed the same
@@ -115,11 +140,13 @@ Handles mechanics, inspections and breakdowns.
   a mechanic to. It restores no reliability, and the three-day wait keeps it from replacing
   mechanics altogether.
 
+![Rides broken down and average ride downtime, over 90 days: plugins off vs defaults vs every feature on](docs/img/showcase/mechanic-manager.svg)
+
 ### Wait Time Optimizer
 
 Handles ride wait settings and queue length.
 
-<img src="docs/images/wait-time-optimizer.png" alt="Wait Time Optimizer window" width="410">
+<img src="docs/img/windows/wait-time-optimizer.png" alt="Wait Time Optimizer window" width="400">
 
 - **Wait times.** Sets each ride's minimum and maximum wait from its cycle length and number
   of trains, and applies them daily.
@@ -133,11 +160,13 @@ Handles ride wait settings and queue length.
   rides with long queues and lengthens it on quiet ones. Each change resets the ride's
   ratings until it runs again, so it changes things one step at a time.
 
+![Guests fed up with queuing, over 90 days: plugins off vs defaults vs every feature on](docs/img/showcase/wait-time-optimizer.svg)
+
 ### Staff Extras
 
 Handles entertainers. On by default since [#51](https://github.com/MatthewT1/matts-openrct2-plugins/issues/51); switch it off in the window if you'd rather not pay their wages.
 
-<img src="docs/images/staff-extras.png" alt="Staff Extras window" width="300">
+<img src="docs/img/windows/staff-extras.png" alt="Staff Extras window" width="280">
 
 Hires entertainers and places them at queues that are close to the point where guests walk
 out, because that's where an entertainer makes the most difference, plus one at the park
@@ -147,11 +176,13 @@ entertainers it hired itself, so the ones you placed by a themed ride stay put.
 Once the park has 20 or more staff and no security guard, it also hires one guard. The Best
 Staff award (+25% new guests while held) needs every staff type on the roster (#92).
 
+![Entertainers on staff and guests upset by vandalism, over 90 days: plugins off vs defaults vs every feature on](docs/img/showcase/staff-extras.svg)
+
 ### Marketing Manager
 
 Handles advertising and voucher campaigns.
 
-<img src="docs/images/marketing-manager.png" alt="Marketing Manager window" width="380">
+<img src="docs/img/windows/marketing-manager.png" alt="Marketing Manager window" width="320">
 
 Ranks every campaign by what each extra guest it brings in is likely to cost,
 based on your park's current prices and capacity. Some campaigns are much worse value than

@@ -243,6 +243,58 @@ registerPlugin({
             return out;
         }
 
+        // README images (#140): what the map looked like at the start, so the end of the run
+        // can be framed where the plugins changed it most.
+        function mapMarks() {
+            var adds = {}, rides = {};
+            for (var x = 0; x < map.size.x; x++) for (var y = 0; y < map.size.y; y++) {
+                var els = map.getTile(x, y).elements;
+                for (var e = 0; e < els.length; e++) {
+                    var el = els[e];
+                    if (el.type === "footpath" && el.addition !== null && el.addition !== undefined) adds[x + "," + y] = el.addition;
+                }
+            }
+            var rs = map.rides;
+            for (var i = 0; i < rs.length; i++) rides[rs[i].id] = true;
+            return { adds: adds, rides: rides };
+        }
+
+        // Tile at the centre of the busiest 20x20 area of plugin changes (new path additions,
+        // new rides and stalls, weighted 3), or null when nothing changed.
+        function focusTile(marks) {
+            var pts = [], now = mapMarks(), k;
+            for (k in now.adds) if (marks.adds[k] !== now.adds[k]) {
+                var xy = k.split(",");
+                pts.push({ x: +xy[0], y: +xy[1], w: 1 });
+            }
+            var rs = map.rides;
+            for (var i = 0; i < rs.length; i++) {
+                if (marks.rides[rs[i].id]) continue;
+                var st = rs[i].stations;
+                for (var s = 0; s < st.length; s++) if (st[s].start) pts.push({ x: Math.floor(st[s].start.x / 32), y: Math.floor(st[s].start.y / 32), w: 3 });
+            }
+            var best = null, bestW = 0;
+            for (var a = 0; a < pts.length; a++) {
+                var w = 0;
+                for (var b = 0; b < pts.length; b++) if (Math.abs(pts[a].x - pts[b].x) <= 10 && Math.abs(pts[a].y - pts[b].y) <= 10) w += pts[b].w;
+                if (w > bestW) { bestW = w; best = { x: pts[a].x, y: pts[a].y, weight: w }; }
+            }
+            return best;
+        }
+
+        // A headless game cannot draw (captureImage asserts: no sprites loaded), so the park
+        // is saved and run.mjs renders it with `openrct2 screenshot`.
+        function capture(name, tile) {
+            if (!tile) return false;
+            try {
+                context.saveGame({ filename: "capture-" + name });
+                return true;
+            } catch (e) {
+                send({ type: "error", error: "saveGame: " + e });
+                return false;
+            }
+        }
+
         function hello() {
             var names = [];
             var plugins = pluginManager.plugins;
@@ -290,13 +342,15 @@ registerPlugin({
             send({ type: "settings", stored: stored });
         }
 
-        function start(days, speed, perturb) {
+        function start(days, speed, perturb, cap) {
             if (daySub) daySub.dispose();
             daysWanted = days;
             daysDone = 0;
             breakdownsToday = 0;
             moneyReset();
             var census0 = census();
+            var marks = cap ? mapMarks() : null;
+            var shots = [];
             send(snapshot());
             // Writing context.paused from a socket callback throws "Game state is not
             // mutable in this context"; the pausetoggle action works.
@@ -305,6 +359,9 @@ registerPlugin({
             daySub = context.subscribe("interval.day", function () {
                 daysDone++;
                 if (daysDone === 1) {
+                    // Saving from the socket callback throws "not mutable in this context", so
+                    // the fixed-frame "before" image is taken on the first day tick.
+                    if (cap && cap.at && capture("start", cap.at)) shots.push("start");
                     for (var n = 0; n < perturb; n++) context.getRandom(0, 2);
                     moneyReset();
                 }
@@ -313,7 +370,12 @@ registerPlugin({
                     daySub.dispose();
                     daySub = null;
                     if (!context.paused) context.executeAction("pausetoggle", {});
-                    send({ type: "done", days: daysDone, census0: census0, census: census() });
+                    var focus = null;
+                    if (cap) {
+                        focus = cap.at || focusTile(marks);
+                        if (capture("end", focus)) shots.push("end");
+                    }
+                    send({ type: "done", days: daysDone, census0: census0, census: census(), focus: focus, shots: shots });
                 }
             });
         }
@@ -333,7 +395,7 @@ registerPlugin({
             if (msg.cmd === "hello") hello();
             else if (msg.cmd === "nomoney") noMoney();
             else if (msg.cmd === "settings") settings(msg.set, msg.keys, msg.debug);
-            else if (msg.cmd === "start") start(msg.days | 0, msg.speed | 0, msg.perturb | 0);
+            else if (msg.cmd === "start") start(msg.days | 0, msg.speed | 0, msg.perturb | 0, msg.capture || null);
             else send({ type: "error", error: "unknown cmd " + msg.cmd });
         }
 

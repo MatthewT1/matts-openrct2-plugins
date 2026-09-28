@@ -1,0 +1,434 @@
+[
+ {
+  "save": "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios/Six Flags Magic Mountain.SC6",
+  "out": "harness-runs/showcase-140/Six_Flags_Magic_Mountain/r1/defaults",
+  "days": 90,
+  "perturb": 1,
+  "arms": [
+   "off",
+   "on"
+  ],
+  "settings": "defaults",
+  "minOpenRides": 5,
+  "capture": true
+ },
+ {
+  "save": "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios/Six Flags Magic Mountain.SC6",
+  "out": "harness-runs/showcase-140/Six_Flags_Magic_Mountain/r1/all",
+  "days": 90,
+  "perturb": 1,
+  "arms": [
+   "on"
+  ],
+  "settings": "all",
+  "minOpenRides": 5
+ },
+ {
+  "save": "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios/Six Flags Magic Mountain.SC6",
+  "out": "harness-runs/showcase-140/Six_Flags_Magic_Mountain/r2/defaults",
+  "days": 90,
+  "perturb": 2,
+  "arms": [
+   "off",
+   "on"
+  ],
+  "settings": "defaults",
+  "minOpenRides": 5,
+  "capture": false
+ },
+ {
+  "save": "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios/Six Flags Magic Mountain.SC6",
+  "out": "harness-runs/showcase-140/Six_Flags_Magic_Mountain/r2/all",
+  "days": 90,
+  "perturb": 2,
+  "arms": [
+   "on"
+  ],
+  "settings": "all",
+  "minOpenRides": 5
+ },
+ {
+  "save": "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios/Six Flags Magic Mountain.SC6",
+  "out": "harness-runs/showcase-140/Six_Flags_Magic_Mountain/r3/defaults",
+  "days": 90,
+  "perturb": 3,
+  "arms": [
+   "off",
+   "on"
+  ],
+  "settings": "defaults",
+  "minOpenRides": 5,
+  "capture": false
+ },
+ {
+  "save": "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios/Six Flags Magic Mountain.SC6",
+  "out": "harness-runs/showcase-140/Six_Flags_Magic_Mountain/r3/all",
+  "days": 90,
+  "perturb": 3,
+  "arms": [
+   "on"
+  ],
+  "settings": "all",
+  "minOpenRides": 5
+ },
+ {
+  "save": "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios/Six Flags over Texas.SC6",
+  "out": "harness-runs/showcase-140/Six_Flags_over_Texas/r1/defaults",
+  "days": 90,
+  "perturb": 1,
+  "arms": [
+   "off",
+   "on"
+  ],
+  "settings": "defaults",
+  "minOpenRides": 5,
+  "capture": true
+ },
+ {
+  "save": "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios/Six Flags over Texas.SC6",
+  "out": "harness-runs/showcase-140/Six_Flags_over_Texas/r1/all",
+  "days": 90,
+  "perturb": 1,
+  "arms": [
+   "on"
+  ],
+  "settings": "all",
+  "minOpenRides": 5
+ },
+ {
+  "save": "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios/Six Flags over Texas.SC6",
+  "out": "harness-runs/showcase-140/Six_Flags_over_Texas/r2/defaults",
+  "days": 90,
+  "perturb": 2,
+  "arms": [
+   "off",
+   "on"
+  ],
+  "settings": "defaults",
+  "minOpenRides": 5,
+  "capture": false
+ },
+ {
+  "save": "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios/Six Flags over Texas.SC6",
+  "out": "harness-runs/showcase-140/Six_Flags_over_Texas/r2/all",
+  "days": 90,
+  "perturb": 2,
+  "arms": [
+   "on"
+  ],
+  "settings": "all",
+  "minOpenRides": 5
+ },
+ {
+  "save": "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios/Six Flags over Texas.SC6",
+  "out": "harness-runs/showcase-140/Six_Flags_over_Texas/r3/defaults",
+  "days": 90,
+  "perturb": 3,
+  "arms": [
+   "off",
+   "on"
+  ],
+  "settings": "defaults",
+  "minOpenRides": 5,
+  "capture": false
+ },
+ {
+  "save": "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios/Six Flags over Texas.SC6",
+  "out": "harness-runs/showcase-140/Six_Flags_over_Texas/r3/all",
+  "days": 90,
+  "perturb": 3,
+  "arms": [
+   "on"
+  ],
+  "settings": "all",
+  "minOpenRides": 5
+ },
+ {
+  "save": "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios/Six Flags Great Adventure.SC6",
+  "out": "harness-runs/showcase-140/Six_Flags_Great_Adventure/r1/defaults",
+  "days": 90,
+  "perturb": 1,
+  "arms": [
+   "off",
+   "on"
+  ],
+  "settings": "defaults",
+  "minOpenRides": 5,
+  "capture": true
+ },
+ {
+  "save": "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios/Six Flags Great Adventure.SC6",
+  "out": "harness-runs/showcase-140/Six_Flags_Great_Adventure/r1/all",
+  "days": 90,
+  "perturb": 1,
+  "arms": [
+   "on"
+  ],
+  "settings": "all",
+  "minOpenRides": 5
+ },
+ {
+  "save": "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios/Six Flags Great Adventure.SC6",
+  "out": "harness-runs/showcase-140/Six_Flags_Great_Adventure/r2/defaults",
+  "days": 90,
+  "perturb": 2,
+  "arms": [
+   "off",
+   "on"
+  ],
+  "settings": "defaults",
+  "minOpenRides": 5,
+  "capture": false
+ },
+ {
+  "save": "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios/Six Flags Great Adventure.SC6",
+  "out": "harness-runs/showcase-140/Six_Flags_Great_Adventure/r2/all",
+  "days": 90,
+  "perturb": 2,
+  "arms": [
+   "on"
+  ],
+  "settings": "all",
+  "minOpenRides": 5
+ },
+ {
+  "save": "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios/Six Flags Great Adventure.SC6",
+  "out": "harness-runs/showcase-140/Six_Flags_Great_Adventure/r3/defaults",
+  "days": 90,
+  "perturb": 3,
+  "arms": [
+   "off",
+   "on"
+  ],
+  "settings": "defaults",
+  "minOpenRides": 5,
+  "capture": false
+ },
+ {
+  "save": "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios/Six Flags Great Adventure.SC6",
+  "out": "harness-runs/showcase-140/Six_Flags_Great_Adventure/r3/all",
+  "days": 90,
+  "perturb": 3,
+  "arms": [
+   "on"
+  ],
+  "settings": "all",
+  "minOpenRides": 5
+ },
+ {
+  "save": "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios/Six Flags Holland.SC6",
+  "out": "harness-runs/showcase-140/Six_Flags_Holland/r1/defaults",
+  "days": 90,
+  "perturb": 1,
+  "arms": [
+   "off",
+   "on"
+  ],
+  "settings": "defaults",
+  "minOpenRides": 5,
+  "capture": true
+ },
+ {
+  "save": "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios/Six Flags Holland.SC6",
+  "out": "harness-runs/showcase-140/Six_Flags_Holland/r1/all",
+  "days": 90,
+  "perturb": 1,
+  "arms": [
+   "on"
+  ],
+  "settings": "all",
+  "minOpenRides": 5
+ },
+ {
+  "save": "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios/Six Flags Holland.SC6",
+  "out": "harness-runs/showcase-140/Six_Flags_Holland/r2/defaults",
+  "days": 90,
+  "perturb": 2,
+  "arms": [
+   "off",
+   "on"
+  ],
+  "settings": "defaults",
+  "minOpenRides": 5,
+  "capture": false
+ },
+ {
+  "save": "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios/Six Flags Holland.SC6",
+  "out": "harness-runs/showcase-140/Six_Flags_Holland/r2/all",
+  "days": 90,
+  "perturb": 2,
+  "arms": [
+   "on"
+  ],
+  "settings": "all",
+  "minOpenRides": 5
+ },
+ {
+  "save": "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios/Six Flags Holland.SC6",
+  "out": "harness-runs/showcase-140/Six_Flags_Holland/r3/defaults",
+  "days": 90,
+  "perturb": 3,
+  "arms": [
+   "off",
+   "on"
+  ],
+  "settings": "defaults",
+  "minOpenRides": 5,
+  "capture": false
+ },
+ {
+  "save": "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios/Six Flags Holland.SC6",
+  "out": "harness-runs/showcase-140/Six_Flags_Holland/r3/all",
+  "days": 90,
+  "perturb": 3,
+  "arms": [
+   "on"
+  ],
+  "settings": "all",
+  "minOpenRides": 5
+ },
+ {
+  "save": "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios/Six Flags Belgium.SC6",
+  "out": "harness-runs/showcase-140/Six_Flags_Belgium/r1/defaults",
+  "days": 90,
+  "perturb": 1,
+  "arms": [
+   "off",
+   "on"
+  ],
+  "settings": "defaults",
+  "minOpenRides": 5,
+  "capture": true
+ },
+ {
+  "save": "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios/Six Flags Belgium.SC6",
+  "out": "harness-runs/showcase-140/Six_Flags_Belgium/r1/all",
+  "days": 90,
+  "perturb": 1,
+  "arms": [
+   "on"
+  ],
+  "settings": "all",
+  "minOpenRides": 5
+ },
+ {
+  "save": "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios/Six Flags Belgium.SC6",
+  "out": "harness-runs/showcase-140/Six_Flags_Belgium/r2/defaults",
+  "days": 90,
+  "perturb": 2,
+  "arms": [
+   "off",
+   "on"
+  ],
+  "settings": "defaults",
+  "minOpenRides": 5,
+  "capture": false
+ },
+ {
+  "save": "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios/Six Flags Belgium.SC6",
+  "out": "harness-runs/showcase-140/Six_Flags_Belgium/r2/all",
+  "days": 90,
+  "perturb": 2,
+  "arms": [
+   "on"
+  ],
+  "settings": "all",
+  "minOpenRides": 5
+ },
+ {
+  "save": "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios/Six Flags Belgium.SC6",
+  "out": "harness-runs/showcase-140/Six_Flags_Belgium/r3/defaults",
+  "days": 90,
+  "perturb": 3,
+  "arms": [
+   "off",
+   "on"
+  ],
+  "settings": "defaults",
+  "minOpenRides": 5,
+  "capture": false
+ },
+ {
+  "save": "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios/Six Flags Belgium.SC6",
+  "out": "harness-runs/showcase-140/Six_Flags_Belgium/r3/all",
+  "days": 90,
+  "perturb": 3,
+  "arms": [
+   "on"
+  ],
+  "settings": "all",
+  "minOpenRides": 5
+ },
+ {
+  "save": "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios/Crazy Castle.SC6",
+  "out": "harness-runs/showcase-140/Crazy_Castle/r1/defaults",
+  "days": 90,
+  "perturb": 1,
+  "arms": [
+   "off",
+   "on"
+  ],
+  "settings": "defaults",
+  "minOpenRides": 5,
+  "capture": true
+ },
+ {
+  "save": "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios/Crazy Castle.SC6",
+  "out": "harness-runs/showcase-140/Crazy_Castle/r1/all",
+  "days": 90,
+  "perturb": 1,
+  "arms": [
+   "on"
+  ],
+  "settings": "all",
+  "minOpenRides": 5
+ },
+ {
+  "save": "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios/Crazy Castle.SC6",
+  "out": "harness-runs/showcase-140/Crazy_Castle/r2/defaults",
+  "days": 90,
+  "perturb": 2,
+  "arms": [
+   "off",
+   "on"
+  ],
+  "settings": "defaults",
+  "minOpenRides": 5,
+  "capture": false
+ },
+ {
+  "save": "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios/Crazy Castle.SC6",
+  "out": "harness-runs/showcase-140/Crazy_Castle/r2/all",
+  "days": 90,
+  "perturb": 2,
+  "arms": [
+   "on"
+  ],
+  "settings": "all",
+  "minOpenRides": 5
+ },
+ {
+  "save": "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios/Crazy Castle.SC6",
+  "out": "harness-runs/showcase-140/Crazy_Castle/r3/defaults",
+  "days": 90,
+  "perturb": 3,
+  "arms": [
+   "off",
+   "on"
+  ],
+  "settings": "defaults",
+  "minOpenRides": 5,
+  "capture": false
+ },
+ {
+  "save": "E:/Gog/RollerCoaster Tycoon 2 Triple Thrill Pack/Scenarios/Crazy Castle.SC6",
+  "out": "harness-runs/showcase-140/Crazy_Castle/r3/all",
+  "days": 90,
+  "perturb": 3,
+  "arms": [
+   "on"
+  ],
+  "settings": "all",
+  "minOpenRides": 5
+ }
+]

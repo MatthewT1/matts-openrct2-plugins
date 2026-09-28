@@ -44,6 +44,8 @@ Money in `summary.md` is in currency units. The CSV and JSON keep the game's raw
 | `--game-port`, `--agent-port` | 11800, 47820 | Both bound to 127.0.0.1. |
 | `--perturb <n>` | 0 | Draw the scenario RNG n times at the first day tick (#63), giving a replicate of an otherwise deterministic run. |
 | `--min-open-rides <n>` | 0 | Exit with code 3 and no output when the park has fewer open rides at load. |
+| `--capture` | off | README images (#140). The on arm saves the park at the end and it is rendered as `on/end.png`, framed on the busiest 20x20 area of plugin changes (new path additions, new rides and stalls). The off arm then reuses that frame and adds `off/start.png` (day 1) and `off/end.png`. The on arm runs first. |
+| `--capture-at X,Y` | | The same with a fixed frame (tile coordinates). |
 
 Each day row also records (#63): ride reliability/downtime (mean of open rides), rides broken
 now, breakdowns that day, vomit, a tally of selected guest thoughts (`th*`, plus negative and
@@ -114,6 +116,18 @@ node tools/headless/ablation.mjs --plugin-dir dist --seed 133 --parks 18 --k 8
 
 ## Things to know
 
+- **A headless game cannot draw.** `context.captureImage` asserts ("GfxGetG1Element called on
+  headless instance") and stalls the run, so `--capture` saves the park with
+  `context.saveGame` and `run.mjs` renders it with `openrct2 screenshot <park> <png> 960 540 x y
+  0 0` afterwards. `saveGame` throws "not mutable in this context" from a socket callback, so
+  saves happen on a day tick. The screenshot command takes no `--user-data-path` and uses your
+  default OpenRCT2 config (it also writes `debug_replay.parkrep` there).
+- **Plugin windows need the real game.** `node tools/window-shots.mjs --park <file.park>` opens
+  the windowed game on a throwaway user folder (scale 2, £) with copies of our plugins that
+  open their own window one at a time, and captures each from the screen into
+  `docs/img/windows/` (Windows only; keep the game window visible for about a minute). Use a
+  park a harness run saved, so the windows show real numbers. The README charts come from
+  `node tools/showcase-charts.mjs` after `pool.mjs tools/headless/showcase.jobs.json`.
 - **Judge build spend at 90 d, not 30 d.** Auto-Builder's cash gap vs no builder is
   mostly up-front building; on 3 of 4 young parks it stops growing after month 1 and
   company value turns positive by day 90 (#134). Cash also varies by about £1-3k between
