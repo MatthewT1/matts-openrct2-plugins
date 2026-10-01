@@ -144,24 +144,27 @@ function rig(result, backoffDays = HIRE_BACKOFF_DAYS) {
     // Reason + window line (#163 telemetry).
     p = planAwardCrew(I(10, 4, 1, 4, 490), CREW);
     ok(p.reason === "short" && p.staff === 19 && p.shortBy === 1, "19 of 20: short by 1");
-    ok(awardCrewStatusText(p, 0) === "Best Staff: 19/20 staff, 1 short, hiring guards", "short text");
+    ok(awardCrewStatusText(p, 0) === "Best Staff: 19/20, hiring guards", "short text");
     p = planAwardCrew(I(10, 4, 2, 4, 490, 1), CREW);
     ok(p.reason === "met" && p.shortBy === 0, "our guard closes the gap: met");
-    ok(awardCrewStatusText(p, 1) === "Best Staff: 20/20 staff, line met (1 award guard)", "met text names our guard");
+    ok(awardCrewStatusText(p, 1) === "Best Staff: 20/20, line met (1 hired)", "met text names our guard");
     p = planAwardCrew(I(25, 10, 1, 7, 3041), CREW);
     ok(p.reason === "outOfReach" && p.shortBy === 53, "43 of 96: out of reach");
-    ok(awardCrewStatusText(p, 0) === "Best Staff: 43/96 staff, 53 short, too far for guards", "out-of-reach text");
+    ok(awardCrewStatusText(p, 0) === "Best Staff: 43/96, out of reach", "out-of-reach text");
     p = planAwardCrew(I(0, 4, 1, 4, 300), CREW);
     ok(p.reason === "missingType", "no handyman: missing type");
-    ok(awardCrewStatusText(p, 0) === "Best Staff: 9/20 staff, needs every staff type", "missing-type text");
+    ok(awardCrewStatusText(p, 0) === "Best Staff: 9/20, needs every type", "missing-type text");
     p = planAwardCrew(I(14, 4, 4, 4, 490, 3), CREW);
-    ok(p.reason === "met" && awardCrewStatusText(p, 3).indexOf("(3 award guards)") > 0, "over the line: met, plural guards");
+    ok(p.reason === "met" && awardCrewStatusText(p, 3).indexOf("(3 hired)") > 0, "over the line: met, guards counted");
     p = planAwardCrew(I(10, 4, 2, 4, 490, 1), CREW);
-    ok(awardCrewStatusText(p, 1, 4) === "Best Staff: 20/20 staff, award held, 4 months left (1 award guard)", "award held: months left shown");
-    ok(awardCrewStatusText(p, 0, 1) === "Best Staff: 20/20 staff, award held, 1 month left", "one month: singular");
-    ok(awardCrewStatusText(p, 1, 0) === "Best Staff: 20/20 staff, line met (1 award guard)", "0 months = not held");
+    ok(awardCrewStatusText(p, 1, 4) === "Best Staff: 20/20, award held 4 mo (1 hired)", "award held: months left shown");
+    ok(awardCrewStatusText(p, 0, 1) === "Best Staff: 20/20, award held 1 mo", "one month");
+    ok(awardCrewStatusText(p, 1, 0) === "Best Staff: 20/20, line met (1 hired)", "0 months = not held");
+    for (const q of [planAwardCrew(I(40, 20, 12, 7, 3041, 12), CREW), planAwardCrew(I(25, 10, 1, 7, 3041), CREW), planAwardCrew(I(60, 20, 14, 5, 3100, 5), CREW)]) {
+        ok(awardCrewStatusText(q, 12, 5).length <= 46 && awardCrewStatusText(q, 12).length <= 46, "fits the window: " + awardCrewStatusText(q, 12));
+    }
     p = planAwardCrew(I(10, 4, 1, 4, 490), CREW);
-    ok(awardCrewStatusText(p, 0, 3).indexOf("award held, 3 months left") > 0, "held from earlier while 1 short now: still says held");
+    ok(awardCrewStatusText(p, 0, 3).indexOf("award held 3 mo") > 0, "held from earlier while 1 short now: still says held");
 }
 
 console.log(`${pass} passed, ${fail} failed`); if (fail) process.exitCode = 1;
