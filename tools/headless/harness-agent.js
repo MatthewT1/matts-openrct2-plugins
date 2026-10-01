@@ -128,7 +128,7 @@ registerPlugin({
         function guestStats() {
             var guests = map.getAllEntities("guest");
             var inPark = 0, happy = 0, c;
-            var out = { thoughtsNeg: 0, thoughtsPos: 0, lostFresh: 0 };
+            var out = { thoughtsNeg: 0, thoughtsPos: 0, lostFresh: 0, awCleanFresh: 0, awSceneryFresh: 0, awHungryFresh: 0, awToiletFresh: 0, awUntidyFresh: 0, awVandalFresh: 0 };
             for (c in THOUGHTS_NEG) out[c] = 0;
             for (c in THOUGHTS_POS) out[c] = 0;
             for (c in THOUGHTS_INFO) out[c] = 0;
@@ -142,6 +142,18 @@ registerPlugin({
                 // cant_find (not cant_find_exit) with freshness <= 5. Close, not exact: the API hides
                 // freshness-0 thoughts (ScGuest.cpp:578), which wait at most ~220 ticks (Guest.cpp:5145-5200).
                 if (th.length > 0 && th[0].freshness <= 5 && (th[0].type === "lost" || th[0].type === "cant_find")) out.lostFresh++;
+                // #162 award inputs: the same newest-thought test, per award clause.
+                if (th.length > 0 && th[0].freshness <= 5) {
+                    var t0 = th[0].type;
+                    if (t0 === "very_clean") out.awCleanFresh++;
+                    else if (t0 === "scenery") out.awSceneryFresh++;
+                    else if (t0 === "hungry") out.awHungryFresh++;
+                    else if (t0 === "toilet") out.awToiletFresh++;
+                    else if (t0 === "bad_litter" || t0 === "path_disgusting" || t0 === "vandalism") {
+                        out.awUntidyFresh++;
+                        if (t0 === "vandalism") out.awVandalFresh++;
+                    }
+                }
                 for (var j = 0; j < th.length; j++) {
                     if (THOUGHTS_SPLIT[th[j].type]) out[THOUGHTS_SPLIT[th[j].type]]++;
                     var col = thoughtCol[th[j].type];
@@ -154,6 +166,8 @@ registerPlugin({
             out.avgHappiness = inPark > 0 ? Math.round(happy / inPark) : 0;
             // 1 when the award rule is met today: >= 10 and >= guests / 64 (integer division).
             out.confusingAward = out.lostFresh >= 10 && out.lostFresh >= Math.floor(inPark / 64) ? 1 : 0;
+            out.guestsInPark = inPark;
+            out.guestEntities = guests.length;
             return out;
         }
 
@@ -172,6 +186,41 @@ registerPlugin({
                 avgReliability: open > 0 ? Math.round(rel / open) : 0,
                 avgDowntime: open > 0 ? Math.round(down / open) : 0,
                 ridesBroken: broken
+            };
+        }
+
+        // #162: 1 when the park would be granted each positive award if it were tested today
+        // (Award.cpp:121-150 tidy, 202-232 beautiful, 251-277 safest, 280-297 staff, 300-342 food,
+        // 390-420 toilets), plus the awards it holds. The "other award held" exclusions are left
+        // out, and safest cannot see past crashes, so both are upper bounds.
+        function awardStats(g, staff) {
+            var rides = map.rides, toilets = 0, food = 0, items = {}, unique = 0;
+            for (var i = 0; i < rides.length; i++) {
+                var r = rides[i];
+                if (r.status !== "open") continue;
+                if (r.type === 36) toilets++;
+                else if (r.type === 28) {
+                    food++;
+                    var it = r.object ? r.object.shopItem : -1;
+                    if (!items[it]) { items[it] = true; unique++; }
+                }
+            }
+            var n = g.guestsInPark, staffN = staff.handyman + staff.mechanic + staff.security + staff.entertainer;
+            var held = park.awards, pos = 0, neg = 0, names = [];
+            for (var j = 0; j < held.length; j++) {
+                if (held[j].positive) pos++; else neg++;
+                names.push(held[j].type);
+            }
+            return {
+                awToiletsOpen: toilets, awFoodShops: food, awFoodUnique: unique,
+                awTidy: g.awUntidyFresh <= 5 && g.awCleanFresh > Math.floor(n / 64) ? 1 : 0,
+                awBeautiful: g.awUntidyFresh <= 15 && g.awSceneryFresh > Math.floor(n / 128) ? 1 : 0,
+                awSafest: g.awVandalFresh <= 2 ? 1 : 0,
+                awStaff: staff.handyman > 0 && staff.mechanic > 0 && staff.security > 0 && staff.entertainer > 0
+                    && staffN >= 20 && staffN >= Math.floor(g.guestEntities / 32) ? 1 : 0,
+                awFood: food >= 7 && unique >= 4 && food >= Math.floor(n / 128) && g.awHungryFresh <= 12 ? 1 : 0,
+                awToilets: toilets >= 4 && toilets >= Math.floor(n / 128) && g.awToiletFresh <= 16 ? 1 : 0,
+                awardsPos: pos, awardsNeg: neg, awardsHeld: names.join("|")
             };
         }
 
@@ -241,6 +290,8 @@ registerPlugin({
             var k;
             for (k in m) row[k] = m[k];
             for (k in g) if (k !== "avgHappiness") row[k] = g[k];
+            var aw = awardStats(g, staff);
+            for (k in aw) row[k] = aw[k];
             return row;
         }
 

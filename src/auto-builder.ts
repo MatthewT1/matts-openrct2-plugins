@@ -74,7 +74,7 @@ function autoBuilderMain(): void {
             queueTvs.thought(type, x, y);
         },
         sweepComplete: function (): void { cheap.listener.sweepComplete(); },
-    }, courtStats);
+    }, courtStats, scan.getCoverageTiles);
     const repairs = createRepairManager(settings, dbg, extras, scan);
     const courtExtras = createCourtExtrasManager(settings, dbg, extras, stalls, courtStats, amenityObjectIndex);
     const { sampleGuestNeeds, manageFacilities, facilityTracker } = facilities;
@@ -97,6 +97,8 @@ function autoBuilderMain(): void {
             queueTvsPlaced: queueTvs.placedCount(),
             repaired: repairs.repairedCount(),
             autoCourtExtras: courtExtras.isOn(),
+            autoAwardTopUp: settings.autoAwardTopUp.get(),
+            awardTopUps: facilities.getAwardTopUps(),
             courtStats: courtStats.read(),
             stillBroken: repairs.brokenCount(),
             placedAmenities: placedCount(),
