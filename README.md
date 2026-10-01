@@ -101,6 +101,9 @@ Places benches and bins and builds guest facilities. Split out of Trash Manager 
 - **Food courts** *(on by default, can be switched off)*. Where 2+ food or drink stalls stand
   together, fills the nearby paths with benches and bins and adds a toilet if none is close,
   from the same monthly budget as queue TVs (#83).
+- **Award top-up** *(on by default, can be switched off)*. When the park is 1 to 3 toilets or
+  food stalls short of the Best Toilets or Best Food award and has £5,000, builds one every
+  5 days. Each award held means 25% more new guests (#162).
 - **Queue TVs** *(on by default, can be switched off)*. Once the TV is researched, puts a TV
   on every 2nd empty tile of queues where guests wait a long time, front first: long-waiting guests only stop
   losing happiness on a tile with a TV. Paid from a monthly extras budget (5% of the cash
@@ -178,6 +181,8 @@ Once the park has 20 or more staff and no security guard, it also hires one guar
 Staff award (+25% new guests while held) needs every staff type on the roster (#92). It also
 needs 20 staff and one per 32 guests, so when the park is 1 to 5 short of that line it hires
 a few more guards to close the gap, and lets its own extras go when they stop being needed (#163).
+The window shows where the park stands ("Best Staff: 19/20 staff, 1 short, hiring guards"),
+and says so when the award is held.
 
 ![Guest happiness, guests fed up with queuing and guests upset by vandalism, over 90 days: plugins off vs defaults vs every feature on](docs/img/showcase/staff-extras.svg)
 
@@ -196,6 +201,11 @@ needs more guests.
 
 The game doesn't let plugins see which campaigns are running, so this window keeps its own
 record, saved with the park.
+
+It also warns about two prices that quietly cost you guests, without ever changing them: an
+entrance fee above your rides' total value (new arrivals drop to a quarter, #94), and a ride
+priced above what guests will pay for it, which they refuse at the entrance and leave
+unhappier (#166).
 
 ### Path Connector (experimental)
 
