@@ -175,7 +175,9 @@ entrance and one at each food court (#68). It only ever fires
 entertainers it hired itself, so the ones you placed by a themed ride stay put.
 
 Once the park has 20 or more staff and no security guard, it also hires one guard. The Best
-Staff award (+25% new guests while held) needs every staff type on the roster (#92).
+Staff award (+25% new guests while held) needs every staff type on the roster (#92). It also
+needs 20 staff and one per 32 guests, so when the park is 1 to 5 short of that line it hires
+a few more guards to close the gap, and lets its own extras go when they stop being needed (#163).
 
 ![Guest happiness, guests fed up with queuing and guests upset by vandalism, over 90 days: plugins off vs defaults vs every feature on](docs/img/showcase/staff-extras.svg)
 

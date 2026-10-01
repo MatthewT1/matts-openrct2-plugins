@@ -45,7 +45,9 @@ import {
 } from "./entertainer-targeting";
 import { findCourts, DEFAULT_COURT_OPTIONS } from "./facilities";
 import { createStaffingController, StaffingDecision } from "./staffing";
-import { createStaffHirer, wantsAwardGuard, HIRE_BACKOFF_DAYS } from "./staff-hiring";
+import { createStaffHirer, wantsAwardGuard, planAwardCrew, DEFAULT_AWARD_CREW_OPTIONS, HIRE_BACKOFF_DAYS } from "./staff-hiring";
+import { createOwnedStaff } from "./staff-ownership";
+import { spendGate } from "./cash-gate";
 import { createParkNews, newsCheckbox } from "./park-news";
 import { EXTRAS_PHRASES } from "./news";
 import { createDeferredActions } from "./deferred";
@@ -114,16 +116,65 @@ registerPlugin({
             count: (name, n) => dbg.count(name, n),
         });
 
+        // #163: guards hired to hold the headcount at the Best Staff line. Only these are
+        // ever fired; the #92 guard above and the player's guards are not in this list.
+        const crewGuards = createOwnedStaff(storage, "ourAwardGuards");
+        const AWARD_CREW_MIN_CASH = 3_000 * 10; // GBP 3,000: wages recur
+
         /** Hires the award guard if the roster needs one. Cheap: one staff list read. */
         function manageAwardGuard(): void {
             if (!settings.awardGuard.get()) return;
-            const types = map.getAllEntities("staff").map((s: Staff) => s.staffType);
-            if (!wantsAwardGuard(types) || guardHirer.blocked()) return;
+            const staff = map.getAllEntities("staff");
+            const types = staff.map((s: Staff) => s.staffType);
+            if (wantsAwardGuard(types)) {
+                if (guardHirer.blocked()) return;
+                guardHirer.hire((peepId: number) => {
+                    dbg.count("guardHired");
+                    news.add("guardHired", undefined, { type: "peep", id: peepId });
+                    console.log("[Staff Extras] Hired a security guard (" + formatMoney(SECURITY_WAGE_PER_MONTH) +
+                        "/month) so the Best Staff award becomes possible: it needs every staff type.");
+                });
+                return;
+            }
+            manageAwardCrew(staff);
+        }
+
+        /** Holds the headcount at the Best Staff line with a few guards of our own (#163). */
+        function manageAwardCrew(staff: Staff[]): void {
+            const n: Record<string, number> = { handyman: 0, mechanic: 0, security: 0, entertainer: 0 };
+            const guardIds: number[] = [];
+            for (let i = 0; i < staff.length; i++) {
+                const id = staff[i].id;
+                if (id === null || guardHirer.firePending(id)) continue;
+                n[staff[i].staffType]++;
+                if (staff[i].staffType === "security") guardIds.push(id);
+            }
+            const owned = crewGuards.prune(guardIds);
+            const ownedIds = guardIds.filter((id) => owned[String(id)] === true);
+            const plan = planAwardCrew({
+                handymen: n.handyman, mechanics: n.mechanic, security: n.security, entertainers: n.entertainer,
+                guestEntities: map.getAllEntities("guest").length, ownedGuards: ownedIds.length,
+            }, DEFAULT_AWARD_CREW_OPTIONS);
+            if (plan.action === "none") return;
+            if (plan.action === "fire") {
+                const id = ownedIds[ownedIds.length - 1];
+                crewGuards.remove(id);
+                guardHirer.fire(id);
+                dbg.count("crewGuardFired");
+                console.log("[Staff Extras] Let an award guard go: the park is past the Best Staff line of " + plan.line + " staff without them.");
+                return;
+            }
+            if (spendGate(park.cash, AWARD_CREW_MIN_CASH, park.getFlag("noMoney"), "build") === "lowCash") {
+                dbg.count("crewGuardLowCash");
+                return;
+            }
+            if (guardHirer.blocked()) return;
             guardHirer.hire((peepId: number) => {
-                dbg.count("guardHired");
+                crewGuards.add(peepId);
+                dbg.count("crewGuardHired");
                 news.add("guardHired", undefined, { type: "peep", id: peepId });
                 console.log("[Staff Extras] Hired a security guard (" + formatMoney(SECURITY_WAGE_PER_MONTH) +
-                    "/month) so the Best Staff award becomes possible: it needs every staff type.");
+                    "/month) toward the Best Staff award: it needs " + plan.line + " staff.");
             });
         }
 
@@ -714,10 +765,12 @@ registerPlugin({
                     {
                         type: "checkbox", name: "chkGuard",
                         x: 8, y: 196, width: 264, height: 14,
-                        text: "Hire 1 security guard for Best Staff award",
-                        tooltip: "Once the park has 20+ staff and no security guard, hire one ("
-                            + formatMoney(SECURITY_WAGE_PER_MONTH) + "/month). The Best Staff award (+25% new guests "
-                            + "while held) needs every staff type, and nothing else hires security. On by default (#92).",
+                        text: "Hire security guards for Best Staff award",
+                        tooltip: "The Best Staff award (+25% new guests while held) needs every staff type, 20+ staff "
+                            + "and one per 32 guests. Once the park has 20+ staff and no security guard, hires one ("
+                            + formatMoney(SECURITY_WAGE_PER_MONTH) + "/month); and when the park is 1 to 5 staff short of "
+                            + "the line, hires guards to close the gap, one a day, with 3,000 in the bank. Lets its own "
+                            + "extra guards go when they are no longer needed; never fires yours. On by default (#92, #163).",
                         isChecked: settings.awardGuard.get(),
                         onChange: (checked: boolean) => { settings.awardGuard.set(checked); }
                     },

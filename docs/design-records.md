@@ -623,6 +623,18 @@ the ideal ride settings are, from community practice and the source, is left for
 
 ---
 
+### AC — Award crew: guards that hold the Best Staff line (#163)
+
+**Basis.** Best Staff needs all four staff types, 20+ staff and staff >= guest entities / 32 (`management/Award.cpp:280-297`). Measured in #162: never deserved in 25 of 32 parks, and 12 of those were 1-5 staff short, because the adaptive controllers trim handymen and mechanics below the line.
+
+**Decision.** `planAwardCrew` in `src/staff-hiring.ts`. Line = max(20, guests / 32 + 1). With a handyman, a mechanic and an entertainer on the roster and a gap of 1-5, Staff Extras hires security guards up to the gap, one a day, with GBP 3,000 in the bank. Guards, because nothing else trims them (extra handymen would be fired by Trash Manager the next day) and a guard nearby stops vandalism. Its own guards (`ourAwardGuards` in park storage) are let go once it owns two more than needed, or when the gap passes 7; the #92 guard and the player's guards are never fired.
+
+**A/B (32 parks, 90 d, vs the same build without it).** Best Staff deserved on 19% -> 51% of park-days; parks deserving it on half the days or more 6 -> 18; rose in all 11 near-miss parks. Hired in 14 parks; there wages +GBP 570 and end cash -GBP 830 at median over 90 d (bar GBP 1,000). Passed.
+
+**The hold rule.** The first version released the whole crew whenever the gap passed 5, and a park swinging between 5 and 6 short hired and fired 16 guards in 90 days (Trinity Islands, deserved 24% of days). Holding until the gap passes 7 took that to 8 hires, 2 fires and 90%.
+
+---
+
 ## Ideas not yet scoped
 
 ### NEEDS — Guest-need clustering, then automatic facility placement

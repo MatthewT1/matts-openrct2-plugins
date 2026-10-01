@@ -1,4 +1,4 @@
-import { createStaffHirer, HIRE_BACKOFF_DAYS, wantsAwardGuard } from "./build/staff-hiring.mjs";
+import { createStaffHirer, HIRE_BACKOFF_DAYS, wantsAwardGuard, planAwardCrew, awardStaffLine, DEFAULT_AWARD_CREW_OPTIONS as CREW } from "./build/staff-hiring.mjs";
 let pass = 0, fail = 0;
 const ok = (c, m) => { c ? pass++ : (fail++, console.log("FAIL:", m)); };
 
@@ -99,6 +99,47 @@ function rig(result, backoffDays = HIRE_BACKOFF_DAYS) {
     const f = rig(() => ({ error: 1, errorMessage: "x" }));
     f.hirer.fire(6);
     ok(!f.hirer.firePending(6), "refused fire clears pending too");
+}
+
+// --- award crew (#163): guards that hold the Best Staff line -----------------------------
+{
+    const I = (handymen, mechanics, security, entertainers, guestEntities, ownedGuards = 0) => ({ handymen, mechanics, security, entertainers, guestEntities, ownedGuards });
+    ok(awardStaffLine(400, CREW) === 20, "small park: the line is 20");
+    ok(awardStaffLine(1280, CREW) === 41, "1280 guests: 40 + 1 spare");
+    let p = planAwardCrew(I(10, 4, 1, 4, 490), CREW);
+    ok(p.action === "hire" && p.target === 1 && p.line === 20, "Dynamite Dunes: 19 of 20 -> hire one");
+    p = planAwardCrew(I(10, 3, 1, 4, 373), CREW);
+    ok(p.action === "hire" && p.target === 2, "Jetlag Heights: 18 of 20 -> target two");
+    p = planAwardCrew(I(10, 4, 2, 4, 490, 1), CREW);
+    ok(p.action === "none" && p.target === 1, "gap closed by our guard: hold");
+    p = planAwardCrew(I(20, 8, 2, 7, 1322), CREW);
+    ok(p.action === "hire" && p.target === 5 && p.line === 42, "37 of 42 (41 + 1 spare): 5 short is still chased");
+    p = planAwardCrew(I(20, 8, 1, 6, 1322), CREW);
+    ok(p.action === "none" && p.target === 0, "Fort Anachronism, 35 of 42: 7 short is past maxExtra, nothing hired");
+    p = planAwardCrew(I(25, 10, 1, 7, 3041), CREW);
+    ok(p.action === "none", "Amity Airfield: 43 of 96, never chased");
+    p = planAwardCrew(I(0, 4, 1, 4, 300), CREW);
+    ok(p.action === "none" && p.target === 0, "no handyman: extra guards cannot earn the award");
+    p = planAwardCrew(I(10, 4, 1, 0, 300), CREW);
+    ok(p.action === "none", "no entertainer: same");
+    p = planAwardCrew(I(14, 4, 4, 4, 490, 3), CREW);
+    ok(p.action === "fire" && p.target === 0, "others grew to 23 without ours: 3 owned -> let one go");
+    p = planAwardCrew(I(14, 4, 2, 4, 490, 1), CREW);
+    ok(p.action === "none", "one owned over target is slack, not fired");
+    p = planAwardCrew(I(10, 4, 4, 4, 1600, 3), CREW);
+    ok(p.action === "fire", "park outgrew it (51 needed, 19 without ours): release");
+    p = planAwardCrew(I(10, 4, 2, 4, 1600, 1), CREW);
+    ok(p.action === "fire", "out of reach: released down to none");
+    p = planAwardCrew(I(10, 4, 1, 4, 1600, 0), CREW);
+    ok(p.action === "none", "nothing owned: never asks to fire");
+    p = planAwardCrew(I(10, 4, 6, 4, 780, 5), CREW);
+    ok(p.action === "hire" && p.target === 6, "gap grew to 6 while we own 5: hold and follow it, not release");
+    p = planAwardCrew(I(10, 4, 6, 4, 880, 5), CREW);
+    ok(p.action === "fire" && p.target === 0, "gap of 9 is past maxExtra + holdExtra: release");
+    p = planAwardCrew(I(10, 4, 1, 4, 780, 0), CREW);
+    ok(p.action === "none", "the same 6 gap with nothing owned is not started");
+    p = planAwardCrew(I(12, 4, 3, 4, 490, 2), CREW);
+    ok(p.action === "fire" && p.target === 0, "21 staff without ours and two owned: one is let go");
 }
 
 console.log(`${pass} passed, ${fail} failed`); if (fail) process.exitCode = 1;
