@@ -102,7 +102,7 @@ Places benches and bins and builds guest facilities. Split out of Trash Manager 
   together, fills the nearby paths with benches and bins and adds a toilet if none is close,
   from the same monthly budget as queue TVs (#83).
 - **Queue TVs** *(on by default, can be switched off)*. Once the TV is researched, puts a TV
-  on every 2nd empty queue tile of every ride, front first: long-waiting guests only stop
+  on every 2nd empty tile of queues where guests wait a long time, front first: long-waiting guests only stop
   losing happiness on a tile with a TV. Paid from a monthly extras budget (5% of the cash
   above £1,000, set at the start of each month) (#104, #116).
 - **Repairs** *(on by default, can be switched off)*. Vandals break benches, bins and lamps and

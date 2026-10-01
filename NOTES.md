@@ -117,6 +117,11 @@ npm test
 ```
 
 ```bash
+# Broken internal Markdown links (missing files or #anchors); CI runs this too
+npm run check:links
+```
+
+```bash
 # Headless plugins-on vs plugins-off run (~4 min for 60 days); see docs/headless-harness.md
 node tools/headless/run.mjs --save "<OpenRCT2 user dir>/save/YourPark.park" --days 60 --settings all
 ```
