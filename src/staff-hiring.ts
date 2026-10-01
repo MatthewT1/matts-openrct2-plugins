@@ -257,19 +257,18 @@ export function planAwardCrew(i: AwardCrewInput, o: AwardCrewOptions): AwardCrew
 }
 
 /**
- * One window line for the plan, e.g. "Best Staff: 21/20 staff, line met (2 award guards)".
+ * One window line for the plan, e.g. "Best Staff: 27/27, line met (6 hired)". Kept to
+ * 46 characters at most: the first wording lost its tail off the 280 px window.
  * `monthsHeld` is the award's months remaining when the park holds it right now: the game
  * tests one random award type a month (Award.cpp:635-680), so meeting the line and holding
  * the award are different things and the line says which.
  */
 export function awardCrewStatusText(p: AwardCrewPlan, ownedGuards: number, monthsHeld?: number): string {
-    const head = "Best Staff: " + p.staff + "/" + p.line + " staff, ";
-    const crew = ownedGuards > 0 ? " (" + ownedGuards + " award guard" + (ownedGuards === 1 ? "" : "s") + ")" : "";
-    if (monthsHeld !== undefined && monthsHeld > 0) {
-        return head + "award held, " + monthsHeld + " month" + (monthsHeld === 1 ? "" : "s") + " left" + crew;
-    }
+    const head = "Best Staff: " + p.staff + "/" + p.line + ", ";
+    const crew = ownedGuards > 0 ? " (" + ownedGuards + " hired)" : "";
+    if (monthsHeld !== undefined && monthsHeld > 0) return head + "award held " + monthsHeld + " mo" + crew;
     if (p.reason === "met") return head + "line met" + crew;
-    if (p.reason === "missingType") return head + "needs every staff type" + crew;
-    if (p.reason === "outOfReach") return head + p.shortBy + " short, too far for guards" + crew;
-    return head + p.shortBy + " short, hiring guards" + crew;
+    if (p.reason === "missingType") return head + "needs every type" + crew;
+    if (p.reason === "outOfReach") return head + "out of reach" + crew;
+    return head + "hiring guards" + crew;
 }

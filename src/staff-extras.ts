@@ -199,7 +199,7 @@ registerPlugin({
             }
             if (spendGate(park.cash, AWARD_CREW_MIN_CASH, park.getFlag("noMoney"), "build") === "lowCash") {
                 dbg.count("crewGuardLowCash");
-                awardStatus += ", waiting for " + formatMoney(AWARD_CREW_MIN_CASH);
+                awardStatus = awardStatus.replace("hiring guards", "guards wait for " + formatMoney(AWARD_CREW_MIN_CASH / 10));
                 return;
             }
             if (guardHirer.blocked()) { dbg.count("crewGuardSkippedBackoff"); return; }
@@ -810,7 +810,11 @@ registerPlugin({
                         isChecked: settings.awardGuard.get(),
                         onChange: (checked: boolean) => { settings.awardGuard.set(checked); }
                     },
-                    { type: "label", name: "lblAward", x: 20, y: 212, width: 252, height: 14, text: awardStatus },
+                    {
+                        type: "label", name: "lblAward", x: 8, y: 212, width: 264, height: 14, text: awardStatus,
+                        tooltip: "Staff on the roster against the Best Staff line (20, or one per 32 guests). "
+                            + "\"hired\" counts the guards this plugin hired to hold it.",
+                    },
                     { type: "label", name: "lblStatus", x: 8, y: 230, width: 264, height: 14, text: "" },
                     ...diagnosticsCheckbox(8, 250, 264),
                     newsCheckbox(settings.news, 8, 250 + DIAG_ROW, 264)
