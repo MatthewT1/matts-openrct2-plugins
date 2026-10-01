@@ -102,7 +102,7 @@ Places benches and bins and builds guest facilities. Split out of Trash Manager 
   together, fills the nearby paths with benches and bins and adds a toilet if none is close,
   from the same monthly budget as queue TVs (#83).
 - **Queue TVs** *(on by default, can be switched off)*. Once the TV is researched, puts a TV
-  on every 2nd empty queue tile of every ride, front first: long-waiting guests only stop
+  on every 2nd empty tile of queues where guests wait a long time, front first: long-waiting guests only stop
   losing happiness on a tile with a TV. Paid from a monthly extras budget (5% of the cash
   above £1,000, set at the start of each month) (#104, #116).
 - **Repairs** *(on by default, can be switched off)*. Vandals break benches, bins and lamps and
@@ -121,7 +121,7 @@ path below the Woodchip coaster.*
 
 ![Guests who are hungry, thirsty or need a toilet, and guests who are lost, over 90 days: plugins off vs defaults vs every feature on](docs/img/showcase/auto-builder.svg)
 
-<sub>Needs thoughts drop by about half. Lost guests go up with the plugins on (53 -> 73); we haven't worked out why yet.</sub>
+<sub>Needs thoughts drop by about half. The "lost" count (53 -> 73 with the plugins on) is almost all guests who can't find a ride they want (about 98%); almost none are actually lost (1 or fewer per park), and the Most Confusing Layout award never switches on. More guests and more places to go means more "where is it?" thoughts.</sub>
 
 ### Mechanic Manager
 
@@ -257,7 +257,7 @@ The decision-making code is kept apart from the code that talks to the game. Fil
 `staffing.ts`, `needs.ts` and `marketing.ts` take plain numbers in and return decisions,
 so they can be tested without the game running. The seven plugin files connect those
 decisions to the game. Their behaviour in a real park is checked with an optional
-diagnostics feed: tick **Diagnostics** in any plugin window, run `node tools/log-sink.mjs`,
+diagnostics feed: build with `npm run build:debug` (every window then shows **Diagnostics**, ticked), run `node tools/log-sink.mjs`,
 and timings and counters are written to `tools/rct-debug.log`.
 
 Every push is type-checked, tested and built by GitHub Actions. Pushing a tag such as

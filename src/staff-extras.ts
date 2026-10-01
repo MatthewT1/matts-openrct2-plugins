@@ -35,7 +35,7 @@
  * an explicit checkbox with the cost stated in its tooltip.
  */
 
-import { createDebugChannel, diagnosticsCheckbox } from "./debug";
+import { createDebugChannel, diagnosticsCheckbox, DIAG_ROW } from "./debug";
 import { boolSetting } from "./settings";
 import { formatMoney } from "./money";
 import {
@@ -604,7 +604,7 @@ registerPlugin({
                 classification: "staff-extras",
                 title: "Staff Extras v" + PLUGIN_VERSION,
                 width: 280,
-                height: 276,
+                height: 258 + DIAG_ROW,
                 widgets: [
                     {
                         type: "label", name: "lblStats",
@@ -662,8 +662,8 @@ registerPlugin({
                         onChange: (checked: boolean) => { settings.awardGuard.set(checked); }
                     },
                     { type: "label", name: "lblStatus", x: 8, y: 214, width: 264, height: 14, text: "" },
-                    diagnosticsCheckbox(8, 234, 264),
-                    newsCheckbox(settings.news, 8, 252, 264)
+                    ...diagnosticsCheckbox(8, 234, 264),
+                    newsCheckbox(settings.news, 8, 234 + DIAG_ROW, 264)
                 ],
                 onClose: () => {
                     pluginWindow = null;
