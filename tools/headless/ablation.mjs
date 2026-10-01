@@ -4,7 +4,7 @@
  * all off (the run.mjs "off" arm: no plugins). Seeded park draw as in soak.mjs. Writes one
  * compact results.md with a verdict per plugin.
  *
- *   node tools/headless/ablation.mjs --plugin-dir dist [--tag ablation-133] [--seed 133] [--parks 16] [--k 8] [--days 30] [--report]
+ *   node tools/headless/ablation.mjs --plugin-dir dist [--tag ablation-133] [--seed 133] [--parks 16] [--scenarios 3] [--pool census|old] [--k 8] [--days 30] [--report]
  *
  * Rules (pre-registered in #133). Delta per park = full minus ablated, signed so + = better with the plugin.
  * - Works: the plugin's primary claim metric (run mean) is better with it in >= 70% of parks.
@@ -20,12 +20,12 @@ import { homedir } from "node:os";
 import { runPool } from "./pool.mjs";
 import { TOGGLES } from "./settings.mjs";
 
-const POOL = "harness-runs/viability-seed63";
+const POOL = "harness-runs/viability-seed63", CENSUS = "harness-runs/pool-v2/pool.json";
 const ALWAYS = ["rct2-Six_Flags_Magic_Mountain", "scenario-Jetlag_Heights"];
 const argv = process.argv.slice(2);
 const opt = (k, d) => { const i = argv.indexOf(k); return i >= 0 ? argv[i + 1] : d; };
 const PDIR = opt("--plugin-dir"), TAG = opt("--tag", "ablation-133"), SEED = Number(opt("--seed", 133));
-const NPARKS = Number(opt("--parks", 16)), K = Number(opt("--k", 8)), DAYS = Number(opt("--days", 30));
+const NPARKS = Number(opt("--parks", 16)), NSCEN = Number(opt("--scenarios", 3)), POOL_MODE = opt("--pool", "census"), K = Number(opt("--k", 8)), DAYS = Number(opt("--days", 30));
 if (!PDIR) throw new Error("--plugin-dir <dir> is required");
 const OUT = join("harness-runs", TAG);
 
@@ -46,27 +46,38 @@ function rng(seed) {
     return () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 }
 const rand = rng(SEED);
-// Pool: every save + scenario the #63 viability walk could draw (tools/headless/pool.local.json for the
-// RCT1/RCT2 folders), minus parks it skipped for too few open rides. Mature = saves, new = scenarios.
-const userDir = join(homedir(), "Documents", "OpenRCT2");
-const local = existsSync("tools/headless/pool.local.json") ? JSON.parse(readFileSync("tools/headless/pool.local.json", "utf8")) : {};
-const skipped = new Set(JSON.parse(readFileSync(join(POOL, "state.json"), "utf8")).skipped.map((x) => x.file));
-const pool = [];
-for (const [src, dir, re] of [["save", join(userDir, "save"), /\.(park|sv6)$/i], ["scenario", join(userDir, "scenario"), /\.(park|sc6|sc4)$/i], ["rct2", local.rct2, /\.sc6$/i], ["rct1", local.rct1, /\.sc4$/i]]) {
-    if (!dir || !existsSync(dir)) continue;
-    for (const f of readdirSync(dir).filter((x) => re.test(x)).sort()) {
-        const file = join(dir, f);
-        if (!skipped.has(file)) pool.push({ dir: `${src}-${f.replace(/[^\w.-]+/g, "_")}`, save: file });
-    }
-}
-const always = pool.filter((p) => ALWAYS.some((s) => p.dir.startsWith(s)));
+// Pool (#160): the census pool (harness-runs/pool-v2/pool.json, made by census.mjs): the first
+// --scenarios fixed scenarios, then a seeded draw of saves, as in soak.mjs. --pool old keeps the
+// #133 draw for comparison.
 const shuffle = (xs) => xs.map((x) => [rand(), x]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
-const saves = shuffle(pool.filter((p) => !always.includes(p) && p.dir.startsWith("save-")));
-const scen = shuffle(pool.filter((p) => !always.includes(p) && !p.dir.startsWith("save-")));
-const parks = [...always];
-while (parks.length < NPARKS && (saves.length || scen.length)) {
-    if (saves.length) parks.push(saves.shift());
-    if (parks.length < NPARKS && scen.length) parks.push(scen.shift());
+let pool, parks;
+if (POOL_MODE === "old") {
+    // Pool: every save + scenario the #63 viability walk could draw (tools/headless/pool.local.json for the
+    // RCT1/RCT2 folders), minus parks it skipped for too few open rides. Mature = saves, new = scenarios.
+    const userDir = join(homedir(), "Documents", "OpenRCT2");
+    const local = existsSync("tools/headless/pool.local.json") ? JSON.parse(readFileSync("tools/headless/pool.local.json", "utf8")) : {};
+    const skipped = new Set(JSON.parse(readFileSync(join(POOL, "state.json"), "utf8")).skipped.map((x) => x.file));
+    pool = [];
+    for (const [src, dir, re] of [["save", join(userDir, "save"), /\.(park|sv6)$/i], ["scenario", join(userDir, "scenario"), /\.(park|sc6|sc4)$/i], ["rct2", local.rct2, /\.sc6$/i], ["rct1", local.rct1, /\.sc4$/i]]) {
+        if (!dir || !existsSync(dir)) continue;
+        for (const f of readdirSync(dir).filter((x) => re.test(x)).sort()) {
+            const file = join(dir, f);
+            if (!skipped.has(file)) pool.push({ dir: `${src}-${f.replace(/[^\w.-]+/g, "_")}`, save: file });
+        }
+    }
+    const always = pool.filter((p) => ALWAYS.some((s) => p.dir.startsWith(s)));
+    const saves = shuffle(pool.filter((p) => !always.includes(p) && p.dir.startsWith("save-")));
+    const scen = shuffle(pool.filter((p) => !always.includes(p) && !p.dir.startsWith("save-")));
+    parks = [...always];
+    while (parks.length < NPARKS && (saves.length || scen.length)) {
+        if (saves.length) parks.push(saves.shift());
+        if (parks.length < NPARKS && scen.length) parks.push(scen.shift());
+    }
+} else {
+    if (!existsSync(CENSUS)) throw new Error(`${CENSUS} not found: run node tools/headless/census.mjs first`);
+    pool = JSON.parse(readFileSync(CENSUS, "utf8")).parks.filter((p) => p.inPool);
+    const scen = pool.filter((p) => p.kind === "scenario").slice(0, Math.min(NSCEN, NPARKS));
+    parks = [...scen, ...shuffle(pool.filter((p) => p.kind === "save")).slice(0, Math.max(0, NPARKS - scen.length))];
 }
 for (const p of parks) p.perturb = 1 + Math.floor(rand() * 9);
 
