@@ -7,7 +7,7 @@ The 2026-09-20 parallel build-out, work packages and regression/validation passe
 ## Parallel build-out results (2026-09-20)
 
 All four packages landed. Full detail in
-[performance.md](performance.md) and [scale-audit.md](scale-audit.md).
+[performance.md](../performance.md) and [scale-audit.md](../scale-audit.md).
 
 | | Package | Outcome |
 |---|---|---|
@@ -261,7 +261,7 @@ so a future session does not rediscover it and assume it is unhandled.
 ### Fixed in the 2026-09-20 regression pass
 
 The first play session with everything switched on found four real bugs. Full analysis in
-[performance.md](performance.md#field-measurements-the-regression-session-2026-09-20-163-in-game-days).
+[performance.md](performance-field-log.md#field-measurements-the-regression-session-2026-09-20-163-in-game-days).
 
 | | Bug | Cause |
 |---|---|---|
@@ -274,7 +274,7 @@ The first play session with everything switched on found four real bugs. Full an
 > **The through-line.** Three of these are the same mistake wearing different clothes: a
 > threshold chosen against an *imagined* range rather than a measured one. The project
 > already had a rule for that
-> ([check thresholds against real data](performance.md#the-rules)) and it still happened,
+> ([check thresholds against real data](../performance.md#the-rules)) and it still happened,
 > because the rule was being applied to *new* constants only. `URGENT_OLD_LITTER = 25` was
 > correct where it was written and became wrong when reused. **Reusing a controller reuses
 > its calibration, and calibration is where the units live.**
@@ -284,7 +284,7 @@ The first play session with everything switched on found four real bugs. Full an
 ### Validated in the field, 2026-09-20
 
 First run after the regression fixes. Full analysis in
-[performance.md](performance.md#field-measurements-the-validation-session-2026-09-20-41-in-game-days).
+[performance.md](performance-field-log.md#field-measurements-the-validation-session-2026-09-20-41-in-game-days).
 
 | | Status | Evidence |
 |---|---|---|

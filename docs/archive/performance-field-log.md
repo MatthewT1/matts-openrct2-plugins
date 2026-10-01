@@ -63,7 +63,7 @@ Zero patrol actions on every steady-state day. The delta tracking holds.
 
 About one sweep per day across the whole workforce, and the guest-driven formula
 (`ceil(guests / 30) + 2`) keeps hiring forever as the park grows. See
-[roadmap.md § S](roadmap.md#s--closed-loop-staffing).
+[roadmap.md § S](../design-records.md#s--closed-loop-staffing).
 
 ### Mechanics were fine all along
 
@@ -74,8 +74,8 @@ every ~38 in-game days.
 
 This is the cautionary tale of the project. Two sessions of data "supported" a
 hypothesis that collapsed the moment the denominator was computed. See
-[roadmap.md § M2](roadmap.md#m2--small-patrol-zones-for-mechanics) and
-[api-reference.md](api-reference.md#inspection-cadence-is-far-slower-than-it-sounds).
+[roadmap.md § M2](../design-records.md#m2--small-patrol-zones-for-mechanics) and
+[api-reference.md](../api-reference.md#inspection-cadence-is-far-slower-than-it-sounds).
 
 **Always compute the expected value before reading a measurement as an anomaly.**
 
@@ -243,7 +243,7 @@ real distribution before shipping it.**
 ### Other plugins
 
 - Mechanics: 4 breakdowns, 10 work events, `fleetUnderworked` on 10 of 17 days —
-  consistent with the case for [MS](roadmap.md#ms--adaptive-mechanic-staffing).
+  consistent with the case for [MS](../design-records.md#ms--adaptive-mechanic-staffing).
 - Wait-time: 31 ride writes, **8 capacity-bound detections**. W3 is earning its place.
 
 ## Bug: "Can't build this on sloped footpath"
@@ -348,7 +348,7 @@ sampled during a quiet moment would have been lengthened — exactly backwards.
 
 ### Community research changed the design
 
-Vetting against community practice (see [research.md](research.md#ride-operation-settings-added-2026-09-20))
+Vetting against community practice (see [research.md](../research.md#ride-operation-settings-added-2026-09-20))
 surfaced a trap the original design would have walked into:
 
 - Intensity must stay **below 10** or excitement caps around 5.50.
@@ -451,14 +451,14 @@ a park large enough for the difference to matter:
 
 ### NEEDS Phase 1's exit criterion fired
 
-The full table is in [roadmap.md](roadmap.md#needs--guest-need-clustering-then-automatic-facility-placement).
+The full table is in [roadmap.md](../design-records.md#needs--guest-need-clustering-then-automatic-facility-placement).
 The short version: `hunger` at (4, 4) persisted across **63 of 121 sweeps** at **78 tiles**
 from the nearest food stall, and park-wide unmet needs went from essentially zero to 90
 hungry / 59 thirsty / 76 needing a toilet out of 933 sampled.
 
 **This is what an instrument-first process is supposed to produce.** The same discipline
-closed [M2](roadmap.md#m2--small-patrol-zones-for-mechanics) and
-[C](roadmap.md#c--bin-placement-advisor) without building anything; here it opened a gate
+closed [M2](../design-records.md#m2--small-patrol-zones-for-mechanics) and
+[C](../design-records.md#c--bin-placement-advisor) without building anything; here it opened a gate
 that had been held shut for several sessions. The criterion was written down in advance
 and then honoured in both directions.
 
@@ -483,7 +483,7 @@ Two things worth recording:
    the right home. Noted so a future session does not rediscover it and assume it is
    unhandled.
 2. **Queue complaints are real**, which is the measured support for
-   [W2](roadmap.md#w2--more-aggressive-emergency-override). `crowded` at 91 and
+   [W2](../design-records.md#w2--more-aggressive-emergency-override). `crowded` at 91 and
    `queuing_ages` at 67 are not a hypothetical problem.
 
 ### Amenity placement has saturated, and that is correct
@@ -510,7 +510,7 @@ should need.
 **Hypothesis, not a conclusion:** probing may be re-running for rides whose range is
 already known. Worth checking next run before changing anything — the last time a
 measurement here was called an anomaly without computing the expected value first, it
-cost a session (see [M2](roadmap.md#m2--small-patrol-zones-for-mechanics)).
+cost a session (see [M2](../design-records.md#m2--small-patrol-zones-for-mechanics)).
 
 Expected probe count for a binary search over a 1-255 range is ~8 per ride; 12 rides
 would be ~96, so 130 is high but not wildly so. It may simply be the two rides whose
@@ -536,7 +536,7 @@ fixed"*, and the telemetry explained it completely.
 
 ### Was it actually understaffing? Compute the expected value first
 
-The [M2](roadmap.md#m2--small-patrol-zones-for-mechanics) lesson, applied before drawing a
+The [M2](../design-records.md#m2--small-patrol-zones-for-mechanics) lesson, applied before drawing a
 conclusion:
 
 | | |
@@ -745,7 +745,7 @@ re-check. Releasing stays blocked throughout, so the emergency response is uncha
 only the *extra* hires are withheld. 0 for handymen, preserving their behaviour.
 
 > The deeper reading: **a ride broken for 8 days while headcount tripled is not a staffing
-> problem.** That is the [M3](roadmap.md#m3--emergency-repair) case — a ride no mechanic
+> problem.** That is the [M3](../design-records.md#m3--emergency-repair) case — a ride no mechanic
 > can physically reach. Pacing stops the controller throwing staff at something staff
 > cannot fix; M3 is the actual answer, and it is off by default.
 
