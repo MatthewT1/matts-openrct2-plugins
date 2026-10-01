@@ -52,6 +52,13 @@ now, breakdowns that day, vomit, a tally of selected guest thoughts (`th*`, plus
 positive totals; `thLost` counts every lost/can't-find thought), the Most Confusing Layout award rule (#93: `lostFresh` = guests whose newest thought is lost or cant_find with freshness <= 5, and `confusingAward` = 1 when that is >= 10 and >= guests/64, `Award.cpp:539-556`; slightly approximate because the API hides freshness-0 thoughts), and money totals since day 1 (`*Cum`: income, expenses, entrance, ride
 tickets, sales, stock, wages, running costs, build, marketing; costs negative).
 
+Award columns (#162): `awTidy`, `awBeautiful`, `awSafest`, `awStaff`, `awFood` and `awToilets` are 1
+on a day the park would be granted that award if the game tested it then (`Award.cpp:121-420`),
+with their inputs beside them (`awToiletsOpen`, `awFoodShops`, `awFoodUnique`, and the
+newest-thought counts `aw*Fresh`). `awardsPos`, `awardsNeg` and `awardsHeld` (types joined by
+`|`) are what the park holds. The flags are upper bounds: they skip the "another award is held"
+exclusions, and `awSafest` cannot see whether a ride has ever crashed.
+
 ## Viability study (#63)
 
 ```

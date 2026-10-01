@@ -36,9 +36,9 @@ export function createBuilderWindow(deps: BuilderWindowDeps) {
             classification: "auto-builder",
             title: "Auto-Builder v" + __PLUGIN_VERSION__,
             width: 300,
-            height: 280 + DIAG_ROW,
+            height: 298 + DIAG_ROW,
             widgets: [
-                { type: "groupbox", x: 6, y: 16, width: 288, height: 146, text: "Automation  (runs each in-game day)" },
+                { type: "groupbox", x: 6, y: 16, width: 288, height: 164, text: "Automation  (runs each in-game day)" },
                 {
                     type: "checkbox", name: "chkAmenities",
                     x: 14, y: 30, width: 276, height: 14,
@@ -95,15 +95,23 @@ export function createBuilderWindow(deps: BuilderWindowDeps) {
                     isChecked: settings.autoCourtExtras.get(),
                     onChange: function(v: boolean): void { settings.autoCourtExtras.set(v); },
                 },
+                {
+                    type: "checkbox", name: "chkAwardTopUp",
+                    x: 14, y: 156, width: 276, height: 14,
+                    text: "Build toward the toilet & food awards",
+                    tooltip: "The Best Toilets award needs 4 toilets and one per 128 guests; Best Food needs 7 food stalls, 4 different items and one stall per 128 guests. When the park is 1 to 3 short of either and has 5,000 in the bank, builds one toilet or food stall (a new item first) every 5 days, beside the guests who need it or in the biggest gap between existing ones. An award brings in more guests while it is held. Never demolishes anything. On by default (#162).",
+                    isChecked: settings.autoAwardTopUp.get(),
+                    onChange: function(v: boolean): void { settings.autoAwardTopUp.set(v); },
+                },
 
-                { type: "groupbox", x: 6, y: 168, width: 288, height: 86, text: "Status" },
-                { type: "label", name: "lblPlaced",     x: 14, y: 182, width: 276, height: 14, text: "" },
-                { type: "label", name: "lblFacilities", x: 14, y: 196, width: 276, height: 14, text: "" },
-                { type: "label", name: "lblQueueTvs",   x: 14, y: 210, width: 276, height: 14, text: "" },
-                { type: "label", name: "lblRepairs",    x: 14, y: 224, width: 276, height: 14, text: "" },
-                { type: "label", name: "lblCourts",     x: 14, y: 238, width: 276, height: 14, text: "" },
-                ...diagnosticsCheckbox(14, 260, 276),
-                newsCheckbox(settings.news, 14, 260 + DIAG_ROW, 276),
+                { type: "groupbox", x: 6, y: 186, width: 288, height: 86, text: "Status" },
+                { type: "label", name: "lblPlaced",     x: 14, y: 200, width: 276, height: 14, text: "" },
+                { type: "label", name: "lblFacilities", x: 14, y: 214, width: 276, height: 14, text: "" },
+                { type: "label", name: "lblQueueTvs",   x: 14, y: 228, width: 276, height: 14, text: "" },
+                { type: "label", name: "lblRepairs",    x: 14, y: 242, width: 276, height: 14, text: "" },
+                { type: "label", name: "lblCourts",     x: 14, y: 256, width: 276, height: 14, text: "" },
+                ...diagnosticsCheckbox(14, 278, 276),
+                newsCheckbox(settings.news, 14, 278 + DIAG_ROW, 276),
             ],
             onClose: function(): void {
                 win = null;

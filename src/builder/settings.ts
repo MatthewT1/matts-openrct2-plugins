@@ -23,6 +23,8 @@ export function createBuilderSettings(storage: SettingsStore) {
         autoRepairs: boolSetting(storage, "autoRepairs", true),
         // #83: dense benches/bins and a toilet at food courts, from the extras budget.
         autoCourtExtras: boolSetting(storage, "autoCourtExtras", true),
+        // #162: a toilet or food stall when the park is 1-3 short of the award count.
+        autoAwardTopUp: boolSetting(storage, "autoAwardTopUp", true),
         // #124: a daily news line about what was built.
         news: boolSetting(storage, "newsSummaries", true),
     };

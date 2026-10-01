@@ -7,7 +7,7 @@
 import { isDebugEnabled, DebugChannel } from "../debug";
 import { BuilderSettings } from "./settings";
 import { spendGate } from "../cash-gate";
-import { createCooldown, NEED_SAMPLE_TICKS, BUILD_WATCHDOG_TICKS } from "../cooldown";
+import { createCooldown, NEED_SAMPLE_TICKS, BUILD_WATCHDOG_TICKS, TICKS_PER_DAY } from "../cooldown";
 import {
     createNeedAccumulator, createSampleRotation, findGaps, describeGap,
     CLUSTER_MIN_GUESTS, NeedKind, NeedCounts, NeedGap, Facility,
@@ -20,6 +20,9 @@ import { createThoughtAccumulator, describeThoughts, ThoughtTally } from "../tho
 import { StallBuilder } from "./stall-build";
 import { CourtStatsStore } from "./court-extras";
 import { pickSite, DEFAULT_CHEAP_BUILD_OPTIONS } from "../cheap-builds";
+import {
+    planAwardTopUp, rankTopUpAnchors, nearestTopUpSite, scaledFacilityCap, DEFAULT_AWARD_TOPUP_OPTIONS, AwardTopUp,
+} from "../award-topup";
 
 /**
  * Gets every fresh thought the need sampler reads, with the guest's tile, and hears
@@ -34,7 +37,8 @@ export interface GuestThoughtListener {
 }
 
 export function createFacilityManager(settings: BuilderSettings, dbg: DebugChannel, stalls: StallBuilder,
-                                      listener?: GuestThoughtListener, courtStats?: CourtStatsStore) {
+                                      listener?: GuestThoughtListener, courtStats?: CourtStatsStore,
+                                      pathTiles?: () => Array<{ x: number; y: number }>) {
 
 
     // --- Guest-need instrumentation (Phase 1: measure, do not act) ------------
@@ -103,6 +107,8 @@ export function createFacilityManager(settings: BuilderSettings, dbg: DebugChann
     // gameSpeed 2+ - directly slowing down an already-conservative-by-design build
     // rate even further, which is exactly the "doesn't add buildings quickly" report.
     const FACILITY_SITE_RADIUS = DEFAULT_FACILITY_OPTIONS.siteRadius;
+    /** #162: let the toilet and food caps grow with the guest count. */
+    const SCALE_CAP = true;
     /**
      * A stall costs far more than a bench, so the cash floor is correspondingly higher.
      * Money is in TENTHS of a pound (core/Money.hpp:27) - the mistake that silently
@@ -131,6 +137,17 @@ export function createFacilityManager(settings: BuilderSettings, dbg: DebugChann
         firstAid: 48,  // RIDE_TYPE_FIRST_AID
     };
 
+
+    // #162 award top-up: a toilet or food stall when the park is 1-3 short of the Best
+    // Toilets / Best Food count (award-topup.ts). Real money, so a higher floor than the
+    // need-gap builder, one build every 5 days, and only on a day that builder did nothing.
+    const AWARD_MIN_CASH = 5_000 * 10; // GBP 5,000
+    const AWARD_GAP_TICKS = 5 * TICKS_PER_DAY;
+    /** Spots tried per pass before giving up for 5 days. */
+    const AWARD_ANCHOR_TRIES = 6;
+    /** Game tick before which no further top-up is tried (game time, so the same at every speed). */
+    let awardNextTick = 0;
+    let awardTopUps = 0;
 
     const facilityTracker = createFacilityTracker(DEFAULT_FACILITY_OPTIONS);
     /** Set while a build chain is mid-flight, so passes cannot overlap. */
@@ -403,18 +420,32 @@ export function createFacilityManager(settings: BuilderSettings, dbg: DebugChann
             // NOT a fault. It only becomes interesting if `needGaps` is non-empty at the
             // same time, which would mean gaps are being found but never confirmed.
             dbg.count("facilityNoGaps");
+            awardTopUp();
             return;
         }
 
         const sites = stalls.collectSites(confirmed, FACILITY_SITE_RADIUS);
         if (sites.length === 0) {
             dbg.count("facilityNoSite");
+            awardTopUp();
             return;
         }
 
-        const plans = planFacilities(confirmed, sites, currentFacilityCounts(), DEFAULT_FACILITY_OPTIONS);
+        // #162: toilets and food are capped by the award's yardstick (guests / 128) once
+        // that passes the flat cap, so a big park can keep building at confirmed gaps.
+        const counts = currentFacilityCounts();
+        const plans = planFacilities(confirmed, sites, counts, DEFAULT_FACILITY_OPTIONS).concat(
+            SCALE_CAP ? planFacilities(confirmed.filter(function (g): boolean {
+                return (g.kind === "toilet" || g.kind === "hunger") && counts[g.kind] >= DEFAULT_FACILITY_OPTIONS.maxPerKind;
+            }), sites, counts, {
+                minGuests: DEFAULT_FACILITY_OPTIONS.minGuests, minDistance: DEFAULT_FACILITY_OPTIONS.minDistance,
+                confirmSweeps: DEFAULT_FACILITY_OPTIONS.confirmSweeps, maxPlacements: DEFAULT_FACILITY_OPTIONS.maxPlacements,
+                mergeRadius: DEFAULT_FACILITY_OPTIONS.mergeRadius, siteRadius: DEFAULT_FACILITY_OPTIONS.siteRadius,
+                maxPerKind: scaledFacilityCap(DEFAULT_FACILITY_OPTIONS.maxPerKind, park.guests, DEFAULT_AWARD_TOPUP_OPTIONS.guestsPerFacility),
+            }) : []);
         if (plans.length === 0) {
             dbg.count("facilityCapped");
+            awardTopUp();
             return;
         }
 
@@ -423,6 +454,94 @@ export function createFacilityManager(settings: BuilderSettings, dbg: DebugChann
         buildWatchdog.reset();
         buildWatchdog.ready(date.ticksElapsed, Date.now());
         buildFacility(toCourt(plans[0]));
+    }
+
+    /** Builds toward the Best Toilets / Best Food award when the park is a few short (#162). */
+    function awardTopUp(): void {
+        if (!settings.autoAwardTopUp.get() || facilityBuilding) return;
+        if (date.ticksElapsed < awardNextTick) return;
+        const gate = spendGate(park.cash, AWARD_MIN_CASH, park.getFlag("noMoney"), "build");
+        if (gate === "lowCash") {
+            dbg.count("awardTopUpLowCash");
+            return;
+        }
+
+        // Open toilets and food stalls, and the items the food stalls sell.
+        const rides = map.rides;
+        const existing: Record<string, Array<{ x: number; y: number }>> = { toilet: [], hunger: [] };
+        const items: Record<number, true> = {};
+        let toilets = 0, foodStalls = 0, foodItems = 0;
+        for (let i = 0; i < rides.length; i++) {
+            const r = rides[i];
+            const kind = FACILITY_RIDE_TYPES[r.type];
+            if ((kind !== "toilet" && kind !== "hunger") || r.status !== "open") continue;
+            const stations = r.stations;
+            const start = stations.length > 0 ? stations[0].start : null;
+            if (start && start.x >= 0 && start.y >= 0) existing[kind].push({ x: start.x >> 5, y: start.y >> 5 });
+            if (kind === "toilet") toilets++;
+            else {
+                foodStalls++;
+                const item = r.object.shopItem;
+                if (!items[item]) { items[item] = true; foodItems++; }
+            }
+        }
+        const sellsNewItem = function (objectIndex: number): boolean {
+            const o = objectManager.getObject("ride", objectIndex);
+            return o !== null && !items[o.shopItem];
+        };
+        const newFoodObject = stalls.unlockedObject(FACILITY_BUILD_TYPE.hunger, sellsNewItem);
+        const topUp = planAwardTopUp({
+            guests: park.guests, toilets: toilets, foodStalls: foodStalls, foodItems: foodItems,
+            newFoodItemUnlocked: newFoodObject >= 0,
+        }, DEFAULT_AWARD_TOPUP_OPTIONS);
+        if (topUp === null) {
+            dbg.count("awardTopUpNotNeeded");
+            return;
+        }
+
+        const rideType = FACILITY_BUILD_TYPE[topUp.kind];
+        // A food stall that sells something new first: the award also counts item types.
+        const rideObject = topUp.kind === "hunger" && newFoodObject >= 0 ? newFoodObject : stalls.unlockedObject(rideType);
+        if (rideObject < 0) {
+            dbg.count("awardTopUpNotUnlocked");
+            return;
+        }
+        const clusters = lastNeedGaps.map(function (g): { kind: string; x: number; y: number; guests: number } {
+            return { kind: g.cluster.kind, x: g.cluster.x, y: g.cluster.y, guests: g.cluster.count };
+        });
+        const anchors = rankTopUpAnchors(topUp.kind, clusters, existing[topUp.kind], pathTiles !== undefined ? pathTiles() : [], AWARD_ANCHOR_TRIES);
+        if (anchors.length === 0) {
+            dbg.count("awardTopUpNoAnchor");
+            return;
+        }
+        // The best spot may have nowhere to build (a pier over water), so try the next ones.
+        let site: FacilityPlan["site"] | null = null;
+        for (let i = 0; i < anchors.length && site === null; i++) {
+            site = nearestTopUpSite(anchors[i], stalls.collectSites([anchors[i]], FACILITY_SITE_RADIUS), FACILITY_SITE_RADIUS);
+        }
+        if (site === null) {
+            // Nowhere to build today: look again in 5 days, not daily (each try scans tiles).
+            awardNextTick = date.ticksElapsed + AWARD_GAP_TICKS;
+            dbg.count("awardTopUpNoSite");
+            return;
+        }
+        awardNextTick = date.ticksElapsed + AWARD_GAP_TICKS;
+        buildTopUp(topUp, rideType, rideObject, site);
+    }
+
+    function buildTopUp(topUp: AwardTopUp, rideType: number, rideObject: number, site: FacilityPlan["site"]): void {
+        facilityBuilding = true;
+        buildWatchdog.reset();
+        buildWatchdog.ready(date.ticksElapsed, Date.now());
+        stalls.build("awardTopUp", rideType, rideObject, site,
+            function (): void { facilityBuilding = false; },
+            function (): void {
+                awardTopUps++;
+                dbg.count("awardTopUpBuilt");
+                console.log("[Auto-Builder] Built a " + (topUp.kind === "toilet" ? "toilet" : "food stall") + " at (" + site.x + ", " + site.y +
+                    ") toward the " + topUp.award + " award: " + (topUp.varietyOnly ? "item types " : "") +
+                    (topUp.have + 1) + " of " + topUp.need + " needed.");
+            });
     }
 
     /**
@@ -484,5 +603,6 @@ export function createFacilityManager(settings: BuilderSettings, dbg: DebugChann
         getFacilityCounts(): Record<string, number> { return facilityCounts; },
         getLastFacilityPlans(): number { return lastFacilityPlans; },
         getLastNeedGaps(): NeedGap[] { return lastNeedGaps; },
+        getAwardTopUps(): number { return awardTopUps; },
     };
 }

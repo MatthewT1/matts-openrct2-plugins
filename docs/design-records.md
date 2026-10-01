@@ -607,6 +607,22 @@ the ideal ride settings are, from community practice and the source, is left for
 
 ---
 
+### AW — Award top-up for Best Toilets and Best Food (#162)
+
+**Basis.** Each positive award multiplies guest generation by 1.25 while held (`world/Park.cpp:163-211`); one random award type is tested a month (`management/Award.cpp:635-680`). Best Toilets needs 4 open toilets, one per 128 guests and at most 16 "need toilet" thinkers (L390-420); Best Food needs 7 open food stalls, 4 different items, one per 128 guests and at most 12 hungry (L300-342).
+
+**Measurement (32 parks from the #160 pool, 60 d, defaults).** Most Tidy was deserved on 91% of park-days, Best Toilets on 17%, Best Food on 14%, Best Staff on 20%. 8 parks met the toilet thought clause and were 1-3 toilets short; 12 met the hungry clause and were 1-3 food stalls or item types short. Rule set first: build if 25% of parks are in that band. Both passed.
+
+**Decision.** `src/award-topup.ts`: when the need-gap builder did nothing that day, cash is GBP 5,000+, and the park is 1-3 short, build one toilet (first) or food stall (an unbuilt item first), at most one per 5 days; site = biggest current need cluster of that kind, else the coverage tile farthest from every existing one. More than 3 short is left to the need-gap builder. Toggle `autoAwardTopUp`, on by default.
+
+**A/B (same 32 parks, 90 d, main / top-up / top-up + scaled cap).** Deserved days rose in 14 of 16 band parks and fell in none; all parks: Best Toilets 16% -> 37% of days, Best Food 13% -> 31%; parks deserving on half the days or more 6 -> 13 and 4 -> 9. Median end cash -GBP 5 (band parks -GBP 745), happiness 0.00. 63 top-ups over 32 parks. Passed (bar: half the band parks, cash within GBP 1,000, happiness within 3).
+
+**Scaled cap.** The flat 8-per-kind cap left 1,000+ guest parks short while guests kept asking. Toilets and food now cap at max(8, guests/128 + 1). A/B vs top-up alone on the 21 parks with 1,000+ guests: need thoughts lower in 9, higher in 3, same in 9 (median 32.5 -> 32), cash 0. A narrow pass: it only acts where a gap is confirmed at the cap (Magic Mountain 189 -> 145 need thoughts, Amity Airfield 94 -> 83, Factory Capers Best Food days 39% -> 98%).
+
+**Rejected.** Chasing the count on parks more than 3 short (Planet Llipe 3 of 18 toilets): that is a need problem, not a top-up. Best Staff is headcount-bound in 25 parks and is its own issue (#163).
+
+---
+
 ## Ideas not yet scoped
 
 ### NEEDS — Guest-need clustering, then automatic facility placement
