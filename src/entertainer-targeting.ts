@@ -91,6 +91,12 @@ export const MAX_ENTERTAINERS = MAX_TARGETED_ENTERTAINERS + MAX_STATION_ENTERTAI
  */
 export const PATROL_RADIUS_TILES = 4;
 
+/**
+ * Two targets whose centres are closer than this (Chebyshev, tiles) would put their
+ * entertainers on the same crowd, so the later one is skipped. About half a patrol box.
+ */
+export const MIN_TARGET_SEPARATION_TILES = 5;
+
 /** Game distance units per tile (`kCoordsXYStep`), matching the engine's own MapRange units. */
 export const TILE_SIZE = 32;
 
@@ -131,7 +137,21 @@ export function selectEntertainerTargets(
     eligible.sort((a, b) => b.queueMinutes - a.queueMinutes);
 
     const cap = Math.max(0, Math.min(maxEntertainers, MAX_TARGETED_ENTERTAINERS));
-    const chosen = eligible.slice(0, cap);
+    // Worst first, but skip a ride standing right next to one already chosen: two
+    // entertainers in the same spot is one entertainer's worth of fun.
+    const sep = MIN_TARGET_SEPARATION_TILES * TILE_SIZE;
+    const chosen: RideQueueSignal[] = [];
+    for (let i = 0; i < eligible.length && chosen.length < cap; i++) {
+        const r = eligible[i];
+        let near = false;
+        for (let j = 0; j < chosen.length; j++) {
+            if (Math.max(Math.abs(chosen[j].stationX - r.stationX), Math.abs(chosen[j].stationY - r.stationY)) < sep) {
+                near = true;
+                break;
+            }
+        }
+        if (!near) chosen.push(r);
+    }
 
     const radius = PATROL_RADIUS_TILES * TILE_SIZE;
     return chosen.map((r) => ({
@@ -313,9 +333,33 @@ export interface StationSignal {
  * They go AFTER the queue targets in the list the roster is assigned from, so if the
  * roster is short it is a station that goes without, not a long queue.
  */
-export function selectStationTargets(stations: StationSignal[]): EntertainerTarget[] {
+export function selectStationTargets(
+    stations: StationSignal[],
+    taken: EntertainerTarget[] = [],
+): EntertainerTarget[] {
     const radius = PATROL_RADIUS_TILES * TILE_SIZE;
-    return stations.slice(0, MAX_STATION_ENTERTAINERS).map((s) => ({
+    const sep = MIN_TARGET_SEPARATION_TILES * TILE_SIZE;
+    // Centres already used (queue targets first), so a station beside a queue
+    // entertainer, or a second court beside the first, is dropped rather than doubled up.
+    const cx: number[] = [];
+    const cy: number[] = [];
+    for (let i = 0; i < taken.length; i++) {
+        cx.push((taken[i].patrol.x1 + taken[i].patrol.x2) / 2);
+        cy.push((taken[i].patrol.y1 + taken[i].patrol.y2) / 2);
+    }
+    const kept: StationSignal[] = [];
+    for (let i = 0; i < stations.length && kept.length < MAX_STATION_ENTERTAINERS; i++) {
+        const s = stations[i];
+        let near = false;
+        for (let j = 0; j < cx.length; j++) {
+            if (Math.max(Math.abs(cx[j] - s.x), Math.abs(cy[j] - s.y)) < sep) { near = true; break; }
+        }
+        if (near) continue;
+        cx.push(s.x);
+        cy.push(s.y);
+        kept.push(s);
+    }
+    return kept.map((s) => ({
         rideId: -1,
         name: s.name,
         queueMinutes: 0,

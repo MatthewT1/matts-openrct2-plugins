@@ -422,11 +422,13 @@ registerPlugin({
             cache.urgentQueues = census.urgentCount;
             cache.worstQueueMinutes = census.worstMinutes;
             // Queues first, stations after: a short roster leaves a station empty, never
-            // a long queue (#68).
-            const stations = dbg.time("cache.stations", () => selectStationTargets(collectStations()));
+            // a long queue (#68). Stations skip spots a queue entertainer already covers.
+            const queueTargets = selectEntertainerTargets(signals,
+                Math.max(cache.entertainerCount, census.eligibleCount));
+            const stations = dbg.time("cache.stations",
+                () => selectStationTargets(collectStations(), queueTargets));
             cache.stationCount = stations.length;
-            cache.targets = selectEntertainerTargets(signals,
-                Math.max(cache.entertainerCount, census.eligibleCount)).concat(stations);
+            cache.targets = queueTargets.concat(stations);
         }
 
         // --- Game state mutations (only from interval hooks) ---

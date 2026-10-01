@@ -8,7 +8,7 @@ import { createStaffingController } from "./build/staffing.mjs";
 let pass = 0, fail = 0;
 const ok = (c, m) => { c ? pass++ : (fail++, console.log("FAIL:", m)); };
 
-const ride = (rideId, name, queueMinutes, stationX = 1000, stationY = 2000) =>
+const ride = (rideId, name, queueMinutes, stationX = rideId * 1000, stationY = 2000) =>
     ({ rideId, name, queueMinutes, stationX, stationY });
 
 // --- selection: below floor never selected, however many slots available
@@ -156,8 +156,8 @@ const ride = (rideId, name, queueMinutes, stationX = 1000, stationY = 2000) =>
 
 // --- stations (#68): entrance/courts, capped, rect around the spot ----------------
 {
-    const st = selectStationTargets([{ name: "entrance", x: 320, y: 640 }, { name: "a", x: 0, y: 0 },
-        { name: "b", x: 0, y: 0 }, { name: "c", x: 0, y: 0 }]);
+    const st = selectStationTargets([{ name: "entrance", x: 320, y: 640 }, { name: "a", x: 1000, y: 0 },
+        { name: "b", x: 2000, y: 0 }, { name: "c", x: 3000, y: 0 }]);
     ok(st.length === MAX_STATION_ENTERTAINERS, "stations capped, got " + st.length);
     ok(st[0].name === "entrance" && st[0].patrol.x1 === 320 - 128 && st[0].patrol.y2 === 640 + 128, "entrance rect");
     ok(MAX_ENTERTAINERS === MAX_TARGETED_ENTERTAINERS + MAX_STATION_ENTERTAINERS, "total cap = queues + stations");
@@ -166,3 +166,20 @@ const ride = (rideId, name, queueMinutes, stationX = 1000, stationY = 2000) =>
 
 console.log(`entertainer-targeting: ${pass} passed, ${fail} failed`);
 if (fail > 0) process.exit(1);
+
+// --- spread: a ride beside an already-chosen one is skipped for the next-worst
+{
+    const out = selectEntertainerTargets([ride(1, "A", 9, 1000, 1000), ride(2, "B", 8, 1100, 1000), ride(3, "C", 4, 3000, 1000)], 4);
+    ok(out.map(o => o.name).join(",") === "A,C", "adjacent ride skipped, got " + out.map(o => o.name).join(","));
+}
+
+// --- spread: stations beside a queue target or each other are dropped
+{
+    const q = selectEntertainerTargets([ride(1, "A", 9, 1000, 1000)], 4);
+    const st = selectStationTargets([
+        { name: "park entrance", x: 5000, y: 5000 }, { name: "food court", x: 1050, y: 1050 },
+        { name: "food court", x: 5100, y: 5000 }, { name: "food court", x: 8000, y: 8000 },
+    ], q);
+    ok(st.length === 2 && st[0].name === "park entrance" && st[1].name === "food court",
+        "stations spread, got " + st.map(o => o.name).join(","));
+}
