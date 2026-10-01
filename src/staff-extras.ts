@@ -506,6 +506,11 @@ registerPlugin({
                     mode: PATROL_MODE_SET,
                 }, () => {});
                 dbg.count("patrolAssignments");
+                const ent = map.getEntity(e.id);
+                dbg.event("entertainerPatrol", {
+                    id: e.id, at: ent ? [ent.x >> 5, ent.y >> 5] : null, target: t.name,
+                    rect: [t.patrol.x1 >> 5, t.patrol.y1 >> 5, t.patrol.x2 >> 5, t.patrol.y2 >> 5],
+                });
             }
             for (let i = n; i < entertainers.length; i++) {
                 const e = entertainers[i];
