@@ -539,3 +539,75 @@ export function createFeeWatch(holdDays: number = FEE_WARNING_HOLD_DAYS) {
         held(): 1 | 4 | 16 { return streak >= holdDays ? current : 1; },
     };
 }
+
+/** One ride as the price check sees it. Money in raw tenths of a pound. */
+export interface PricedRide {
+    id: number;
+    name: string;
+    /** `ride.price[0]`: what a guest pays to get on. */
+    price: number;
+    /** `ride.value`; undefined until the game has rated the ride (guests then pay anything). */
+    value: number | undefined;
+    open: boolean;
+}
+
+export interface RidePriceWarning {
+    id: number;
+    name: string;
+    price: number;
+    /** The most a guest will pay: twice the value they see. */
+    limit: number;
+    /** price / the value the guest sees, one decimal. */
+    times: number;
+}
+
+/**
+ * Open rides priced past what guests will pay (#166). Guest.cpp:2112-2132: a guest refuses
+ * a ride whose price is above 2x its value, and the value is quartered first (money64
+ * integer division) for a guest who paid to enter the park. Each refusal at the ride is a
+ * "bad value" thought, happiness target -16 and a popularity hit. Free rides and rides with
+ * no value yet are never refused. Worst first.
+ */
+export function rideValueWarnings(rides: PricedRide[], paidEntry: boolean): RidePriceWarning[] {
+    const out: RidePriceWarning[] = [];
+    for (let i = 0; i < rides.length; i++) {
+        const r = rides[i];
+        if (!r.open || r.price <= 0 || r.value === undefined) continue;
+        const seen = paidEntry ? Math.floor(r.value / 4) : r.value;
+        if (r.price <= seen * 2) continue;
+        // A value of 0 has no ratio; 99 keeps it at the top of the list.
+        const times = seen > 0 ? Math.round((r.price / seen) * 10) / 10 : 99;
+        out.push({ id: r.id, name: r.name, price: r.price, limit: seen * 2, times: times });
+    }
+    out.sort((a, b) => b.times - a.times || a.id - b.id);
+    return out;
+}
+
+/**
+ * Debounce for the ride price warning, per ride. Call `observe` once a day with the ids
+ * over the limit; it returns the ids to announce: over for `holdDays` days running and
+ * not announced since they were last fine. A ride that drops out of the list re-arms.
+ * Value dips for a day while a ride is broken down, same reason as the fee hold.
+ */
+export function createRidePriceWatch(holdDays: number = FEE_WARNING_HOLD_DAYS) {
+    let streaks: Record<string, number> = {};
+    let warned: Record<string, boolean> = {};
+    return {
+        observe(overIds: number[]): number[] {
+            const nextStreaks: Record<string, number> = {};
+            const nextWarned: Record<string, boolean> = {};
+            const announce: number[] = [];
+            for (let i = 0; i < overIds.length; i++) {
+                const k = String(overIds[i]);
+                nextStreaks[k] = (streaks[k] || 0) + 1;
+                if (warned[k]) nextWarned[k] = true;
+                else if (nextStreaks[k] >= holdDays) { nextWarned[k] = true; announce.push(overIds[i]); }
+            }
+            streaks = nextStreaks;
+            warned = nextWarned;
+            return announce;
+        },
+        /** True once the ride has been over the limit for the hold period. */
+        held(id: number): boolean { return (streaks[String(id)] || 0) >= holdDays; },
+    };
+}
