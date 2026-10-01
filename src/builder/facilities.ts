@@ -21,7 +21,7 @@ import { StallBuilder } from "./stall-build";
 import { CourtStatsStore } from "./court-extras";
 import { pickSite, DEFAULT_CHEAP_BUILD_OPTIONS } from "../cheap-builds";
 import {
-    planAwardTopUp, pickTopUpAnchor, nearestTopUpSite, scaledFacilityCap, DEFAULT_AWARD_TOPUP_OPTIONS, AwardTopUp,
+    planAwardTopUp, rankTopUpAnchors, nearestTopUpSite, scaledFacilityCap, DEFAULT_AWARD_TOPUP_OPTIONS, AwardTopUp,
 } from "../award-topup";
 
 /**
@@ -143,6 +143,8 @@ export function createFacilityManager(settings: BuilderSettings, dbg: DebugChann
     // need-gap builder, one build every 5 days, and only on a day that builder did nothing.
     const AWARD_MIN_CASH = 5_000 * 10; // GBP 5,000
     const AWARD_GAP_TICKS = 5 * TICKS_PER_DAY;
+    /** Spots tried per pass before giving up for 5 days. */
+    const AWARD_ANCHOR_TRIES = 6;
     /** Game tick before which no further top-up is tried (game time, so the same at every speed). */
     let awardNextTick = 0;
     let awardTopUps = 0;
@@ -507,13 +509,19 @@ export function createFacilityManager(settings: BuilderSettings, dbg: DebugChann
         const clusters = lastNeedGaps.map(function (g): { kind: string; x: number; y: number; guests: number } {
             return { kind: g.cluster.kind, x: g.cluster.x, y: g.cluster.y, guests: g.cluster.count };
         });
-        const anchor = pickTopUpAnchor(topUp.kind, clusters, existing[topUp.kind], pathTiles !== undefined ? pathTiles() : []);
-        if (anchor === null) {
+        const anchors = rankTopUpAnchors(topUp.kind, clusters, existing[topUp.kind], pathTiles !== undefined ? pathTiles() : [], AWARD_ANCHOR_TRIES);
+        if (anchors.length === 0) {
             dbg.count("awardTopUpNoAnchor");
             return;
         }
-        const site = nearestTopUpSite(anchor, stalls.collectSites([anchor], FACILITY_SITE_RADIUS), FACILITY_SITE_RADIUS);
+        // The best spot may have nowhere to build (a pier over water), so try the next ones.
+        let site: FacilityPlan["site"] | null = null;
+        for (let i = 0; i < anchors.length && site === null; i++) {
+            site = nearestTopUpSite(anchors[i], stalls.collectSites([anchors[i]], FACILITY_SITE_RADIUS), FACILITY_SITE_RADIUS);
+        }
         if (site === null) {
+            // Nowhere to build today: look again in 5 days, not daily (each try scans tiles).
+            awardNextTick = date.ticksElapsed + AWARD_GAP_TICKS;
             dbg.count("awardTopUpNoSite");
             return;
         }

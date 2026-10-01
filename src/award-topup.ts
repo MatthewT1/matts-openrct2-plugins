@@ -111,6 +111,28 @@ export function pickTopUpAnchor(kind: string, clusters: TopUpCluster[], existing
     return far;
 }
 
+/**
+ * Anchors to try in order, at most `max`: pickTopUpAnchor's choice first, then the other
+ * clusters of that kind by size, then path tiles from the farthest inward. On Big Pier the
+ * first choice sat over water with no buildable tile within reach, and retrying it daily
+ * built nothing for 90 days (#162).
+ */
+export function rankTopUpAnchors(kind: string, clusters: TopUpCluster[], existing: TopUpTile[], pathTiles: TopUpTile[], max: number): TopUpTile[] {
+    const out: TopUpTile[] = clusters.filter(function (c): boolean { return c.kind === kind; })
+        .sort(function (a, b): number { return b.guests - a.guests; })
+        .map(function (c): TopUpTile { return { x: c.x, y: c.y }; });
+    const ranked = pathTiles.map(function (t): { t: TopUpTile; d: number } {
+        let nearest = Infinity;
+        for (let e = 0; e < existing.length; e++) nearest = Math.min(nearest, manhattan(t, existing[e]));
+        return { t: t, d: nearest };
+    }).sort(function (a, b): number { return b.d - a.d; });
+    // Spread the path picks over the list rather than taking neighbours of the farthest tile.
+    const want = Math.max(0, max - out.length);
+    const step = want > 0 ? Math.max(1, Math.floor(ranked.length / want)) : 1;
+    for (let i = 0; i < ranked.length && out.length < max; i += step) out.push(ranked[i].t);
+    return out.slice(0, max);
+}
+
 /** Nearest site to the anchor within `radius`; flat ground breaks a tie. */
 export function nearestTopUpSite<T extends TopUpTile & { flat: boolean }>(anchor: TopUpTile, sites: T[], radius: number): T | null {
     let best: T | null = null;

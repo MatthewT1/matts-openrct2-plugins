@@ -1,4 +1,4 @@
-import { planAwardTopUp, awardNeed, pickTopUpAnchor, nearestTopUpSite, scaledFacilityCap, DEFAULT_AWARD_TOPUP_OPTIONS as O } from "./build/award-topup.mjs";
+import { planAwardTopUp, awardNeed, pickTopUpAnchor, rankTopUpAnchors, nearestTopUpSite, scaledFacilityCap, DEFAULT_AWARD_TOPUP_OPTIONS as O } from "./build/award-topup.mjs";
 let pass=0, fail=0; const ok=(c,m)=>{ c?pass++:(fail++,console.log("FAIL:",m)); };
 const C = (guests, toilets, foodStalls, foodItems, newFoodItemUnlocked = true) => ({ guests, toilets, foodStalls, foodItems, newFoodItemUnlocked });
 
@@ -41,6 +41,16 @@ ok(a.x === 40 && a.y === 40, "no cluster: the path tile farthest from every exis
 a = pickTopUpAnchor("toilet", [], [], paths);
 ok(a !== null && a.x === 5, "no cluster and no existing facility: first path tile");
 ok(pickTopUpAnchor("toilet", [], [{ x: 1, y: 1 }], []) === null, "nothing to go by: null");
+
+// --- rankTopUpAnchors: fallbacks when the first spot has no site (Big Pier) ---------------
+let r = rankTopUpAnchors("toilet", clusters, [{ x: 6, y: 6 }], paths, 6);
+ok(r[0].x === 50 && r[1].x === 10, "clusters of the kind first, biggest first");
+ok(r.length === 5 && r[2].x === 90 && r[4].x === 5, "then path tiles, farthest from existing first");
+ok(rankTopUpAnchors("toilet", clusters, [], paths, 2).length === 2, "never more than max");
+ok(rankTopUpAnchors("toilet", [], [], [], 6).length === 0, "nothing to go by: empty");
+const many = []; for (let i = 0; i < 40; i++) many.push({ x: i, y: 0 });
+r = rankTopUpAnchors("toilet", [], [{ x: 0, y: 0 }], many, 4);
+ok(r.length === 4 && r[0].x === 39 && r[1].x === 29, "path picks are spread over the list, not 4 neighbours");
 
 // --- nearestTopUpSite --------------------------------------------------------------------
 const sites = [{ x: 12, y: 10, flat: false }, { x: 10, y: 12, flat: true }, { x: 30, y: 30, flat: true }];
