@@ -166,3 +166,65 @@ export const BEST_STAFF_MIN_STAFF = 20;
 export function wantsAwardGuard(staffTypes: string[]): boolean {
     return staffTypes.length >= BEST_STAFF_MIN_STAFF && staffTypes.indexOf("security") < 0;
 }
+
+/**
+ * Award crew (#163): extra security guards that hold the headcount at the Best Staff line
+ * when the park is a few staff short. Measured on 32 parks (#162): the award was never
+ * deserved in 25, and 12 of those were only 1-5 staff short of max(20, guests / 32)
+ * (`Award.cpp:294-296`), because the adaptive controllers trim handymen and mechanics.
+ * Guards are the one type no controller trims, and a guard nearby stops vandalism.
+ */
+export interface AwardCrewInput {
+    handymen: number;
+    mechanics: number;
+    security: number;
+    entertainers: number;
+    /** Guest entities, inside the park or not: what the award divides by 32. */
+    guestEntities: number;
+    /** Guards this feature hired that are still on the roster. */
+    ownedGuards: number;
+}
+
+export interface AwardCrewOptions {
+    minStaff: number;
+    guestsPerStaff: number;
+    /** A gap wider than this is not chased, and guards hired for it are let go. */
+    maxExtra: number;
+}
+
+export const DEFAULT_AWARD_CREW_OPTIONS: AwardCrewOptions = {
+    minStaff: BEST_STAFF_MIN_STAFF,
+    guestsPerStaff: 32,
+    maxExtra: 5,
+};
+
+export interface AwardCrewPlan {
+    action: "hire" | "fire" | "none";
+    /** Staff the award asks for, with one spare when the guest count sets it. */
+    line: number;
+    /** Guards this feature should own right now. */
+    target: number;
+}
+
+/** How many staff the award line asks for: the game's rule plus one spare above 20. */
+export function awardStaffLine(guestEntities: number, o: AwardCrewOptions): number {
+    return Math.max(o.minStaff, Math.floor(guestEntities / o.guestsPerStaff) + 1);
+}
+
+/**
+ * One step a day toward the right number of award guards. Hires while we own fewer than
+ * the gap; fires our own once we own two more than needed (one of slack stops flip-flop),
+ * or one more when the gap is out of reach. Never asks to fire with nothing owned.
+ */
+export function planAwardCrew(i: AwardCrewInput, o: AwardCrewOptions): AwardCrewPlan {
+    const line = awardStaffLine(i.guestEntities, o);
+    const staff = i.handymen + i.mechanics + i.security + i.entertainers;
+    const gap = line - (staff - i.ownedGuards);
+    // The award needs every type; extra guards cannot stand in for a missing one.
+    const reachable = i.handymen > 0 && i.mechanics > 0 && i.entertainers > 0 && gap <= o.maxExtra;
+    const target = reachable && gap > 0 ? gap : 0;
+    if (i.ownedGuards < target) return { action: "hire", line: line, target: target };
+    const slack = reachable ? 2 : 1;
+    if (i.ownedGuards >= target + slack) return { action: "fire", line: line, target: target };
+    return { action: "none", line: line, target: target };
+}
