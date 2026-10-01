@@ -6,7 +6,8 @@
  *
  * Reads <run>/<park>/<rep>/defaults/{off,on}/days.csv and <run>/<park>/<rep>/all/on/days.csv
  * (tools/headless/pool.mjs with tools/headless/showcase.jobs.json), averages each day across
- * every park and replicate that has all three arms, and prints an end-of-run table.
+ * every park and replicate that has all three arms, and prints an end-of-run table. Each mean line
+ * has a shaded min/max band across parks (each park = mean of its replicates) so the spread shows.
  */
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -57,20 +58,32 @@ function readCsv(f) {
 }
 
 const runs = { off: [], def: [], all: [] };
-const parks = new Set();
+const parks = new Set(), runPark = [];
 for (const park of readdirSync(RUN)) {
     if (!existsSync(join(RUN, park)) || park.endsWith(".json")) continue;
     for (const rep of readdirSync(join(RUN, park))) {
         const files = ARMS.map((a) => join(RUN, park, rep, a.path[0], a.path[1], "days.csv"));
         if (!files.every(existsSync)) continue;
         ARMS.forEach((a, i) => runs[a.key].push(readCsv(files[i])));
-        parks.add(park);
+        parks.add(park); runPark.push(park);
     }
 }
 const n = runs.off.length;
 if (!n) throw new Error(`no complete runs under ${RUN}`);
 const days = Math.min(...Object.values(runs).flat().map((r) => r.length));
 const series = (key, panel) => Array.from({ length: days }, (_, d) => runs[key].reduce((s, r) => s + panel.get(r[d]), 0) / n);
+const parkList = [...parks];
+const reps = parkList.map((p) => runPark.filter((q) => q === p).length);
+const runsLabel = reps.every((r) => r === reps[0])
+    ? `${parkList.length} parks, ${reps[0]} perturbed replicates each` : `${parkList.length} parks, ${n} runs`;
+/** Per day, min and max across parks of each park's replicate mean. */
+function band(key, panel) {
+    const per = parkList.map((p) => runs[key].filter((_, i) => runPark[i] === p));
+    return Array.from({ length: days }, (_, d) => {
+        const v = per.map((rs) => rs.reduce((s, r) => s + panel.get(r[d]), 0) / rs.length);
+        return [Math.min(...v), Math.max(...v)];
+    });
+}
 
 const W = 330, H = 180, PAD = { l: 50, r: 12, t: 34, b: 28 }, GAP = 16;
 const fmt = (v) => Math.abs(v) >= 10000 ? `${Math.round(v / 1000)}k` : Math.abs(v) >= 100 ? `${Math.round(v)}` : v.toFixed(1).replace(/\.0$/, "");
@@ -79,18 +92,20 @@ const table = [];
 
 for (const chart of CHARTS) {
     const total = chart.panels.length * W + (chart.panels.length - 1) * GAP;
-    const svg = [`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${total} ${H + 46}" width="${total}" height="${H + 46}" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif">`,
+    const svg = [`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${total} ${H + 60}" width="${total}" height="${H + 60}" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif">`,
         `<style>
   .bg{fill:#ffffff} .ax{stroke:#d0d7de} .tx{fill:#57606a;font-size:11px} .tt{fill:#1f2328;font-size:13px;font-weight:600}
   .def{stroke:#1a7f37;fill:none;stroke-width:2.5} .all{stroke:#0969da;fill:none;stroke-width:2;stroke-dasharray:1 3;stroke-linecap:round}
-  .off{stroke:#8c959f;fill:none;stroke-width:2;stroke-dasharray:5 4} .ldef{fill:#1a7f37} .lall{fill:#0969da} .loff{fill:#8c959f}
+  .off{stroke:#8c959f;fill:none;stroke-width:2;stroke-dasharray:5 4}
+  .boff{fill:#8c959f;fill-opacity:.12} .bdef{fill:#1a7f37;fill-opacity:.14} .ball{fill:#0969da;fill-opacity:.10} .ldef{fill:#1a7f37} .lall{fill:#0969da} .loff{fill:#8c959f}
   @media (prefers-color-scheme: dark){ .bg{fill:#0d1117} .ax{stroke:#30363d} .tx{fill:#8b949e} .tt{fill:#e6edf3}
-    .def{stroke:#3fb950} .ldef{fill:#3fb950} .all{stroke:#58a6ff} .lall{fill:#58a6ff} .off{stroke:#6e7681} .loff{fill:#6e7681} }
+    .def{stroke:#3fb950} .bdef{fill:#3fb950} .ball{fill:#58a6ff} .boff{fill:#6e7681} .ldef{fill:#3fb950} .all{stroke:#58a6ff} .lall{fill:#58a6ff} .off{stroke:#6e7681} .loff{fill:#6e7681} }
 </style>`, `<rect class="bg" width="100%" height="100%" rx="8"/>`];
     chart.panels.forEach((panel, i) => {
         const x0 = i * (W + GAP);
         const s = Object.fromEntries(ARMS.map((a) => [a.key, series(a.key, panel)]));
-        const vals = Object.values(s).flat();
+        const b = Object.fromEntries(ARMS.map((a) => [a.key, band(a.key, panel)]));
+        const vals = [...Object.values(s).flat(), ...Object.values(b).flat(2)];
         let lo = Math.min(...vals), hi = Math.max(...vals);
         const span = hi - lo || 1;
         lo = Math.max(0, lo - span * 0.1); hi = hi + span * 0.1;
@@ -103,6 +118,9 @@ for (const chart of CHARTS) {
             svg.push(`<text class="tx" x="${x0 + PAD.l - 6}" y="${(py(t) + 4).toFixed(1)}" text-anchor="end">${fmt(t)}${panel.unit ?? ""}</text>`);
         }
         svg.push(`<text class="tx" x="${px(0)}" y="${H - 8}">day 0</text><text class="tx" x="${px(days - 1)}" y="${H - 8}" text-anchor="end">day ${days - 1}</text>`);
+        const area = (a) => a.map(([, h], d) => `${d ? "L" : "M"}${px(d).toFixed(1)},${py(h).toFixed(1)}`).join("")
+            + a.map((_, d) => d).reverse().map((d) => `L${px(d).toFixed(1)},${py(a[d][0]).toFixed(1)}`).join("") + "Z";
+        for (const a of ARMS) svg.push(`<path class="b${a.key}" d="${area(b[a.key])}"/>`);
         svg.push(`<path class="off" d="${path(s.off)}"/><path class="all" d="${path(s.all)}"/><path class="def" d="${path(s.def)}"/>`);
         table.push(`| ${chart.file} | ${panel.title} | ${fmt(s.off[days - 1])} | ${fmt(s.def[days - 1])} | ${fmt(s.all[days - 1])} |`);
     });
@@ -112,8 +130,9 @@ for (const chart of CHARTS) {
         svg.push(`<rect class="l${a.key}" x="${lx}" y="${ly - 9}" width="18" height="4" rx="2"/><text class="tx" x="${lx + 24}" y="${ly - 3}">${a.label}</text>`);
         lx += 24 + a.label.length * 6 + 14;
     }
-    svg.push(`<text class="tx" x="12" y="${ly + 15}">mean of ${n} runs (${parks.size} parks, 90 days)</text>`, `</svg>`);
+    svg.push(`<text class="tx" x="12" y="${ly + 15}">line = mean, band = min-max across parks</text>`,
+        `<text class="tx" x="12" y="${ly + 30}">${runsLabel}, ${days - 1} days</text>`, `</svg>`);
     writeFileSync(join(OUT, `${chart.file}.svg`), svg.join("\n") + "\n");
 }
-console.log(`${n} runs, ${parks.size} parks, ${days} days -> ${OUT}\n`);
+console.log(`${n} runs (${runsLabel}), ${days} days -> ${OUT}\n`);
 console.log("| Chart | Measure | off | defaults | all on |\n|---|---|---|---|---|\n" + table.join("\n"));

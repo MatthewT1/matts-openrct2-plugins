@@ -1,4 +1,7 @@
-# Roadmap — Proposed Improvements
+# Roadmap (archived)
+
+> **Archived.** Every item here is done, rejected or superseded. The live backlog is
+> [GitHub Issues](https://github.com/MatthewT1/matts-openrct2-plugins/issues); new work goes there, not here.
 
 Each item is tagged with its basis (**source** = verified in OpenRCT2 C++;
 **research** = community consensus, see [research.md](research.md); **measured** = from
@@ -142,7 +145,7 @@ measurement.** Nothing is outstanding.
 | Mechanic Manager | Adaptive staffing, inspections, emergency repair |
 | Staff Extras | Entertainers (security closed on measured zero demand) |
 | Marketing Manager | Campaign ranking, auto-run |
-| Shared | 6 plugins, 12 pure modules, **396 tests**, telemetry throughout |
+| Shared | Pure decision modules with unit tests, telemetry throughout (as of 2026-09-24: 6 plugins, 12 modules, 396 tests) |
 
 Validated in the field this session: the entertainer costume fix (4 hired), the
 sample-rotation fix (19 sweeps published), the OPS direction fix (`opsSetRejected`

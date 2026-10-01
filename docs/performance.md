@@ -257,7 +257,7 @@ shows up as a number rather than as a stutter.
 node tests/run.mjs
 ```
 
-140 tests across 9 suites. The runner compiles `src/*.ts` for the pure modules into
+The runner compiles `src/*.ts` for the pure modules into
 `tests/build/` and executes every `*.test.mjs`.
 
 **Why the pure modules exist.** `hotspots`, `staff-activity`, `staffing`, `vomit`,

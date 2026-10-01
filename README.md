@@ -15,10 +15,10 @@ few jobs the game leaves entirely to you.
 Every decision is based on what's actually happening in your park, not on a fixed ratio.
 If the park is clean with 20 handymen, the plugin won't hire 40 because a formula says so.
 
-![Plugins off vs on: guest happiness, guests and park rating over 90 days, mean of 15 runs on 5 Six Flags parks](docs/img/showcase/overview.svg)
+![Plugins off vs on: guest happiness, guests and park rating over 90 days, mean and min-max band across 5 Six Flags parks, 3 perturbed replicates each](docs/img/showcase/overview.svg)
 
 <sub>Headless test runs: Six Flags Magic Mountain, over Texas, Great Adventure, Holland and
-Belgium, 3 runs each, 90 days, with the plugins off, on with their defaults, and with every
+Belgium, 3 perturbed replicates each, 90 days, with the plugins off, on with their defaults, and with every
 feature on. Each plugin's chart below shows its own measure with all the plugins running, so a shared
 measure like queuing reflects more than one plugin. Regenerate with `node tools/showcase-charts.mjs` (#140).</sub>
 
