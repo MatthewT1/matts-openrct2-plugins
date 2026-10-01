@@ -24,9 +24,9 @@ ok(pickTvTiles(q(10, { 0: { hasAddition: true }, 1: { edgeCount: 4 } }), OPT, 1)
 ok(pickTvTiles([], OPT, 2).length === 0, "empty queue");
 
 // Default (#116): every 2nd tile, no per-queue cap beyond the budget.
-ok(pickTvTiles(q(5), DEFAULT_QUEUE_TV_OPTIONS, 100).join() === "0,1,2,3,4", "default (#141): every empty tile");
-ok(pickTvTiles(q(5, { 2: { hasAddition: true } }), DEFAULT_QUEUE_TV_OPTIONS, 100).join() === "0,1,3,4",
-   "default: skips an occupied tile");
+ok(pickTvTiles(q(9), DEFAULT_QUEUE_TV_OPTIONS, 100).join() === "0,2,4,6,8", "default: every 2nd tile");
+ok(pickTvTiles(q(9, { 2: { hasAddition: true } }), DEFAULT_QUEUE_TV_OPTIONS, 100).join() === "0,3,5,7",
+   "default: skips an occupied tile and keeps spacing");
 
 // #141: TVs only where a long waiter stands, from the front to that tile + 2.
 const hot = (set) => (t) => set.includes(t.x);
@@ -35,8 +35,8 @@ ok(hotReach(line(10), hot([])) === -1, "no long waiter: no reach");
 ok(hotReach(line(10), hot([3])) === 5, "reach = deepest hot + 2");
 ok(hotReach(line(10), hot([1, 4])) === 6, "deepest of several hot tiles");
 ok(hotReach(line(10), hot([9])) === 9, "reach clamped to the queue end");
-ok(pickTvTiles(line(10), DEFAULT_QUEUE_TV_OPTIONS, 100, hotReach(line(10), hot([3]))).join() === "0,1,2,3,4,5",
-   "dense from the front up to reach");
-ok(pickTvTiles(line(10), DEFAULT_QUEUE_TV_OPTIONS, 2, 5).join() === "0,1", "budget still caps a hot queue");
+ok(pickTvTiles(line(10), DEFAULT_QUEUE_TV_OPTIONS, 100, hotReach(line(10), hot([3]))).join() === "0,2,4",
+   "every 2nd tile from the front up to reach");
+ok(pickTvTiles(line(10), DEFAULT_QUEUE_TV_OPTIONS, 1, 5).join() === "0", "budget still caps a hot queue");
 
 console.log(`${pass} passed, ${fail} failed`);

@@ -35,7 +35,7 @@ export interface QueueTvOptions {
 
 export const DEFAULT_QUEUE_TV_OPTIONS: QueueTvOptions = {
     maxPerQueue: 1_000,
-    spacing: 1,
+    spacing: 2,
 };
 
 /** Tiles past the deepest long-waiter that are still covered, as the queue keeps growing. */
