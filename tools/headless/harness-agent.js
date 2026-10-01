@@ -57,7 +57,11 @@ registerPlugin({
         // Tallied as columns but NOT counted in thoughtsNeg/thoughtsPos, so adding one keeps
         // those totals comparable with older runs.
         //   #82: "running out of cash" is what sends a guest to an ATM (Guest.cpp:1052).
-        var THOUGHTS_INFO = { thRunningOut: ["running_out"] };
+        //   #144: thLost split into its three thoughts (thLost itself is unchanged).
+        var THOUGHTS_INFO = {
+            thRunningOut: ["running_out"],
+            thLostOnly: ["lost"], thCantFind: ["cant_find"], thCantFindExit: ["cant_find_exit"]
+        };
         var thoughtCol = {};
         (function () {
             var c, i;
