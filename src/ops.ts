@@ -358,8 +358,9 @@ export function createOpsController(probeCeiling: number, knownRange?: KnownOpsR
                 // right for a ride with a queue, and it makes the first change useful
                 // rather than a coin flip.
                 //
-                // Empty: the midpoint is still right. A longer ride costs nothing when
-                // nobody is waiting, and may raise excitement.
+                // Empty: the midpoint. Not free: a "low" reading includes a 1-minute
+                // queue, and lengthening cost lightly queued rides ~38% of their
+                // throughput (design-records.md § WQ). Removing it measured as a tie (#101).
                 if (acting === "high") {
                     target = record.min;
                     reason = "sustained queue pressure with an unknown current setting; " +
@@ -378,7 +379,7 @@ export function createOpsController(probeCeiling: number, knownRange?: KnownOpsR
             } else {
                 target = clamp(record.current + 1, record.min, max);
                 reason = "sustained empty queue (score " + record.streak +
-                    "); lengthening the cycle since it costs nothing";
+                    "); lengthening the cycle";
             }
 
             if (record.current !== null && target === record.current) {
