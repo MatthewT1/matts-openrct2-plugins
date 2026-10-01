@@ -14,7 +14,7 @@
  * campaigns' evidence to a reload in this project's own 2026-09-20 testing.
  */
 
-import { createDebugChannel, diagnosticsCheckbox } from "./debug";
+import { createDebugChannel, diagnosticsCheckbox, DIAG_ROW } from "./debug";
 import { boolSetting } from "./settings";
 import { formatMoney, formatMoney2dp } from "./money";
 import {
@@ -560,7 +560,7 @@ registerPlugin({
                 title: "Marketing Manager v" + PLUGIN_VERSION,
                 // 320, not 300: "Half-price entry vouchers - £34.87/guest" was cut off (#24).
                 width: 320,
-                height: rowsBottom + 104,
+                height: rowsBottom + 86 + DIAG_ROW,
                 widgets: [
                     {
                         type: "label", name: "lblStatus",
@@ -606,14 +606,14 @@ registerPlugin({
                             refreshWindow();
                         },
                     },
-                    diagnosticsCheckbox(8, rowsBottom + 42, 304),
+                    ...diagnosticsCheckbox(8, rowsBottom + 42, 304),
                     {
                         type: "label", name: "lblFee",
-                        x: 8, y: rowsBottom + 62, width: 304, height: 14,
+                        x: 8, y: rowsBottom + 44 + DIAG_ROW, width: 304, height: 14,
                         text: "",
                         tooltip: "The game cuts new guest arrivals to 1/4 when the entrance fee is above your open rides' total value, and to 1/16 above twice it. Checked daily; a news message is posted once it has lasted " + FEE_WARNING_HOLD_DAYS + " days.",
                     },
-                    newsCheckbox(settings.news, 8, rowsBottom + 80, 304),
+                    newsCheckbox(settings.news, 8, rowsBottom + 62 + DIAG_ROW, 304),
                 ],
                 onClose: () => { pluginWindow = null; },
             });
