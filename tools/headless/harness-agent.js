@@ -227,7 +227,6 @@ registerPlugin({
                 vomit: lv.vomit,
                 oldLitter: lv.oldLitter,
                 handymenIdle: idleHandymen(lv.oldLitter),
-                zoneActions: (context.getParkStorage("Trash Manager").get("zoneStats") || {}).actions || 0,
                 openRides: rs.openRides,
                 avgReliability: rs.avgReliability,
                 avgDowntime: rs.avgDowntime,

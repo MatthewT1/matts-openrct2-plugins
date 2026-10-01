@@ -121,7 +121,7 @@ for (const [key, limit] of Object.entries(LIMITS)) {
     L.push(`| ${m.label} (${limit}) | ${cells.join(" | ")} |`);
 }
 // Info rows (never fail an arm): metrics a stack may be expected to move, medians of arm - previous arm.
-const INFO = ["oldLitter", "litter", "handymen", "handymenIdle", "zoneActions", "buildCum", "wagesCum"];
+const INFO = ["oldLitter", "litter", "handymen", "handymenIdle", "buildCum", "wagesCum"];
 L.push("", "## Info: medians of arm minus previous arm (end of run; mean over the run for oldLitter), lower old litter = better", "",
     `| Metric | ${arms.slice(1).join(" | ")} |`, `|---|${arms.slice(1).map(() => "---").join("|")}|`);
 for (const key of INFO) {

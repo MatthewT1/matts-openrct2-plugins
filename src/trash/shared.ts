@@ -101,7 +101,5 @@ export function createTrashSettings(storage: SettingsStore) {
         autoSweep:        boolSetting(storage, "autoSweepEnabled", true),
         autoHire:         boolSetting(storage, "autoHireEnabled", true),
         news:             boolSetting(storage, "newsSummaries", true),
-        // Handymen patrol 4x4-block zones instead of all roaming (#65). Off until the A/B says so.
-        handymanZones:    boolSetting(storage, "handymanZones", false),
     };
 }
