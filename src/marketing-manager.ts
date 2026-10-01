@@ -22,7 +22,7 @@ import {
     MIN_WEEKS, MAX_WEEKS, WEEKLY_COST, rankCampaigns, createAttributionTracker,
     CampaignRankingResult, MarketingSignals, AttributionTracker, AttributionSnapshot,
     AutoBatch, IncomeSample, MoodSample, PAYBACK_BASELINE_DAYS, PAYBACK_COOLDOWN_DAYS, TREND_DAYS,
-    autoStartHold, dailyIncomeRate, judgeBatch, moodHold, entranceFeePenalty, createFeeWatch, FEE_WARNING_HOLD_DAYS,
+    autoStartHold, dailyIncomeRate, judgeBatch, moodHold, entranceFeePenalty, createFeeWatch, FEE_WARNING_HOLD_DAYS, rideValueWarnings, createRidePriceWatch, PricedRide,
 } from "./marketing";
 import { spendGate } from "./cash-gate";
 import { createParkNews, newsCheckbox } from "./park-news";
@@ -325,6 +325,39 @@ registerPlugin({
             console.log("[Marketing Manager] " + text);
             park.postMessage({ type: "money", text });
         }
+
+        // Ride price warning (#166). Info only: the plugin never changes a ride's price.
+        const ridePriceWatch = createRidePriceWatch();
+        let lastRidePriceLine = "";
+
+        function checkRidePrices(): void {
+            if (park.getFlag("noMoney")) { lastRidePriceLine = ""; return; }
+            const rides = map.rides; // rebuilt on every access: read once
+            const priced: PricedRide[] = [];
+            for (let i = 0; i < rides.length; i++) {
+                const r = rides[i];
+                if (r.classification !== "ride") continue;
+                priced.push({ id: r.id, name: r.name, price: r.price[0], value: r.value, open: r.status === "open" });
+            }
+            const over = rideValueWarnings(priced, chargedEntranceFee() > 0);
+            const announce = ridePriceWatch.observe(over.map((w) => w.id));
+            const held = over.filter((w) => ridePriceWatch.held(w.id));
+            dbg.count("ridePriceChecked", priced.length);
+            if (over.length > 0) dbg.count("ridePriceOver", over.length);
+            if (over.length > held.length) dbg.count("ridePriceWaitingHold", over.length - held.length);
+            lastRidePriceLine = held.length === 0 ? "" : held[0].name + ": " + formatMoney2dp(held[0].price / 10)
+                + " is " + held[0].times + "x its value, guests refuse"
+                + (held.length > 1 ? " (+" + (held.length - 1) + " more)" : "");
+            for (let i = 0; i < over.length; i++) {
+                const w = over[i];
+                if (announce.indexOf(w.id) < 0) continue;
+                dbg.count("ridePriceWarned");
+                const text = w.name + " costs " + formatMoney2dp(w.price / 10) + ", but guests will pay "
+                    + formatMoney2dp(w.limit / 10) + " at most. They turn away unhappy. Lower the price.";
+                console.log("[Marketing Manager] " + text);
+                park.postMessage({ type: "attraction", subject: w.id, text });
+            }
+        }
         let lastTracked: TrackedCampaigns = {};
         let lastFoodOrDrinkStalls: Ride[] = [];
 
@@ -512,6 +545,8 @@ registerPlugin({
 
             const feeLabel = pluginWindow.findWidget<LabelWidget>("lblFee");
             if (feeLabel) feeLabel.text = lastFeeLine;
+            const ridePriceLabel = pluginWindow.findWidget<LabelWidget>("lblRidePrice");
+            if (ridePriceLabel) ridePriceLabel.text = lastRidePriceLine;
 
             const status = pluginWindow.findWidget<LabelWidget>("lblStatus");
             if (status) {
@@ -560,7 +595,7 @@ registerPlugin({
                 title: "Marketing Manager v" + PLUGIN_VERSION,
                 // 320, not 300: "Half-price entry vouchers - £34.87/guest" was cut off (#24).
                 width: 320,
-                height: rowsBottom + 86 + DIAG_ROW,
+                height: rowsBottom + 102 + DIAG_ROW,
                 widgets: [
                     {
                         type: "label", name: "lblStatus",
@@ -613,7 +648,13 @@ registerPlugin({
                         text: "",
                         tooltip: "The game cuts new guest arrivals to 1/4 when the entrance fee is above your open rides' total value, and to 1/16 above twice it. Checked daily; a news message is posted once it has lasted " + FEE_WARNING_HOLD_DAYS + " days.",
                     },
-                    newsCheckbox(settings.news, 8, rowsBottom + 62 + DIAG_ROW, 304),
+                    {
+                        type: "label", name: "lblRidePrice",
+                        x: 8, y: rowsBottom + 60 + DIAG_ROW, width: 304, height: 14,
+                        text: "",
+                        tooltip: "Guests refuse a ride priced above twice its value (the value is quartered if they paid to enter the park) and leave its entrance unhappy. Checked daily; a news message is posted once it has lasted " + FEE_WARNING_HOLD_DAYS + " days. The price is yours to change: this plugin never sets it.",
+                    },
+                    newsCheckbox(settings.news, 8, rowsBottom + 78 + DIAG_ROW, 304),
                 ],
                 onClose: () => { pluginWindow = null; },
             });
@@ -630,6 +671,7 @@ registerPlugin({
             updateMood();
             judgePending();
             checkEntranceFee();
+            dbg.time("day.ridePrices", checkRidePrices);
 
             lastTracked = upkeepCampaigns(loadTracked());
             saveTracked(lastTracked);
