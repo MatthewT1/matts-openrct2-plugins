@@ -91,6 +91,12 @@ export const MAX_ENTERTAINERS = MAX_TARGETED_ENTERTAINERS + MAX_STATION_ENTERTAI
  */
 export const PATROL_RADIUS_TILES = 4;
 
+/**
+ * Two targets whose centres are closer than this (Chebyshev, tiles) would put their
+ * entertainers on the same crowd, so the later one is skipped. About half a patrol box.
+ */
+export const MIN_TARGET_SEPARATION_TILES = 5;
+
 /** Game distance units per tile (`kCoordsXYStep`), matching the engine's own MapRange units. */
 export const TILE_SIZE = 32;
 
@@ -131,7 +137,21 @@ export function selectEntertainerTargets(
     eligible.sort((a, b) => b.queueMinutes - a.queueMinutes);
 
     const cap = Math.max(0, Math.min(maxEntertainers, MAX_TARGETED_ENTERTAINERS));
-    const chosen = eligible.slice(0, cap);
+    // Worst first, but skip a ride standing right next to one already chosen: two
+    // entertainers in the same spot is one entertainer's worth of fun.
+    const sep = MIN_TARGET_SEPARATION_TILES * TILE_SIZE;
+    const chosen: RideQueueSignal[] = [];
+    for (let i = 0; i < eligible.length && chosen.length < cap; i++) {
+        const r = eligible[i];
+        let near = false;
+        for (let j = 0; j < chosen.length; j++) {
+            if (Math.max(Math.abs(chosen[j].stationX - r.stationX), Math.abs(chosen[j].stationY - r.stationY)) < sep) {
+                near = true;
+                break;
+            }
+        }
+        if (!near) chosen.push(r);
+    }
 
     const radius = PATROL_RADIUS_TILES * TILE_SIZE;
     return chosen.map((r) => ({
@@ -313,12 +333,101 @@ export interface StationSignal {
  * They go AFTER the queue targets in the list the roster is assigned from, so if the
  * roster is short it is a station that goes without, not a long queue.
  */
-export function selectStationTargets(stations: StationSignal[]): EntertainerTarget[] {
+export function selectStationTargets(
+    stations: StationSignal[],
+    taken: EntertainerTarget[] = [],
+): EntertainerTarget[] {
     const radius = PATROL_RADIUS_TILES * TILE_SIZE;
-    return stations.slice(0, MAX_STATION_ENTERTAINERS).map((s) => ({
+    const sep = MIN_TARGET_SEPARATION_TILES * TILE_SIZE;
+    // Centres already used (queue targets first), so a station beside a queue
+    // entertainer, or a second court beside the first, is dropped rather than doubled up.
+    const cx: number[] = [];
+    const cy: number[] = [];
+    for (let i = 0; i < taken.length; i++) {
+        cx.push((taken[i].patrol.x1 + taken[i].patrol.x2) / 2);
+        cy.push((taken[i].patrol.y1 + taken[i].patrol.y2) / 2);
+    }
+    const kept: StationSignal[] = [];
+    for (let i = 0; i < stations.length && kept.length < MAX_STATION_ENTERTAINERS; i++) {
+        const s = stations[i];
+        let near = false;
+        for (let j = 0; j < cx.length; j++) {
+            if (Math.max(Math.abs(cx[j] - s.x), Math.abs(cy[j] - s.y)) < sep) { near = true; break; }
+        }
+        if (near) continue;
+        cx.push(s.x);
+        cy.push(s.y);
+        kept.push(s);
+    }
+    return kept.map((s) => ({
         rideId: -1,
         name: s.name,
         queueMinutes: 0,
         patrol: { x1: s.x - radius, y1: s.y - radius, x2: s.x + radius, y2: s.y + radius },
     }));
+}
+
+/** Stable identity of a target, so an entertainer can stay on it between passes. */
+export function targetKey(t: EntertainerTarget): string {
+    return t.name + ":" + t.patrol.x1 + "," + t.patrol.y1;
+}
+
+export interface EntertainerPosition {
+    id: number;
+    /** Game units. */
+    x: number;
+    y: number;
+}
+
+/**
+ * Which target each entertainer takes (index into `targets`, -1 = none).
+ *
+ * The game never walks a staff member TO its patrol box: outside it every direction is
+ * valid, so it random-walks where it stands (Staff.cpp:228-231). Entertainers hired at
+ * the entrance therefore stayed there. So the match matters: only the first
+ * `entertainers.length` targets (queues first) are covered, an entertainer already on a
+ * covered target keeps it, and the rest take the nearest uncovered one, so the one-off
+ * move onto the box is as short as possible and nobody gets shuffled across the map
+ * when the target order changes.
+ */
+export function matchTargets(
+    entertainers: EntertainerPosition[],
+    targets: EntertainerTarget[],
+    previous: { [id: number]: string },
+): number[] {
+    const result: number[] = entertainers.map(() => -1);
+    const covered = Math.min(entertainers.length, targets.length);
+    const taken: boolean[] = [];
+    for (let j = 0; j < covered; j++) taken.push(false);
+
+    for (let i = 0; i < entertainers.length; i++) {
+        const prev = previous[entertainers[i].id];
+        if (prev === undefined) continue;
+        for (let j = 0; j < covered; j++) {
+            if (!taken[j] && targetKey(targets[j]) === prev) {
+                taken[j] = true;
+                result[i] = j;
+                break;
+            }
+        }
+    }
+    for (let j = 0; j < covered; j++) {
+        if (taken[j]) continue;
+        const cx = (targets[j].patrol.x1 + targets[j].patrol.x2) / 2;
+        const cy = (targets[j].patrol.y1 + targets[j].patrol.y2) / 2;
+        let best = -1;
+        let bestDist = Infinity;
+        for (let i = 0; i < entertainers.length; i++) {
+            if (result[i] !== -1) continue;
+            const d = Math.max(Math.abs(entertainers[i].x - cx), Math.abs(entertainers[i].y - cy));
+            if (d < bestDist) { bestDist = d; best = i; }
+        }
+        if (best >= 0) { result[best] = j; taken[j] = true; }
+    }
+    return result;
+}
+
+/** True when a point (game units) is outside the patrol rectangle. */
+export function outsidePatrol(x: number, y: number, p: PatrolRect): boolean {
+    return x < p.x1 || x > p.x2 + TILE_SIZE - 1 || y < p.y1 || y > p.y2 + TILE_SIZE - 1;
 }

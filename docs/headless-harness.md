@@ -86,17 +86,40 @@ finished jobs (`out/summary.json`) are skipped and a failed job is retried once.
 K=4 take about as long as one (6 cores / 12 threads).
 
 `soak.mjs` tests a stack of branches: `<dir>` holds one built plugin folder per arm, run in
-name order (`0-main`, `1-cheap-builds-81`, ...). Parks come from the #63 pool (Magic
-Mountain and Jetlag Heights always in), each with one seeded RNG perturb shared by every
-arm; 30 days, `--settings defaults`. `report.md` shows health (runs, game-log errors), what
+name order (`0-main`, `1-cheap-builds-81`, ...). An arm can also differ by settings only: put
+`<arm>.settings.json` (a `--settings` file) next to the arm folder and it replaces `defaults`
+for that arm (#159). Parks come from the census pool (below), each with one seeded RNG perturb
+shared by every arm; 30 days, `--settings defaults`. `report.md` shows health (runs, game-log errors), what
 fired (kiosks, umbrella stalls, queue TVs and stalls built, from an end-of-run census the
 agent takes off the map) and a sign test of each arm against the previous one, with the
 fail limits at the top of the script.
 
+### The park pool (#160)
+
+```
+node tools/headless/census.mjs --k 16
+```
+
+`census.mjs` loads every save in `Documents/OpenRCT2/save` plus seven fixed scenarios for one
+day with no plugins (about 1 min) and writes `harness-runs/pool-v2/pool.json` and `pool.md`:
+open rides, guests, rating and cash on day 0 per park. A park is in the pool when it loads and
+has 5 or more open rides. Run it again after adding saves. On 2026-10-01 that gave **36 parks:
+29 saves and 7 scenarios** (7-35 open rides, 150-3,002 guests, cash from about 200 to 136k, one
+no-money park).
+
+`soak.mjs` and `ablation.mjs` draw the same way: the first `--scenarios` (default 3) fixed
+scenarios are always in as the small-park check (Six Flags Magic Mountain, Jetlag Heights,
+Frozen Flats), and the rest is a seeded shuffle of the saves. So `--parks 12` is 9 saves and 3
+scenarios, and `--parks 32` is every save. Saves repeat; scenarios are clock-seeded (below).
+
+Before #160 the soak drew from the 10 parks the #63 viability walk finished: 3 saves and 7 stock
+scenarios, because the walk spent its budget on 30 stock starts with fewer than 5 rides. Results
+from then lean on young, cash-tight parks; #160 lists which ones were re-checked.
+`ablation.mjs --pool old` keeps that draw for comparisons.
+
 `ablation.mjs` (#133) asks whether each plugin does what we claim: one build, 7 arms per park
-(all default-on plugins, all minus one plugin via a per-job `--settings` JSON, all off). The draw
-is the whole viability pool minus the parks #63 skipped, and each job skips parks with fewer than
-5 open rides (`minOpenRides` in `pool.mjs`). `results.md` gives each plugin a verdict (works /
+(all default-on plugins, all minus one plugin via a per-job `--settings` JSON, all off). Each job
+skips parks with fewer than 5 open rides (`minOpenRides` in `pool.mjs`). `results.md` gives each plugin a verdict (works /
 no effect / harms / silent) by the rules in the script header. `tools/readme-chart.mjs` turns
 the full and all-off arms into the README chart.
 
