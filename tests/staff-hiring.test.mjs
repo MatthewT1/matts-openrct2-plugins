@@ -156,6 +156,12 @@ function rig(result, backoffDays = HIRE_BACKOFF_DAYS) {
     ok(awardCrewStatusText(p, 0) === "Best Staff: 9/20 staff, needs every staff type", "missing-type text");
     p = planAwardCrew(I(14, 4, 4, 4, 490, 3), CREW);
     ok(p.reason === "met" && awardCrewStatusText(p, 3).indexOf("(3 award guards)") > 0, "over the line: met, plural guards");
+    p = planAwardCrew(I(10, 4, 2, 4, 490, 1), CREW);
+    ok(awardCrewStatusText(p, 1, 4) === "Best Staff: 20/20 staff, award held, 4 months left (1 award guard)", "award held: months left shown");
+    ok(awardCrewStatusText(p, 0, 1) === "Best Staff: 20/20 staff, award held, 1 month left", "one month: singular");
+    ok(awardCrewStatusText(p, 1, 0) === "Best Staff: 20/20 staff, line met (1 award guard)", "0 months = not held");
+    p = planAwardCrew(I(10, 4, 1, 4, 490), CREW);
+    ok(awardCrewStatusText(p, 0, 3).indexOf("award held, 3 months left") > 0, "held from earlier while 1 short now: still says held");
 }
 
 console.log(`${pass} passed, ${fail} failed`); if (fail) process.exitCode = 1;
