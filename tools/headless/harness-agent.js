@@ -57,7 +57,9 @@ registerPlugin({
         // Tallied as columns but NOT counted in thoughtsNeg/thoughtsPos, so adding one keeps
         // those totals comparable with older runs.
         //   #82: "running out of cash" is what sends a guest to an ATM (Guest.cpp:1052).
+        //   #144: thLost split into its three thoughts (thLost itself is unchanged).
         var THOUGHTS_INFO = { thRunningOut: ["running_out"] };
+        var THOUGHTS_SPLIT = { lost: "thLostOnly", cant_find: "thCantFind", cant_find_exit: "thCantFindExit" };
         var thoughtCol = {};
         (function () {
             var c, i;
@@ -130,6 +132,7 @@ registerPlugin({
             for (c in THOUGHTS_NEG) out[c] = 0;
             for (c in THOUGHTS_POS) out[c] = 0;
             for (c in THOUGHTS_INFO) out[c] = 0;
+            for (c in THOUGHTS_SPLIT) out[THOUGHTS_SPLIT[c]] = 0;
             for (var i = 0; i < guests.length; i++) {
                 if (!guests[i].isInPark) continue;
                 inPark++;
@@ -140,6 +143,7 @@ registerPlugin({
                 // freshness-0 thoughts (ScGuest.cpp:578), which wait at most ~220 ticks (Guest.cpp:5145-5200).
                 if (th.length > 0 && th[0].freshness <= 5 && (th[0].type === "lost" || th[0].type === "cant_find")) out.lostFresh++;
                 for (var j = 0; j < th.length; j++) {
+                    if (THOUGHTS_SPLIT[th[j].type]) out[THOUGHTS_SPLIT[th[j].type]]++;
                     var col = thoughtCol[th[j].type];
                     if (!col) continue;
                     out[col]++;

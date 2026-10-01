@@ -121,7 +121,7 @@ path below the Woodchip coaster.*
 
 ![Guests who are hungry, thirsty or need a toilet, and guests who are lost, over 90 days: plugins off vs defaults vs every feature on](docs/img/showcase/auto-builder.svg)
 
-<sub>Needs thoughts drop by about half. Lost guests go up with the plugins on (53 -> 73); we haven't worked out why yet.</sub>
+<sub>Needs thoughts drop by about half. The "lost" count (53 -> 73 with the plugins on) is almost all guests who can't find a ride they want (about 98%); almost none are actually lost (1 or fewer per park), and the Most Confusing Layout award never switches on. More guests and more places to go means more "where is it?" thoughts.</sub>
 
 ### Mechanic Manager
 
