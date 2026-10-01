@@ -1,4 +1,4 @@
-import { createDebugChannel, diagnosticsCheckbox, isDebugEnabled } from "./debug";
+import { createDebugChannel, diagnosticsCheckbox, DIAG_ROW, isDebugEnabled } from "./debug";
 import { boolSetting } from "./settings";
 import { formatMoney } from "./money";
 import { createActivityTracker } from "./staff-activity";
@@ -696,7 +696,7 @@ registerPlugin({
                 classification: "mechanic-manager",
                 title: "Mechanic Manager v" + PLUGIN_VERSION,
                 width: 280,
-                height: 394,
+                height: 376 + DIAG_ROW,
                 widgets: [
                     // Stats bar
                     {
@@ -784,8 +784,8 @@ registerPlugin({
                     },
                     // Status feedback
                     { type: "label", name: "lblStatus", x: 8, y: 334, width: 264, height: 14, text: "" },
-                    diagnosticsCheckbox(8, 354, 264),
-                    newsCheckbox(settings.news, 8, 372, 264)
+                    ...diagnosticsCheckbox(8, 354, 264),
+                    newsCheckbox(settings.news, 8, 354 + DIAG_ROW, 264)
                 ],
                 onClose: () => {
                     pluginWindow = null;
