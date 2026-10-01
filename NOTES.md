@@ -71,6 +71,7 @@ openrct2 plugin/
 │   ├── breakdown-trace.ts      # breakdown -> repair timing trace, Diagnostics only (unit-tested)
 │   ├── vomit.ts                # vomit -> nauseating-ride attribution (pure, unit-tested)
 │   ├── amenities.ts            # bench/bin placement planner (pure, unit-tested)
+│   ├── award-topup.ts          # Best Toilets / Best Food top-up + scaled cap (pure, unit-tested)
 │   ├── needs.ts                # guest-need clustering, facility gaps, sample rotation (pure)
 │   ├── thoughts.ts             # guest-thought categorisation (pure, unit-tested)
 │   ├── ops.ts                  # ride operation-setting controller (pure, unit-tested)
@@ -226,9 +227,12 @@ can auto-sweep.
   gap must survive **5 separate sweeps** of the whole park before it can authorise
   construction, because a cluster is a snapshot of where guests were standing and crowds
   move. Since #80 one sweep reads every guest (up to 2,000) once a day, and a gap gains
-  at most one streak point per sweep. Capped at 8 per kind, one build per pass, £2,000
+  at most one streak point per sweep. Capped at 8 per kind (toilets and food: one per 128 guests plus one once that is higher, #162), one build per pass, £2,000
   cash floor (skipped in no-money parks), and it **never demolishes anything**. See
   [design-records.md § NEEDS](docs/design-records.md#needs--guest-need-clustering-then-automatic-facility-placement).
+  - **Award top-up** (#162, on by default): when the park is 1-3 short of the Best Toilets or
+    Best Food count and has £5,000, builds one toilet or food stall every 5 days
+    (`src/award-topup.ts`). See [design-records.md § AW](docs/design-records.md#aw--award-top-up-for-best-toilets-and-best-food-162).
   - Only builds what research has unlocked, via `park.research.inventedItems`.
   - The rotation a 1x1 stall wants is undocumented, so all four are probed with silent
     `queryAction` calls and the winner is counted in telemetry.
