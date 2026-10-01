@@ -188,14 +188,21 @@ export interface AwardCrewInput {
 export interface AwardCrewOptions {
     minStaff: number;
     guestsPerStaff: number;
-    /** A gap wider than this is not chased, and guards hired for it are let go. */
+    /** A gap wider than this is not started on. */
     maxExtra: number;
+    /**
+     * Once we own guards, the gap may grow this much past maxExtra before they are let go.
+     * Without it a park whose gap swings between 5 and 6 hired and fired the whole crew
+     * over and over (Trinity Islands: 16 hires and 16 fires in 90 days).
+     */
+    holdExtra: number;
 }
 
 export const DEFAULT_AWARD_CREW_OPTIONS: AwardCrewOptions = {
     minStaff: BEST_STAFF_MIN_STAFF,
     guestsPerStaff: 32,
     maxExtra: 5,
+    holdExtra: 2,
 };
 
 export interface AwardCrewPlan {
@@ -221,7 +228,8 @@ export function planAwardCrew(i: AwardCrewInput, o: AwardCrewOptions): AwardCrew
     const staff = i.handymen + i.mechanics + i.security + i.entertainers;
     const gap = line - (staff - i.ownedGuards);
     // The award needs every type; extra guards cannot stand in for a missing one.
-    const reachable = i.handymen > 0 && i.mechanics > 0 && i.entertainers > 0 && gap <= o.maxExtra;
+    const reach = i.ownedGuards > 0 ? o.maxExtra + o.holdExtra : o.maxExtra;
+    const reachable = i.handymen > 0 && i.mechanics > 0 && i.entertainers > 0 && gap <= reach;
     const target = reachable && gap > 0 ? gap : 0;
     if (i.ownedGuards < target) return { action: "hire", line: line, target: target };
     const slack = reachable ? 2 : 1;

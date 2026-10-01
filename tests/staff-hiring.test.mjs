@@ -132,6 +132,12 @@ function rig(result, backoffDays = HIRE_BACKOFF_DAYS) {
     ok(p.action === "fire", "out of reach: released down to none");
     p = planAwardCrew(I(10, 4, 1, 4, 1600, 0), CREW);
     ok(p.action === "none", "nothing owned: never asks to fire");
+    p = planAwardCrew(I(10, 4, 6, 4, 780, 5), CREW);
+    ok(p.action === "hire" && p.target === 6, "gap grew to 6 while we own 5: hold and follow it, not release");
+    p = planAwardCrew(I(10, 4, 6, 4, 880, 5), CREW);
+    ok(p.action === "fire" && p.target === 0, "gap of 9 is past maxExtra + holdExtra: release");
+    p = planAwardCrew(I(10, 4, 1, 4, 780, 0), CREW);
+    ok(p.action === "none", "the same 6 gap with nothing owned is not started");
     p = planAwardCrew(I(12, 4, 3, 4, 490, 2), CREW);
     ok(p.action === "fire" && p.target === 0, "21 staff without ours and two owned: one is let go");
 }
