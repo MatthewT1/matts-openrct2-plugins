@@ -45,6 +45,7 @@ export const NEWS_PER_DAY = 2;
  * news; a sacking or a few benches is filler. Unlisted kinds are 1.
  */
 export const PRIORITY: Record<string, number> = {
+    bestStaffWon: 4,
     stall: 3, guardHired: 3, started: 3,
     rush: 2, hired: 2, entertainerHired: 2, completed: 2,
     fired: 1, entertainerFired: 1, amenities: 1, queueTvs: 1,
@@ -225,6 +226,11 @@ export const MECHANIC_PHRASES: Phrasebook = {
 };
 
 export const EXTRAS_PHRASES: Phrasebook = {
+    bestStaffWon: () => [
+        "Best Staff award won. The guards say it was the guards. The pandas disagree.",
+        "The park holds the Best Staff award: a quarter more new guests while it lasts. Nobody tell the handymen, they will want a raise.",
+        "Best Staff award! The mechanics celebrated by inspecting something.",
+    ],
     entertainerHired: (n) => [
         "Sent " + ent(n) + " to cheer up a grumpy queue. Morale is up; dignity is holding.",
         "Hired " + ent(n) + ". The costume smells faintly of candyfloss and ambition.",

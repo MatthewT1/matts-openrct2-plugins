@@ -122,6 +122,16 @@ registerPlugin({
         const AWARD_CREW_MIN_CASH = 3_000 * 10; // GBP 3,000: wages recur
         /** The Best Staff line as of the last daily pass, for the window. */
         let awardStatus = "";
+        let hadBestStaff = false;
+
+        /** Months the Best Staff award has left, 0 when the park does not hold it. */
+        function bestStaffMonths(): number {
+            const awards = park.awards;
+            for (let i = 0; i < awards.length; i++) {
+                if (awards[i].type === "bestStaff") return awards[i].monthsRemaining;
+            }
+            return 0;
+        }
 
         /** Hires the award guard if the roster needs one. Cheap: one staff list read. */
         function manageAwardGuard(): void {
@@ -158,11 +168,19 @@ registerPlugin({
                 handymen: n.handyman, mechanics: n.mechanic, security: n.security, entertainers: n.entertainer,
                 guestEntities: map.getAllEntities("guest").length, ownedGuards: ownedIds.length,
             }, DEFAULT_AWARD_CREW_OPTIONS);
-            awardStatus = awardCrewStatusText(plan, ownedIds.length);
+            const held = bestStaffMonths();
+            awardStatus = awardCrewStatusText(plan, ownedIds.length, held);
+            if (held > 0 && !hadBestStaff) {
+                dbg.count("bestStaffAwardWon");
+                news.add("bestStaffWon");
+                console.log("[Staff Extras] The park holds the Best Staff award (" + plan.staff + " staff against a line of "
+                    + plan.line + "): 25% more new guests for " + held + " months.");
+            }
+            hadBestStaff = held > 0;
             // One record a day: the roster against the line, and what we did about it (#163).
             dbg.event("awardCrew", {
                 action: plan.action, reason: plan.reason, staff: plan.staff, line: plan.line,
-                shortBy: plan.shortBy, target: plan.target, owned: ownedIds.length,
+                shortBy: plan.shortBy, target: plan.target, owned: ownedIds.length, awardMonths: held,
                 guards: n.security, handymen: n.handyman, mechanics: n.mechanic, entertainers: n.entertainer,
                 cash: park.cash,
             });
