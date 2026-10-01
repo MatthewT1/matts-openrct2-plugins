@@ -185,8 +185,9 @@ Any change marked `needs-game` is checked in-game like this (~5 min to set up):
    `Documents\OpenRCT2\plugin\`.
 3. **Load the park.** If the game was already open, go back to the title screen and reload
    the park, because plugins only load with a park.
-4. **Turn on Diagnostics.** Open any plugin window from the map menu and tick
-   **Diagnostics** (one tick turns it on for all plugins).
+4. **Turn on Diagnostics.** Build with `npm run build:debug` (deploys like `build:dev`): the
+   **Diagnostics** checkbox appears in every plugin window, already ticked (one tick toggles all
+   plugins). Normal builds and release zips have no checkbox (#146).
 5. **Play** for the number of in-game days the issue asks for. The numbers land in
    `tools/rct-debug.log`.
 

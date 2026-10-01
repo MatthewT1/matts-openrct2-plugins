@@ -257,7 +257,7 @@ The decision-making code is kept apart from the code that talks to the game. Fil
 `staffing.ts`, `needs.ts` and `marketing.ts` take plain numbers in and return decisions,
 so they can be tested without the game running. The seven plugin files connect those
 decisions to the game. Their behaviour in a real park is checked with an optional
-diagnostics feed: tick **Diagnostics** in any plugin window, run `node tools/log-sink.mjs`,
+diagnostics feed: build with `npm run build:debug` (every window then shows **Diagnostics**, ticked), run `node tools/log-sink.mjs`,
 and timings and counters are written to `tools/rct-debug.log`.
 
 Every push is type-checked, tested and built by GitHub Actions. Pushing a tag such as

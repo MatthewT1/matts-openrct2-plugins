@@ -4,7 +4,7 @@
  * Split out of trash-manager.ts (#6) with no behaviour change.
  */
 
-import { diagnosticsCheckbox } from "../debug";
+import { diagnosticsCheckbox, DIAG_ROW } from "../debug";
 import { newsCheckbox } from "../park-news";
 import {
     LITTER_PENALTY_CAP, FREE_ROAMING_BUFFER, GUESTS_PER_HANDYMAN,
@@ -50,7 +50,7 @@ export function createTrashWindow(deps: TrashWindowDeps) {
             classification: "trash-manager",
             title: "Trash Manager v" + __PLUGIN_VERSION__,
             width: 300,
-            height: 408,
+            height: 390 + DIAG_ROW,
             widgets: [
                 // --- Rating Impact ---
                 { type: "groupbox", x: 6, y: 16, width: 288, height: 66, text: "Rating Impact" },
@@ -157,8 +157,8 @@ export function createTrashWindow(deps: TrashWindowDeps) {
                 },
 
                 { type: "label", name: "lblStatus", x: 14, y: 348, width: 276, height: 14, text: "" },
-                diagnosticsCheckbox(14, 368, 276),
-                newsCheckbox(settings.news, 14, 386, 276),
+                ...diagnosticsCheckbox(14, 368, 276),
+                newsCheckbox(settings.news, 14, 368 + DIAG_ROW, 276),
             ],
             onClose: function(): void {
                 win = null;

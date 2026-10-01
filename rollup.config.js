@@ -21,13 +21,19 @@ const build = process.env.BUILD || "development";
 // One release number for every plugin, taken from package.json.
 const { version } = JSON.parse(readFileSync("./package.json", "utf8"));
 
-/** Replaces the `__PLUGIN_VERSION__` placeholder (declared in src/version.d.ts). */
+const debugBuild = process.env.DEBUG_BUILD === "1";
+
+/** Replaces the `__PLUGIN_VERSION__` and `__DEBUG_BUILD__` placeholders (src/version.d.ts). */
 function stampVersion() {
 	return {
 		name: "stamp-version",
 		transform(code) {
-			if (!code.includes("__PLUGIN_VERSION__")) return null;
-			return { code: code.replaceAll("__PLUGIN_VERSION__", JSON.stringify(version)), map: null };
+			if (!code.includes("__PLUGIN_VERSION__") && !code.includes("__DEBUG_BUILD__")) return null;
+			return {
+				code: code.replaceAll("__PLUGIN_VERSION__", JSON.stringify(version))
+					.replaceAll("__DEBUG_BUILD__", debugBuild ? "true" : "false"),
+				map: null,
+			};
 		},
 	};
 }
