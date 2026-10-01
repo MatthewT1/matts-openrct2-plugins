@@ -63,10 +63,18 @@ function autoBuilderMain(): void {
     });
     const cheap = createCheapBuilder(settings, dbg, stalls);
     const courtStats = createCourtStats(storage);
-    const facilities = createFacilityManager(settings, dbg, stalls, cheap.listener, courtStats);
     // Monthly budget for cheap extras (queue TVs; repairs share it) (#116).
     const extras = createExtrasBudget();
     const queueTvs = createQueueTvManager(settings, dbg, extras);
+    // One guest-thought sampler feeds both the cheap builds and the queue TVs (#141).
+    const facilities = createFacilityManager(settings, dbg, stalls, {
+        wantsSamples: function (): boolean { return cheap.listener.wantsSamples() || queueTvs.isOn(); },
+        thought: function (type: string, x: number, y: number): void {
+            cheap.listener.thought(type, x, y);
+            queueTvs.thought(type, x, y);
+        },
+        sweepComplete: function (): void { cheap.listener.sweepComplete(); },
+    }, courtStats);
     const repairs = createRepairManager(settings, dbg, extras, scan);
     const courtExtras = createCourtExtrasManager(settings, dbg, extras, stalls, courtStats, amenityObjectIndex);
     const { sampleGuestNeeds, manageFacilities, facilityTracker } = facilities;
