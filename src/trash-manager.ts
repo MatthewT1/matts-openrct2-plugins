@@ -70,7 +70,7 @@ function trashManagerMain(): void {
     } = scan;
     const {
         hiringBlocked, hireHandyman, fireHandyman, enforceOrders, enforceAllOrders, clearHandymanZone,
-        clearAllZones, syncZones, checkActivity,
+        clearAllZones, syncZones, syncHandymanZones, checkActivity,
     } = createHandymen(dbg, cache, storage);
     // Bins/benches, facilities and guest-need sampling moved to the Auto-Builder plugin (#84).
 
@@ -276,7 +276,10 @@ function trashManagerMain(): void {
         // synchronously in single player, so `handymen` would otherwise still contain
         // a peep that no longer exists and syncZones would aim a patrol-area action at
         // a dead sprite id.
-        dbg.time("day.syncZones", () => syncZones(rosterChanged ? getHandymen() : handymen));
+        const rosterNow = rosterChanged ? getHandymen() : handymen;
+        dbg.time("day.syncZones", () => syncZones(rosterNow));
+        // 4x4-block zones, only with the setting on (#65); with it off this just releases any.
+        dbg.time("day.handymanZones", () => syncHandymanZones(settings.handymanZones.get(), rosterNow, scan.getZoneBlocks()));
         dbg.flushStats(parkContext());
 
         const penalty = computeRatingPenalty(cache.oldLitter);

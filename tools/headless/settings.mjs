@@ -15,6 +15,7 @@ export const TOGGLES = [
     { plugin: "Trash Manager", key: "autoHireEnabled", defaultOn: true },
     { plugin: "Trash Manager", key: "adaptiveStaffing", defaultOn: true },
     { plugin: "Trash Manager", key: "autoSweepEnabled", defaultOn: true },
+    { plugin: "Trash Manager", key: "handymanZones", defaultOn: false },
     { plugin: "Auto-Builder", key: "autoAmenities", defaultOn: true },
     { plugin: "Auto-Builder", key: "autoAmenityRemoval", defaultOn: true },
     { plugin: "Auto-Builder", key: "autoFacilities", defaultOn: true },

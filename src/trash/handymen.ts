@@ -8,6 +8,7 @@ import { createActivityTracker, ActivitySnapshot } from "../staff-activity";
 import { createStaffHirer, HIRE_BACKOFF_DAYS } from "../staff-hiring";
 import { HANDYMAN_ORDERS, getHandymen, TileCache } from "./shared";
 import { DebugChannel } from "../debug";
+import { blockRect, planZones, zoneDelta, ZoneBlock } from "../handyman-zones";
 import { createOwnedStaff, OwnedStore, pickOwnedToFire } from "../staff-ownership";
 
 export function createHandymen(dbg: DebugChannel, cache: TileCache, storage: OwnedStore) {
@@ -166,6 +167,9 @@ export function createHandymen(dbg: DebugChannel, cache: TileCache, storage: Own
     /** Clears every handyman's patrol area (the manual button). */
     function clearAllZones(handymen?: Handyman[]): void {
         const staff = handymen !== undefined ? handymen : getHandymen();
+        // The zones are gone with the areas; forget them so the next plan sets them again.
+        zonePlanSig = "";
+        for (const id in zoneApplied) zoneApplied[id] = [];
         manualClear = true;
         staff.forEach(function(h: Handyman): void {
             if (h.id !== null) clearHandymanZone(h.id);
@@ -192,6 +196,108 @@ export function createHandymen(dbg: DebugChannel, cache: TileCache, storage: Own
         for (const id in zoneCleared) {
             if (!live[id as unknown as number]) delete zoneCleared[id];
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // 4x4-block zones (#65, setting "Handyman zones", off by default)
+    // -------------------------------------------------------------------------
+
+    // Game actions per day for zone work. A 4x4 block costs 0.05-0.15 ms (headless probe,
+    // #65), so a full re-plan of a big park spreads over a few days instead of one spike.
+    const ZONE_ACTIONS_PER_DAY = 80;
+
+    interface ZoneOp { id: number; key: string | null; mode: 0 | 1 | 2 }
+    let zoneOps: ZoneOp[] = [];
+    // handyman id -> blocks currently set, as far as we know. Never read back from the game.
+    const zoneApplied: Record<number, string[]> = {};
+    let zonePlanSig = "";
+    let zoneStats = { actions: 0, blocksSet: 0, plans: 0 };
+
+    function zoneSig(ids: number[], blocks: ZoneBlock[]): string {
+        let sum = 0;
+        for (const b of blocks) sum = (sum + b.bx * 31 + b.by * 17 + b.tiles * 7 + b.bx * b.by) % 1000003;
+        return ids.join(",") + "|" + blocks.length + "|" + sum;
+    }
+
+    /**
+     * Plans zones for the handymen we hired and queues the changes. Cheap when nothing has
+     * changed (a signature compare); the plan itself is a few hundred blocks.
+     */
+    function planHandymanZones(handymen: Handyman[], blocks: ZoneBlock[]): void {
+        // Every handyman, as with the roaming clear above (syncZones already takes every
+        // handyman's patrol area), not only the ones we hired.
+        const ids: number[] = [];
+        handymen.forEach(function(h: Handyman): void {
+            if (h.id !== null && !hirer.firePending(h.id)) ids.push(h.id);
+        });
+        ids.sort(function(a, b): number { return a - b; });
+        for (const id in zoneApplied) {
+            if (ids.indexOf(Number(id)) < 0) delete zoneApplied[id];
+        }
+        const sig = zoneSig(ids, blocks);
+        if (sig === zonePlanSig) return;
+        zonePlanSig = sig;
+        zoneStats.plans++;
+
+        const plan = planZones(blocks, ids);
+        const ops: ZoneOp[] = [];
+        ids.forEach(function(id: number): void {
+            const wanted = plan.zones[id];
+            if (wanted === undefined) {
+                if (zoneApplied[id] !== undefined && zoneApplied[id].length > 0) ops.push({ id: id, key: null, mode: 2 });
+                zoneApplied[id] = [];
+                return;
+            }
+            const d = zoneDelta(zoneApplied[id], wanted);
+            d.remove.forEach(function(k: string): void { ops.push({ id: id, key: k, mode: 1 }); });
+            d.add.forEach(function(k: string): void { ops.push({ id: id, key: k, mode: 0 }); });
+            zoneApplied[id] = wanted;
+        });
+        zoneOps = ops;
+        dbg.count("zonePlans");
+    }
+
+    /** Switched off: hand every zoned handyman back to roaming. */
+    function releaseHandymanZones(): void {
+        zonePlanSig = "";
+        const ops: ZoneOp[] = [];
+        for (const id in zoneApplied) {
+            if (zoneApplied[id].length > 0) ops.push({ id: Number(id), key: null, mode: 2 });
+            delete zoneApplied[id];
+        }
+        zoneOps = ops;
+    }
+
+    /** Runs up to ZONE_ACTIONS_PER_DAY queued zone actions. */
+    function drainZoneOps(): void {
+        let n = 0;
+        while (zoneOps.length > 0 && n < ZONE_ACTIONS_PER_DAY) {
+            const op = zoneOps.shift() as ZoneOp;
+            if (!staffExists(op.id) || hirer.firePending(op.id)) {
+                dbg.count("zoneSkippedDeadPeep");
+                continue;
+            }
+            const r = op.key === null ? { x1: 0, y1: 0, x2: 0, y2: 0 } : blockRect(op.key);
+            context.executeAction("staffsetpatrolarea", { id: op.id, x1: r.x1, y1: r.y1, x2: r.x2, y2: r.y2, mode: op.mode });
+            n++;
+            if (op.mode === 0) zoneStats.blocksSet++;
+        }
+        if (n > 0) {
+            zoneStats.actions += n;
+            dbg.count("zoneActions", n);
+            dbg.count("zoneActionsLeft", zoneOps.length);
+        }
+    }
+
+    /**
+     * Daily zone upkeep with the setting on: plan, then drain.
+     */
+    function syncHandymanZones(on: boolean, handymen: Handyman[], blocks: ZoneBlock[]): void {
+        if (on) planHandymanZones(handymen, blocks);
+        else if (Object.keys(zoneApplied).length > 0) releaseHandymanZones();
+        drainZoneOps();
+        // Totals for the headless harness (#65); the daily row reads them back.
+        if (zoneStats.actions > 0 || zoneStats.plans > 0) storage.set("zoneStats", zoneStats);
     }
 
     /**
@@ -236,6 +342,7 @@ export function createHandymen(dbg: DebugChannel, cache: TileCache, storage: Own
         clearHandymanZone,
         clearAllZones,
         syncZones,
+        syncHandymanZones,
         checkActivity,
     };
 }

@@ -6,6 +6,7 @@
  */
 
 import { createHotspotAccumulator } from "../hotspots";
+import { ZONE_BLOCK_TILES, ZoneBlock } from "../handyman-zones";
 import { getHandymen, isOldLitter, TileCoord, BoundingRect, TileCache } from "./shared";
 import { BrokenTile } from "../repairs";
 import { DebugChannel } from "../debug";
@@ -78,6 +79,8 @@ export function createMapScan(dbg: DebugChannel, scanTicks: number = TILE_SCAN_T
     // Broken path additions (any kind) and a park entrance tile, from the last tile scan (#115).
     let brokenTiles: BrokenTile[] = [];
     let entranceTile: TileCoord | null = null;
+    // Path tiles per 4x4 block, for handyman patrol zones (#65). Rebuilt by the tile scan.
+    let zoneBlocks: ZoneBlock[] = [];
     const hotspots = createHotspotAccumulator(HOTSPOT_CELL_TILES);
     let lastHotspotReport = "";
 
@@ -99,6 +102,7 @@ export function createMapScan(dbg: DebugChannel, scanTicks: number = TILE_SCAN_T
         const nextCoverage: TileCoord[] = [];
         const nextBroken: BrokenTile[] = [];
         let nextEntrance: TileCoord | null = null;
+        const blockCounts: Record<string, ZoneBlock> = {};
         let minPX = size.x, minPY = size.y, maxPX = 0, maxPY = 0;
         let minPathX = size.x, minPathY = size.y, maxPathX = 0, maxPathY = 0;
 
@@ -148,6 +152,10 @@ export function createMapScan(dbg: DebugChannel, scanTicks: number = TILE_SCAN_T
                     }
                 }
                 if (hasPath) {
+                    const bx = (x / ZONE_BLOCK_TILES) | 0, by = (y / ZONE_BLOCK_TILES) | 0;
+                    const bk = bx + "," + by;
+                    if (blockCounts[bk] === undefined) blockCounts[bk] = { bx: bx, by: by, tiles: 0 };
+                    blockCounts[bk].tiles++;
                     if (x < minPathX) minPathX = x;
                     if (y < minPathY) minPathY = y;
                     if (x > maxPathX) maxPathX = x;
@@ -165,6 +173,7 @@ export function createMapScan(dbg: DebugChannel, scanTicks: number = TILE_SCAN_T
             : cache.parkBounds;
 
         coverageTiles    = nextCoverage;
+        zoneBlocks       = Object.keys(blockCounts).map(function(k: string): ZoneBlock { return blockCounts[k]; });
         cache.pathTiles  = pathCount;
         cache.ownedTiles = ownedCount;
         cache.fullBins   = fullBins;
@@ -250,6 +259,7 @@ export function createMapScan(dbg: DebugChannel, scanTicks: number = TILE_SCAN_T
         /** Broken path additions from the last tile scan; a new array each scan. */
         getBrokenTiles(): BrokenTile[] { return brokenTiles; },
         getEntranceTile(): TileCoord | null { return entranceTile; },
+        getZoneBlocks(): ZoneBlock[] { return zoneBlocks; },
         /** Makes the next updateTileCache run regardless of the cooldown. */
         forceTileScan(): void { tileScanCooldown.reset(); },
     };
