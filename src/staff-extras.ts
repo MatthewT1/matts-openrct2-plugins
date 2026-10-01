@@ -45,7 +45,7 @@ import {
 } from "./entertainer-targeting";
 import { findCourts, DEFAULT_COURT_OPTIONS } from "./facilities";
 import { createStaffingController, StaffingDecision } from "./staffing";
-import { createStaffHirer, wantsAwardGuard, planAwardCrew, DEFAULT_AWARD_CREW_OPTIONS, HIRE_BACKOFF_DAYS } from "./staff-hiring";
+import { createStaffHirer, wantsAwardGuard, planAwardCrew, awardCrewStatusText, DEFAULT_AWARD_CREW_OPTIONS, HIRE_BACKOFF_DAYS } from "./staff-hiring";
 import { createOwnedStaff } from "./staff-ownership";
 import { spendGate } from "./cash-gate";
 import { createParkNews, newsCheckbox } from "./park-news";
@@ -120,14 +120,17 @@ registerPlugin({
         // ever fired; the #92 guard above and the player's guards are not in this list.
         const crewGuards = createOwnedStaff(storage, "ourAwardGuards");
         const AWARD_CREW_MIN_CASH = 3_000 * 10; // GBP 3,000: wages recur
+        /** The Best Staff line as of the last daily pass, for the window. */
+        let awardStatus = "";
 
         /** Hires the award guard if the roster needs one. Cheap: one staff list read. */
         function manageAwardGuard(): void {
-            if (!settings.awardGuard.get()) return;
+            if (!settings.awardGuard.get()) { awardStatus = ""; return; }
             const staff = map.getAllEntities("staff");
             const types = staff.map((s: Staff) => s.staffType);
             if (wantsAwardGuard(types)) {
-                if (guardHirer.blocked()) return;
+                awardStatus = "Best Staff: hiring the first security guard";
+                if (guardHirer.blocked()) { dbg.count("guardSkippedBackoff"); return; }
                 guardHirer.hire((peepId: number) => {
                     dbg.count("guardHired");
                     news.add("guardHired", undefined, { type: "peep", id: peepId });
@@ -155,7 +158,19 @@ registerPlugin({
                 handymen: n.handyman, mechanics: n.mechanic, security: n.security, entertainers: n.entertainer,
                 guestEntities: map.getAllEntities("guest").length, ownedGuards: ownedIds.length,
             }, DEFAULT_AWARD_CREW_OPTIONS);
-            if (plan.action === "none") return;
+            awardStatus = awardCrewStatusText(plan, ownedIds.length);
+            // One record a day: the roster against the line, and what we did about it (#163).
+            dbg.event("awardCrew", {
+                action: plan.action, reason: plan.reason, staff: plan.staff, line: plan.line,
+                shortBy: plan.shortBy, target: plan.target, owned: ownedIds.length,
+                guards: n.security, handymen: n.handyman, mechanics: n.mechanic, entertainers: n.entertainer,
+                cash: park.cash,
+            });
+            dbg.count("crewDay_" + plan.reason);
+            if (plan.action === "none") {
+                if (ownedIds.length > 0) dbg.count("crewGuardHeld", ownedIds.length);
+                return;
+            }
             if (plan.action === "fire") {
                 const id = ownedIds[ownedIds.length - 1];
                 crewGuards.remove(id);
@@ -166,9 +181,10 @@ registerPlugin({
             }
             if (spendGate(park.cash, AWARD_CREW_MIN_CASH, park.getFlag("noMoney"), "build") === "lowCash") {
                 dbg.count("crewGuardLowCash");
+                awardStatus += ", waiting for " + formatMoney(AWARD_CREW_MIN_CASH);
                 return;
             }
-            if (guardHirer.blocked()) return;
+            if (guardHirer.blocked()) { dbg.count("crewGuardSkippedBackoff"); return; }
             guardHirer.hire((peepId: number) => {
                 crewGuards.add(peepId);
                 dbg.count("crewGuardHired");
@@ -698,6 +714,8 @@ registerPlugin({
                     + "  Worst queue " + cache.worstQueueMinutes + "m"
                     + "  " + formatMoney(cache.entertainerCount * ENTERTAINER_WAGE_PER_MONTH) + "/mo";
             }
+            const awardLbl = pluginWindow.findWidget<LabelWidget>("lblAward");
+            if (awardLbl) awardLbl.text = awardStatus;
             const lv = pluginWindow.findWidget<ListViewWidget>("lvTargets");
             if (lv) {
                 lv.items = cache.targets.length > 0
@@ -715,7 +733,7 @@ registerPlugin({
                 classification: "staff-extras",
                 title: "Staff Extras v" + PLUGIN_VERSION,
                 width: 280,
-                height: 258 + DIAG_ROW,
+                height: 274 + DIAG_ROW,
                 widgets: [
                     {
                         type: "label", name: "lblStats",
@@ -774,9 +792,10 @@ registerPlugin({
                         isChecked: settings.awardGuard.get(),
                         onChange: (checked: boolean) => { settings.awardGuard.set(checked); }
                     },
-                    { type: "label", name: "lblStatus", x: 8, y: 214, width: 264, height: 14, text: "" },
-                    ...diagnosticsCheckbox(8, 234, 264),
-                    newsCheckbox(settings.news, 8, 234 + DIAG_ROW, 264)
+                    { type: "label", name: "lblAward", x: 20, y: 212, width: 252, height: 14, text: awardStatus },
+                    { type: "label", name: "lblStatus", x: 8, y: 230, width: 264, height: 14, text: "" },
+                    ...diagnosticsCheckbox(8, 250, 264),
+                    newsCheckbox(settings.news, 8, 250 + DIAG_ROW, 264)
                 ],
                 onClose: () => {
                     pluginWindow = null;
