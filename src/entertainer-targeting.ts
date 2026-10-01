@@ -366,3 +366,68 @@ export function selectStationTargets(
         patrol: { x1: s.x - radius, y1: s.y - radius, x2: s.x + radius, y2: s.y + radius },
     }));
 }
+
+/** Stable identity of a target, so an entertainer can stay on it between passes. */
+export function targetKey(t: EntertainerTarget): string {
+    return t.name + ":" + t.patrol.x1 + "," + t.patrol.y1;
+}
+
+export interface EntertainerPosition {
+    id: number;
+    /** Game units. */
+    x: number;
+    y: number;
+}
+
+/**
+ * Which target each entertainer takes (index into `targets`, -1 = none).
+ *
+ * The game never walks a staff member TO its patrol box: outside it every direction is
+ * valid, so it random-walks where it stands (Staff.cpp:228-231). Entertainers hired at
+ * the entrance therefore stayed there. So the match matters: only the first
+ * `entertainers.length` targets (queues first) are covered, an entertainer already on a
+ * covered target keeps it, and the rest take the nearest uncovered one, so the one-off
+ * move onto the box is as short as possible and nobody gets shuffled across the map
+ * when the target order changes.
+ */
+export function matchTargets(
+    entertainers: EntertainerPosition[],
+    targets: EntertainerTarget[],
+    previous: { [id: number]: string },
+): number[] {
+    const result: number[] = entertainers.map(() => -1);
+    const covered = Math.min(entertainers.length, targets.length);
+    const taken: boolean[] = [];
+    for (let j = 0; j < covered; j++) taken.push(false);
+
+    for (let i = 0; i < entertainers.length; i++) {
+        const prev = previous[entertainers[i].id];
+        if (prev === undefined) continue;
+        for (let j = 0; j < covered; j++) {
+            if (!taken[j] && targetKey(targets[j]) === prev) {
+                taken[j] = true;
+                result[i] = j;
+                break;
+            }
+        }
+    }
+    for (let j = 0; j < covered; j++) {
+        if (taken[j]) continue;
+        const cx = (targets[j].patrol.x1 + targets[j].patrol.x2) / 2;
+        const cy = (targets[j].patrol.y1 + targets[j].patrol.y2) / 2;
+        let best = -1;
+        let bestDist = Infinity;
+        for (let i = 0; i < entertainers.length; i++) {
+            if (result[i] !== -1) continue;
+            const d = Math.max(Math.abs(entertainers[i].x - cx), Math.abs(entertainers[i].y - cy));
+            if (d < bestDist) { bestDist = d; best = i; }
+        }
+        if (best >= 0) { result[best] = j; taken[j] = true; }
+    }
+    return result;
+}
+
+/** True when a point (game units) is outside the patrol rectangle. */
+export function outsidePatrol(x: number, y: number, p: PatrolRect): boolean {
+    return x < p.x1 || x > p.x2 + TILE_SIZE - 1 || y < p.y1 || y > p.y2 + TILE_SIZE - 1;
+}

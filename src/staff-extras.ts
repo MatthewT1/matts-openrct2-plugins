@@ -41,7 +41,7 @@ import { formatMoney } from "./money";
 import {
     selectEntertainerTargets, censusQueues, entertainerStaffingSignals,
     ENTERTAINER_THRESHOLDS, EntertainerTarget, RideQueueSignal, MAX_TARGETED_ENTERTAINERS,
-    planEntertainerRoster, costumeCandidates, selectStationTargets, StationSignal, MAX_STATION_ENTERTAINERS,
+    planEntertainerRoster, costumeCandidates, selectStationTargets, matchTargets, targetKey, outsidePatrol, StationSignal, MAX_STATION_ENTERTAINERS,
 } from "./entertainer-targeting";
 import { findCourts, DEFAULT_COURT_OPTIONS } from "./facilities";
 import { createStaffingController, StaffingDecision } from "./staffing";
@@ -484,45 +484,98 @@ registerPlugin({
             return true;
         }
 
+        /** target key each entertainer was last sent to, so a reorder doesn't shuffle them. */
+        const lastTarget: { [id: number]: string } = {};
+
         /**
-         * Assigns each targeted ride's patrol rectangle to one entertainer, round-robin.
-         * Entertainers left over once every target has one get their zone cleared, so
-         * they roam freely rather than sitting idle in a stale rectangle from a ride
-         * that no longer qualifies.
+         * A flat, non-queue path tile inside the patrol box, nearest its centre, as game
+         * units; null when the box has none.
+         */
+        function pathTileIn(t: EntertainerTarget): { x: number; y: number; z: number } | null {
+            const tx1 = t.patrol.x1 >> 5, ty1 = t.patrol.y1 >> 5, tx2 = t.patrol.x2 >> 5, ty2 = t.patrol.y2 >> 5;
+            const cx = (tx1 + tx2) / 2, cy = (ty1 + ty2) / 2;
+            let best: { x: number; y: number; z: number } | null = null;
+            let bestD = Infinity;
+            for (let x = Math.max(tx1, 1); x <= tx2 && x < map.size.x - 1; x++) {
+                for (let y = Math.max(ty1, 1); y <= ty2 && y < map.size.y - 1; y++) {
+                    const d = Math.max(Math.abs(x - cx), Math.abs(y - cy));
+                    if (d >= bestD) continue;
+                    const tile = map.getTile(x, y);
+                    for (let i = 0; i < tile.numElements; i++) {
+                        const el = tile.getElement(i);
+                        if (el.type !== "footpath") continue;
+                        const fp = el as FootpathElement;
+                        if (fp.isQueue || fp.slopeDirection !== null) continue;
+                        bestD = d;
+                        best = { x: x * 32 + 16, y: y * 32 + 16, z: fp.baseZ };
+                        break;
+                    }
+                }
+            }
+            return best;
+        }
+
+        /**
+         * Gives each target in priority order one entertainer (sticky, else nearest) and
+         * sets its patrol rectangle. The game never walks staff to a box they stand
+         * outside of (Staff.cpp:228-231), so one that is outside is moved onto a path
+         * tile in it, once: after that it wanders the box on its own. Entertainers left
+         * over once every target has one get their zone cleared, so they roam freely.
          */
         function assignPatrols(entertainers: Entertainer[], targets: EntertainerTarget[]): void {
             // `hirer.firePending`: an entertainer fired this tick still exists under a
             // server, where actions run next tick; patrolling it fails (#136).
-            const n = Math.min(entertainers.length, targets.length);
-            for (let i = 0; i < n; i++) {
+            const live: Entertainer[] = [];
+            const pos: Array<{ id: number; x: number; y: number }> = [];
+            for (let i = 0; i < entertainers.length; i++) {
                 const e = entertainers[i];
-                const t = targets[i];
                 if (e.id === null) continue;
-                if (map.getEntity(e.id) === null) continue;
+                const ent = map.getEntity(e.id);
+                if (ent === null) continue;
                 if (hirer.firePending(e.id)) { dbg.count("patrolSkippedFirePending"); continue; }
+                live.push(e);
+                pos.push({ id: e.id, x: ent.x, y: ent.y });
+            }
+            const match = matchTargets(pos, targets, lastTarget);
+            for (let i = 0; i < live.length; i++) {
+                const id = pos[i].id;
+                if (match[i] < 0) {
+                    context.executeAction("staffsetpatrolarea", {
+                        id, x1: 0, y1: 0, x2: 0, y2: 0, mode: PATROL_MODE_CLEAR_ALL,
+                    }, () => {});
+                    delete lastTarget[id];
+                    dbg.count("patrolClears");
+                    continue;
+                }
+                const t = targets[match[i]];
                 context.executeAction("staffsetpatrolarea", {
-                    id: e.id,
+                    id,
                     x1: t.patrol.x1, y1: t.patrol.y1, x2: t.patrol.x2, y2: t.patrol.y2,
                     mode: PATROL_MODE_SET,
                 }, () => {});
                 dbg.count("patrolAssignments");
-                const ent = map.getEntity(e.id);
+                lastTarget[id] = targetKey(t);
+                let moved = false;
+                if (outsidePatrol(pos[i].x, pos[i].y, t.patrol)) {
+                    const spot = pathTileIn(t);
+                    const ent = map.getEntity(id);
+                    if (spot !== null && ent !== null) {
+                        ent.x = spot.x;
+                        ent.y = spot.y;
+                        ent.z = spot.z;
+                        moved = true;
+                        dbg.count("entertainersPlaced");
+                    } else {
+                        dbg.count("entertainerPlaceNoPath");
+                    }
+                }
                 dbg.event("entertainerPatrol", {
-                    id: e.id, at: ent ? [ent.x >> 5, ent.y >> 5] : null, target: t.name,
+                    id, at: [pos[i].x >> 5, pos[i].y >> 5], target: t.name, moved,
                     rect: [t.patrol.x1 >> 5, t.patrol.y1 >> 5, t.patrol.x2 >> 5, t.patrol.y2 >> 5],
                 });
             }
-            for (let i = n; i < entertainers.length; i++) {
-                const e = entertainers[i];
-                if (e.id === null) continue;
-                if (map.getEntity(e.id) === null) continue;
-                if (hirer.firePending(e.id)) { dbg.count("patrolSkippedFirePending"); continue; }
-                context.executeAction("staffsetpatrolarea", {
-                    id: e.id, x1: 0, y1: 0, x2: 0, y2: 0, mode: PATROL_MODE_CLEAR_ALL,
-                }, () => {});
-                dbg.count("patrolClears");
-            }
         }
+
 
         function parkContext(): Record<string, unknown> {
             return {

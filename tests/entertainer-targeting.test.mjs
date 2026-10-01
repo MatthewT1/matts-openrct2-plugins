@@ -1,7 +1,7 @@
 import {
     selectEntertainerTargets, censusQueues, entertainerStaffingSignals,
     QUEUE_FLOOR_MINUTES, QUEUE_URGENT_MINUTES, MAX_TARGETED_ENTERTAINERS, MAX_ENTERTAINERS, MAX_STATION_ENTERTAINERS, selectStationTargets,
-    PATROL_RADIUS_TILES, TILE_SIZE, ENTERTAINER_THRESHOLDS, planEntertainerRoster, costumeCandidates,
+    PATROL_RADIUS_TILES, TILE_SIZE, matchTargets, targetKey, outsidePatrol, ENTERTAINER_THRESHOLDS, planEntertainerRoster, costumeCandidates,
 } from "./build/entertainer-targeting.mjs";
 import { createStaffingController } from "./build/staffing.mjs";
 
@@ -182,4 +182,20 @@ if (fail > 0) process.exit(1);
     ], q);
     ok(st.length === 2 && st[0].name === "park entrance" && st[1].name === "food court",
         "stations spread, got " + st.map(o => o.name).join(","));
+}
+
+// --- matching: sticky, nearest, priority set only
+{
+    const t = selectEntertainerTargets([ride(1, "A", 9, 1000, 1000), ride(2, "B", 8, 5000, 1000), ride(3, "C", 7, 9000, 1000)], 4);
+    const ents = [{ id: 10, x: 9000, y: 1000 }, { id: 11, x: 1000, y: 1000 }];
+    const m = matchTargets(ents, t, {});
+    ok(m[1] === 0 && m[0] === 1, "nearest fills priority targets only, got " + m.join(","));
+    const m2 = matchTargets(ents, t, { 10: targetKey(t[0]) });
+    ok(m2[0] === 0 && m2[1] === 1, "sticky keeps the previous target, got " + m2.join(","));
+    ok(matchTargets([], t, {}).length === 0, "no entertainers");
+    ok(matchTargets(ents, [], {}).join(",") === "-1,-1", "no targets");
+}
+{
+    const p = { x1: 0, y1: 0, x2: 256, y2: 256 };
+    ok(!outsidePatrol(100, 100, p) && !outsidePatrol(280, 280, p) && outsidePatrol(300, 100, p) && outsidePatrol(-1, 5, p), "outsidePatrol");
 }
