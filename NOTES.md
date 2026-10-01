@@ -13,7 +13,7 @@ game's plugin folder.
 | [docs/ride-settings.md](docs/ride-settings.md) | Source-verified dispatch rules, `operationOption` meaning and rating effect per ride type (#38 step 1). |
 | [docs/design-records.md](docs/design-records.md) | Per-feature design record (basis, measurements, decisions, rejections). Read before changing or reopening a feature. |
 | [docs/archive/](docs/archive/) | Verbatim field logs and build-out work log moved out of performance.md and roadmap.md. Rarely needed. |
-| [docs/roadmap.md](docs/roadmap.md) | Proposed improvements, prioritised, each tagged with its basis and cost. |
+| [docs/roadmap.md](docs/roadmap.md) | Archived: the original improvement roadmap (all done/rejected). Backlog lives in GitHub Issues. |
 | [docs/marketing-research.md](docs/marketing-research.md) | Verified marketing-campaign mechanics (costs, guest-generation math, hidden penalties) for the proposed `marketing-manager` plugin. |
 | [docs/marketing-roadmap.md](docs/marketing-roadmap.md) | Step-by-step build plan for `marketing-manager` — done through Phase 6 (auto-run), verified live. |
 | [docs/user-guide.md](docs/user-guide.md) | Player-facing guide: every toggle, defaults, how to tell it is working. |
@@ -25,7 +25,7 @@ game's plugin folder.
 
 **Start here if you are:**
 
-- changing plugin behaviour → [research.md](docs/research.md), then [roadmap.md](docs/roadmap.md)
+- changing plugin behaviour → [GitHub Issues](https://github.com/MatthewT1/matts-openrct2-plugins/issues) for the backlog, then [research.md](docs/research.md) and [design-records.md](docs/design-records.md)
 - touching anything that runs periodically → [performance.md](docs/performance.md)
 - unsure what an API property means or returns → [api-reference.md](docs/api-reference.md)
 - measuring whether the plugins help a park → [headless-harness.md](docs/headless-harness.md)

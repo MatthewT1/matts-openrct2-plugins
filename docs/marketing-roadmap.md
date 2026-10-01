@@ -93,7 +93,7 @@ baked into `marketing-research.md`:**
    guest-count-related, and is bypassed entirely under `difficultGuestGeneration`
    per that flag's own documented intent.
 
-**Exit criterion:** met. Module compiles standalone, 33/33 tests pass (370/370
+**Exit criterion:** met. Module compiles standalone, 33/33 tests pass (370/370 as of 2026-09-21,
 project-wide), and the cheap-entrance-fee test case (`entranceFee < £4`) walks
 through the exact £/guest arithmetic from marketing-research.md and correctly
 demotes free-entry below free-food/drink — by hand: 50÷8=6.25→2.9 guests/wk→£17.44/guest
@@ -252,7 +252,7 @@ Goal: closed-loop marketing, off by default, same shape as adaptive staffing.
 - [x] Telemetry: `autoManage` flag, `autoStarted`, `autoSkippedBudget`,
       `autoSkippedCashFloor` counters — every skip path is countable, not silent
 
-**Exit criterion:** typechecked, 396/396 tests pass, deployed. Ready for you to
+**Exit criterion:** typechecked, 396/396 tests pass (as of 2026-09-21), deployed. Ready for you to
 enable "Auto-manage" and confirm live: campaigns start on their own within budget,
 respect the reserve floor, never duplicate an active type, and the £2,000/day
 budget figure isn't wildly wrong for how this park actually spends (adjust
