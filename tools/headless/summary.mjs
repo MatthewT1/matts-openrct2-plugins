@@ -18,6 +18,8 @@ export const METRICS = [
     { key: "totalAdmissions", label: "Admissions", better: 1 },
     { key: "litter", label: "Litter", better: -1 },
     { key: "vomit", label: "Vomit", better: -1 },
+    { key: "oldLitter", label: "Old litter (past grace period)", better: -1 },
+    { key: "handymenIdle", label: "Handymen idle 5+ days with old litter", better: -1 },
     { key: "avgReliability", label: "Avg ride reliability", better: 1 },
     { key: "avgDowntime", label: "Avg ride downtime", better: -1 },
     { key: "ridesBroken", label: "Rides broken now", better: -1, agg: "mean" },

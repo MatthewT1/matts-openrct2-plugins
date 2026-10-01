@@ -61,12 +61,16 @@ export interface DebugChannel {
  * not JavaScript — `InteractiveConsole` has no eval path. Only the `openrct2.com`
  * stdin console evaluates script (`StdInOutConsole.cpp:79`).
  *
- * Default is off, so a normal game pays only an object-property read per call.
+ * Default is off in a normal build (on in a debug build), so a normal game pays only an
+ * object-property read per call.
  */
 const DEBUG_FLAG = "openrct2-plugins.debug";
 
 export function isDebugEnabled(): boolean {
-    return context.sharedStorage.get<boolean>(DEBUG_FLAG) === true;
+    const stored = context.sharedStorage.get<boolean>(DEBUG_FLAG);
+    // A debug build streams to the sink without anyone ticking a box (#146); an explicit
+    // stored value (the checkbox, or the harness's --debug flag) still wins.
+    return stored === undefined || stored === null ? __DEBUG_BUILD__ : stored === true;
 }
 
 /** Turns the debug channel on or off for every plugin, immediately and globally. */
@@ -74,12 +78,17 @@ export function setDebugEnabled(on: boolean): void {
     context.sharedStorage.set(DEBUG_FLAG, on);
 }
 
+/** Height of the Diagnostics row; 0 in a normal build, where windows leave it out (#146). */
+export const DIAG_ROW: number = __DEBUG_BUILD__ ? 18 : 0;
+
 /**
- * The "Diagnostics" checkbox every plugin window carries. One definition, so the five
- * windows cannot drift apart (one already had a shorter tooltip).
+ * The "Diagnostics" checkbox a debug build's plugin windows carry (none in a normal
+ * build, so spread the result into the widget list). One definition, so the windows
+ * cannot drift apart.
  */
-export function diagnosticsCheckbox(x: number, y: number, width: number): CheckboxDesc {
-    return {
+export function diagnosticsCheckbox(x: number, y: number, width: number): CheckboxDesc[] {
+    if (!__DEBUG_BUILD__) return [];
+    return [{
         type: "checkbox", name: "chkDebug",
         x: x, y: y, width: width, height: 14,
         text: "Diagnostics: stream timings to log sink",
@@ -89,7 +98,7 @@ export function diagnosticsCheckbox(x: number, y: number, width: number): Checkb
             setDebugEnabled(checked);
             syncDiagnosticsCheckboxes(checked);
         },
-    };
+    }];
 }
 
 /** Classifications of every plugin window that carries the Diagnostics checkbox. */

@@ -38,21 +38,35 @@ export const DEFAULT_QUEUE_TV_OPTIONS: QueueTvOptions = {
     spacing: 2,
 };
 
+/** Tiles past the deepest long-waiter that are still covered, as the queue keeps growing. */
+export const HOT_REACH_EXTRA = 2;
+
+/**
+ * Last trace index to cover: the deepest tile (front first) where `isHot` says a long
+ * waiter stands, plus `HOT_REACH_EXTRA`. -1 = no long waiter on this queue, so no TVs.
+ */
+export function hotReach(trace: QueueTile[], isHot: (t: QueueTile) => boolean): number {
+    let deepest = -1;
+    for (let i = 0; i < trace.length; i++) if (isHot(trace[i])) deepest = i;
+    return deepest < 0 ? -1 : Math.min(trace.length - 1, deepest + HOT_REACH_EXTRA);
+}
+
 /**
  * Indices into `trace` (ordered front of queue first) to put a TV on.
  *
  * Skips tiles with any addition (never replaces the player's bin, bench or lamp) and
  * 4-edge tiles, keeps `spacing` tiles from every TV already on the queue, and stops at
- * `maxPerQueue` including existing TVs, or at `budget` new ones.
+ * `maxPerQueue` including existing TVs, at `budget` new ones, or past index `reach`.
  */
-export function pickTvTiles(trace: QueueTile[], options: QueueTvOptions, budget: number): number[] {
+export function pickTvTiles(trace: QueueTile[], options: QueueTvOptions, budget: number,
+                            reach: number = trace.length - 1): number[] {
     const tvAt: number[] = [];
     for (let i = 0; i < trace.length; i++) if (trace[i].hasTv) tvAt.push(i);
     const room = Math.min(options.maxPerQueue - tvAt.length, budget);
     const out: number[] = [];
     if (room <= 0) return out;
 
-    for (let i = 0; i < trace.length && out.length < room; i++) {
+    for (let i = 0; i <= reach && i < trace.length && out.length < room; i++) {
         const t = trace[i];
         if (t.hasAddition || t.edgeCount >= 4) continue;
         let clear = true;

@@ -7,7 +7,7 @@
 import { DebugChannel } from "../debug";
 import { BuilderSettings } from "./settings";
 import { ExtrasBudget } from "../extras-budget";
-import { pickTvTiles, edgeCount, DEFAULT_QUEUE_TV_OPTIONS, QueueTile } from "../queue-tv";
+import { pickTvTiles, hotReach, edgeCount, DEFAULT_QUEUE_TV_OPTIONS, QueueTile } from "../queue-tv";
 import { DIR_DX, DIR_DY } from "./stall-build";
 
 const OPTIONS = DEFAULT_QUEUE_TV_OPTIONS;
@@ -31,6 +31,9 @@ export function createQueueTvManager(settings: BuilderSettings, dbg: DebugChanne
     let tvObject: number | undefined = undefined;
     let placedTotal = 0;
     let cursor = 0;
+    // Tiles where a guest had a fresh queuing_ages thought (#141), "x,y" -> true. Kept for
+    // the session: a queue that was long once is worth its TVs, and nothing is removed.
+    const hotTiles: Record<string, true> = {};
 
     function isOn(): boolean {
         return settings.autoQueueTvs.get();
@@ -126,6 +129,11 @@ export function createQueueTvManager(settings: BuilderSettings, dbg: DebugChanne
         });
     }
 
+    /** Guest-thought feed (facilities.ts sampler): remembers tiles with a long waiter. */
+    function thought(type: string, tileX: number, tileY: number): void {
+        if (type === "queuing_ages") hotTiles[tileX + "," + tileY] = true;
+    }
+
     /** Traces a few ride queues and places TVs the budget covers. Never removes anything. */
     function manage(): void {
         if (!isOn()) return;
@@ -153,11 +161,16 @@ export function createQueueTvManager(settings: BuilderSettings, dbg: DebugChanne
         for (let v = 0; v < visits && room > 0; v++) {
             const ride = queued[cursor++ % queued.length];
             const trace = traceQueue(ride);
-            const picks = pickTvTiles(trace, OPTIONS, room);
+            const reach = hotReach(trace, function (t): boolean { return hotTiles[t.x + "," + t.y] === true; });
+            if (reach < 0) {
+                dbg.count("queueTvSkippedCold");
+                continue;
+            }
+            const picks = pickTvTiles(trace, OPTIONS, room, reach);
             for (let p = 0; p < picks.length; p++) place(trace[picks[p]], obj, ride.name);
             room -= picks.length;
         }
     }
 
-    return { manage, isOn, placedCount(): number { return placedTotal; } };
+    return { manage, isOn, thought, placedCount(): number { return placedTotal; } };
 }

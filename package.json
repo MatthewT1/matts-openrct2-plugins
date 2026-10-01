@@ -8,8 +8,10 @@
 	"scripts": {
 		"start": "node ./node_modules/nodemon/bin/nodemon.js --watch ./src --ext js,ts --exec \"node ./node_modules/rollup/dist/bin/rollup --config rollup.config.js\"",
 		"build": "node ./node_modules/rollup/dist/bin/rollup --config rollup.config.js --environment BUILD:production",
+		"build:debug": "node ./node_modules/rollup/dist/bin/rollup --config rollup.config.js --environment DEBUG_BUILD:1",
 		"build:dev": "node ./node_modules/rollup/dist/bin/rollup --config rollup.config.js",
 		"test": "node tests/run.mjs",
+		"check:links": "node tools/check-doc-links.mjs",
 		"typecheck": "node ./node_modules/typescript/bin/tsc --noEmit -p tsconfig.json"
 	},
 	"devDependencies": {

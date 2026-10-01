@@ -1,4 +1,4 @@
-import { createDebugChannel, diagnosticsCheckbox } from "./debug";
+import { createDebugChannel, diagnosticsCheckbox, DIAG_ROW } from "./debug";
 import { boolSetting } from "./settings";
 import { createDeferredActions } from "./deferred";
 import { createOpsController, RideOpsState, OpsAction } from "./ops";
@@ -772,7 +772,7 @@ registerPlugin({
                 classification: "wait-time-optimizer",
                 title: "Wait Time Optimizer v" + PLUGIN_VERSION,
                 width: 400,
-                height: 364,
+                height: 346 + DIAG_ROW,
                 widgets: [
                     // Summary line
                     {
@@ -862,8 +862,8 @@ registerPlugin({
                         isChecked: isAutoOps(),
                         onChange: (checked: boolean) => { settings.autoOps.set(checked); }
                     },
-                    diagnosticsCheckbox(8, 316, 384),
-                    newsCheckbox(settings.news, 8, 334, 384)
+                    ...diagnosticsCheckbox(8, 316, 384),
+                    newsCheckbox(settings.news, 8, 316 + DIAG_ROW, 384)
                 ],
                 onClose: () => {
                     pluginWindow = null;

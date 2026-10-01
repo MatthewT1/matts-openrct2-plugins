@@ -57,7 +57,9 @@ registerPlugin({
         // Tallied as columns but NOT counted in thoughtsNeg/thoughtsPos, so adding one keeps
         // those totals comparable with older runs.
         //   #82: "running out of cash" is what sends a guest to an ATM (Guest.cpp:1052).
+        //   #144: thLost split into its three thoughts (thLost itself is unchanged).
         var THOUGHTS_INFO = { thRunningOut: ["running_out"] };
+        var THOUGHTS_SPLIT = { lost: "thLostOnly", cant_find: "thCantFind", cant_find_exit: "thCantFindExit" };
         var thoughtCol = {};
         (function () {
             var c, i;
@@ -130,6 +132,7 @@ registerPlugin({
             for (c in THOUGHTS_NEG) out[c] = 0;
             for (c in THOUGHTS_POS) out[c] = 0;
             for (c in THOUGHTS_INFO) out[c] = 0;
+            for (c in THOUGHTS_SPLIT) out[THOUGHTS_SPLIT[c]] = 0;
             for (var i = 0; i < guests.length; i++) {
                 if (!guests[i].isInPark) continue;
                 inPark++;
@@ -140,6 +143,7 @@ registerPlugin({
                 // freshness-0 thoughts (ScGuest.cpp:578), which wait at most ~220 ticks (Guest.cpp:5145-5200).
                 if (th.length > 0 && th[0].freshness <= 5 && (th[0].type === "lost" || th[0].type === "cant_find")) out.lostFresh++;
                 for (var j = 0; j < th.length; j++) {
+                    if (THOUGHTS_SPLIT[th[j].type]) out[THOUGHTS_SPLIT[th[j].type]]++;
                     var col = thoughtCol[th[j].type];
                     if (!col) continue;
                     out[col]++;
@@ -172,12 +176,35 @@ registerPlugin({
         }
 
         function countVomit() {
-            var litter = map.getAllEntities("litter"), n = 0;
+            var litter = map.getAllEntities("litter"), n = 0, old = 0;
             for (var i = 0; i < litter.length; i++) {
                 var t = litter[i].litterType;
                 if (t === "vomit" || t === "vomit_alt") n++;
+                // Old = past the 7680-tick grace period; the rating penalty counts these (#65).
+                var age = date.ticksElapsed - litter[i].creationTick;
+                if (age < 0) age += 4294967296;
+                if (age >= 7680) old++;
             }
-            return { litter: litter.length, vomit: n };
+            return { litter: litter.length, vomit: n, oldLitter: old };
+        }
+
+        // Handymen whose sweep + bin counters have not moved for 5 daily rows while the park has
+        // old litter (#65): the stuck-handyman signal, kept here so no debug channel is needed.
+        var idleSeen = {};
+        function idleHandymen(oldLitter) {
+            var staff = map.getAllEntities("staff"), idle = 0, live = {};
+            for (var i = 0; i < staff.length; i++) {
+                var h = staff[i];
+                if (h.staffType !== "handyman") continue;
+                var w = h.litterSwept + h.binsEmptied;
+                live[h.id] = true;
+                var s = idleSeen[h.id];
+                if (!s || w !== s.w) idleSeen[h.id] = { w: w, days: 0 };
+                else s.days++;
+                if (idleSeen[h.id].days >= 5 && oldLitter > 0) idle++;
+            }
+            for (var id in idleSeen) if (!live[id]) delete idleSeen[id];
+            return idle;
         }
 
         function snapshot() {
@@ -202,6 +229,8 @@ registerPlugin({
                 entertainers: staff.entertainer,
                 litter: lv.litter,
                 vomit: lv.vomit,
+                oldLitter: lv.oldLitter,
+                handymenIdle: idleHandymen(lv.oldLitter),
                 openRides: rs.openRides,
                 avgReliability: rs.avgReliability,
                 avgDowntime: rs.avgDowntime,

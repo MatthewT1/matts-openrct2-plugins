@@ -2,13 +2,14 @@
  * Per-PR soak test for a stack of branches: every build x a seeded draw of parks, 30 d, run in
  * parallel through pool.mjs, then one report comparing each arm with the PREVIOUS arm.
  *
- *   node tools/headless/soak.mjs --builds <dir> [--tag soak] [--seed 12] [--parks 12] [--k 4] [--days 30]
+ *   node tools/headless/soak.mjs --builds <dir> [--tag soak] [--seed 12] [--parks 12] [--scenarios 3] [--k 4] [--days 30]
  *   node tools/headless/soak.mjs --builds <dir> --report     (report only, from finished runs)
  *
  * <dir> holds one plugin folder per arm, run in name order (e.g. 0-main, 1-cheap-builds-81, ...),
- * each with the seven built plugin .js files. Parks come from the #63 viability pool
- * (harness-runs/viability-seed63, parks with verdicts.json); Magic Mountain and Jetlag Heights
- * are always in. Each park gets one random RNG perturb (1-9) shared by all arms.
+ * each with the seven built plugin .js files. Parks come from the census pool (#160,
+ * harness-runs/pool-v2/pool.json, made by census.mjs): the first --scenarios fixed scenarios are
+ * always in as the small-park check (Magic Mountain, Jetlag Heights, Frozen Flats), the rest is a
+ * seeded draw of saves. Each park gets one random RNG perturb (1-9) shared by all arms.
  * Output: harness-runs/<tag>/<arm>/<park>/ and harness-runs/<tag>/report.md.
  */
 
@@ -17,8 +18,7 @@ import { join } from "node:path";
 import { METRICS, metricValue } from "./summary.mjs";
 import { runPool } from "./pool.mjs";
 
-const POOL = "harness-runs/viability-seed63";
-const ALWAYS = ["Magic_Mountain", "Jetlag_Heights"];
+const POOL = "harness-runs/pool-v2/pool.json";
 /** Metric keys checked, and how much worse the median may be before the arm fails (money in GBP). */
 const LIMITS = { rating: 20, avgHappiness: 3, guests: 50, cash: 500, salesCum: 500, thQueuingAges: 20, thCrowded: 20, thHungry: 20, thThirsty: 20, thLost: 20 };
 /** An arm fails a metric when it is worse than the previous arm in at least this share of parks. */
@@ -27,7 +27,7 @@ const WORSE_SHARE = 0.75;
 const argv = process.argv.slice(2);
 const opt = (k, d) => { const i = argv.indexOf(k); return i >= 0 ? argv[i + 1] : d; };
 const BUILDS = opt("--builds"), TAG = opt("--tag", "soak"), SEED = Number(opt("--seed", 12));
-const NPARKS = Number(opt("--parks", 12)), K = Number(opt("--k", 4)), DAYS = Number(opt("--days", 30));
+const NPARKS = Number(opt("--parks", 12)), NSCEN = Number(opt("--scenarios", 3)), K = Number(opt("--k", 4)), DAYS = Number(opt("--days", 30));
 if (!BUILDS) throw new Error("--builds <dir> is required");
 const OUT = join("harness-runs", TAG);
 
@@ -39,23 +39,18 @@ function rng(seed) {
 
 const arms = readdirSync(BUILDS).filter((d) => statSync(join(BUILDS, d)).isDirectory()).sort();
 const rand = rng(SEED);
-const pool = readdirSync(POOL).filter((d) => existsSync(join(POOL, d, "verdicts.json")))
-    .map((d) => ({ dir: d, save: JSON.parse(readFileSync(join(POOL, d, "verdicts.json"), "utf8")).park.file }));
-// Stratified draw: always-in parks first, then alternate between mature saves and scenarios.
-const always = pool.filter((p) => ALWAYS.some((s) => p.dir.includes(s)));
+if (!existsSync(POOL)) throw new Error(`${POOL} not found: run node tools/headless/census.mjs first`);
+const pool = JSON.parse(readFileSync(POOL, "utf8")).parks.filter((p) => p.inPool);
+// Draw: the fixed scenarios in census order (the small-park check), then a seeded shuffle of saves.
 const shuffle = (xs) => xs.map((x) => [rand(), x]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
-const saves = shuffle(pool.filter((p) => !always.includes(p) && p.dir.startsWith("save-")));
-const scen = shuffle(pool.filter((p) => !always.includes(p) && !p.dir.startsWith("save-")));
-const parks = [...always];
-while (parks.length < NPARKS && (saves.length || scen.length)) {
-    if (saves.length) parks.push(saves.shift());
-    if (parks.length < NPARKS && scen.length) parks.push(scen.shift());
-}
+const scen = pool.filter((p) => p.kind === "scenario").slice(0, Math.min(NSCEN, NPARKS));
+const saves = shuffle(pool.filter((p) => p.kind === "save"));
+const parks = [...scen, ...saves.slice(0, Math.max(0, NPARKS - scen.length))];
 for (const p of parks) p.perturb = 1 + Math.floor(rand() * 9);
 
 if (!argv.includes("--report")) {
     const jobs = [];
-    for (const p of parks) for (const arm of arms) jobs.push({ save: p.save, out: join(OUT, arm, p.dir), pluginDir: join(BUILDS, arm), perturb: p.perturb, days: DAYS, settings: "defaults" });
+    for (const p of parks) for (const arm of arms) jobs.push({ save: p.save, out: join(OUT, arm, p.dir), pluginDir: join(BUILDS, arm), perturb: p.perturb, days: DAYS, settings: existsSync(join(BUILDS, arm + ".settings.json")) ? join(BUILDS, arm + ".settings.json") : "defaults" });
     mkdirSync(OUT, { recursive: true });
     const t = Date.now();
     const res = await runPool(jobs, K, (r, n) => console.log(`[${n + 1}/${jobs.length}] ${r.status} ${r.seconds.toFixed(0)} s ${r.job.out}`));
@@ -119,6 +114,28 @@ for (const [key, limit] of Object.entries(LIMITS)) {
         return `${fail ? "**FAIL** " : ""}${better}+/${worse}- med ${med >= 0 ? "+" : ""}${med.toFixed(1)}`;
     });
     L.push(`| ${m.label} (${limit}) | ${cells.join(" | ")} |`);
+}
+// Info rows (never fail an arm): metrics a stack may be expected to move, medians of arm - previous arm.
+const INFO = ["oldLitter", "litter", "handymen", "handymenIdle", "buildCum", "wagesCum"];
+L.push("", "## Info: medians of arm minus previous arm (end of run; mean over the run for oldLitter), lower old litter = better", "",
+    `| Metric | ${arms.slice(1).join(" | ")} |`, `|---|${arms.slice(1).map(() => "---").join("|")}|`);
+for (const key of INFO) {
+    const m = METRICS.find((x) => x.key === key);
+    if (!m) continue;
+    const cells = arms.slice(1).map((arm, j) => {
+        const d = [];
+        parks.forEach((_, i) => {
+            const a = R[arm][i], b = R[arms[j]][i];
+            const sa = a?.summary.metrics[key], sb = b?.summary.metrics[key];
+            if (!sa || !sb) return;
+            const f = key === "oldLitter" ? "mean" : "end";
+            d.push((sa[f] - sb[f]) / (m.money ? 10 : 1));
+        });
+        if (!d.length) return "-";
+        const med = [...d].sort((x, y) => x - y)[Math.floor(d.length / 2)];
+        return `${d.filter((x) => x < 0).length} lower / ${d.filter((x) => x > 0).length} higher, med ${med >= 0 ? "+" : ""}${med.toFixed(1)}`;
+    });
+    L.push(`| ${m.label} | ${cells.join(" | ")} |`);
 }
 L.push("", "## Verdict", "");
 for (const arm of arms.slice(1)) {
