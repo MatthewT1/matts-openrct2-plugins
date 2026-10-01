@@ -55,7 +55,7 @@ for (const p of parks) p.perturb = 1 + Math.floor(rand() * 9);
 
 if (!argv.includes("--report")) {
     const jobs = [];
-    for (const p of parks) for (const arm of arms) jobs.push({ save: p.save, out: join(OUT, arm, p.dir), pluginDir: join(BUILDS, arm), perturb: p.perturb, days: DAYS, settings: "defaults" });
+    for (const p of parks) for (const arm of arms) jobs.push({ save: p.save, out: join(OUT, arm, p.dir), pluginDir: join(BUILDS, arm), perturb: p.perturb, days: DAYS, settings: existsSync(join(BUILDS, arm + ".settings.json")) ? join(BUILDS, arm + ".settings.json") : "defaults" });
     mkdirSync(OUT, { recursive: true });
     const t = Date.now();
     const res = await runPool(jobs, K, (r, n) => console.log(`[${n + 1}/${jobs.length}] ${r.status} ${r.seconds.toFixed(0)} s ${r.job.out}`));
@@ -119,6 +119,28 @@ for (const [key, limit] of Object.entries(LIMITS)) {
         return `${fail ? "**FAIL** " : ""}${better}+/${worse}- med ${med >= 0 ? "+" : ""}${med.toFixed(1)}`;
     });
     L.push(`| ${m.label} (${limit}) | ${cells.join(" | ")} |`);
+}
+// Info rows (never fail an arm): metrics a stack may be expected to move, medians of arm - previous arm.
+const INFO = ["oldLitter", "litter", "handymen", "handymenIdle", "buildCum", "wagesCum"];
+L.push("", "## Info: medians of arm minus previous arm (end of run; mean over the run for oldLitter), lower old litter = better", "",
+    `| Metric | ${arms.slice(1).join(" | ")} |`, `|---|${arms.slice(1).map(() => "---").join("|")}|`);
+for (const key of INFO) {
+    const m = METRICS.find((x) => x.key === key);
+    if (!m) continue;
+    const cells = arms.slice(1).map((arm, j) => {
+        const d = [];
+        parks.forEach((_, i) => {
+            const a = R[arm][i], b = R[arms[j]][i];
+            const sa = a?.summary.metrics[key], sb = b?.summary.metrics[key];
+            if (!sa || !sb) return;
+            const f = key === "oldLitter" ? "mean" : "end";
+            d.push((sa[f] - sb[f]) / (m.money ? 10 : 1));
+        });
+        if (!d.length) return "-";
+        const med = [...d].sort((x, y) => x - y)[Math.floor(d.length / 2)];
+        return `${d.filter((x) => x < 0).length} lower / ${d.filter((x) => x > 0).length} higher, med ${med >= 0 ? "+" : ""}${med.toFixed(1)}`;
+    });
+    L.push(`| ${m.label} | ${cells.join(" | ")} |`);
 }
 L.push("", "## Verdict", "");
 for (const arm of arms.slice(1)) {
