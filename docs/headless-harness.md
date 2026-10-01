@@ -46,6 +46,7 @@ Money in `summary.md` is in currency units. The CSV and JSON keep the game's raw
 | `--min-open-rides <n>` | 0 | Exit with code 3 and no output when the park has fewer open rides at load. |
 | `--capture` | off | README images (#140). The on arm saves the park at the end and it is rendered as `on/end.png`, framed on the busiest 20x20 area of plugin changes (new path additions, new rides and stalls). The off arm then reuses that frame and adds `off/start.png` (day 1) and `off/end.png`. The on arm runs first. |
 | `--capture-at X,Y` | | The same with a fixed frame (tile coordinates). |
+| `--capture-every N` | off | With either capture flag: also saves every N days and renders them as `d005.png`, `d010.png`, ... in the same frame. `node tools/showcase-gif.mjs --frames <out>/on --out <file.gif>` turns the set into a captioned time-lapse (needs ffmpeg). |
 
 Each day row also records (#63): ride reliability/downtime (mean of open rides), rides broken
 now, breakdowns that day, vomit, a tally of selected guest thoughts (`th*`, plus negative and

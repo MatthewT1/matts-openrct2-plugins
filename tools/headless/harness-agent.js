@@ -446,6 +446,11 @@ registerPlugin({
                     moneyReset();
                 }
                 send(snapshot());
+                // Time-lapse frames (#140): a save every N days, rendered by run.mjs afterwards.
+                if (cap && cap.every > 0 && daysDone % cap.every === 0 && daysDone < daysWanted) {
+                    var shot = "d" + ("00" + daysDone).slice(-3);
+                    if (capture(shot, true)) shots.push(shot);
+                }
                 if (daysDone >= daysWanted) {
                     daySub.dispose();
                     daySub = null;
