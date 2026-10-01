@@ -30,7 +30,11 @@ measure like queuing reflects more than one plugin. Regenerate with `node tools/
 <td align="center"><sub>Same spot, same 90 days, plugins on: new stalls by the exit, TVs along the El Condor queue, benches and bins</sub></td>
 </tr></table>
 
-[Download the latest release](../../releases/latest) · [User guide](docs/user-guide.md) · [MIT license](LICENSE)
+![Time-lapse of one corner of Six Flags Holland over 90 days with the plugins on: stalls, benches and bins appear as guests need them](docs/img/showcase/holland-90d.gif)
+
+<sub>90 days in one corner of Six Flags Holland with the plugins on, one frame every 5 days: nothing here was placed by hand. Made with `tools/showcase-gif.mjs`.</sub>
+
+[Download the latest release](../../releases/latest) · [What's new](../../releases) · [User guide](docs/user-guide.md) · [MIT license](LICENSE)
 
 ---
 
@@ -42,8 +46,8 @@ measure like queuing reflects more than one plugin. Regenerate with `node tools/
 | [Auto-Builder](#auto-builder) | Builds benches, bins and stalls where guests need them | Yes: benches, bins and stalls where needed (#51) |
 | [Mechanic Manager](#mechanic-manager) | Keeps rides running | No |
 | [Wait Time Optimizer](#wait-time-optimizer) | Keeps queues from getting out of hand | No |
-| [Staff Extras](#staff-extras) | Puts entertainers where queues need them | Yes: entertainer wages (#51) |
-| [Marketing Manager](#marketing-manager) | Shows which campaigns are worth the money | No (off until you turn it on) |
+| [Staff Extras](#staff-extras) | Puts entertainers where queues need them, and staffs up for the Best Staff award | Yes: entertainer and guard wages (#51) |
+| [Marketing Manager](#marketing-manager) | Shows which campaigns are worth the money, and warns about prices guests refuse | No (off until you turn it on) |
 | [Path Connector](#path-connector-experimental) (experimental) | Draws a footpath between two tiles | Only for paths you choose to build |
 
 Each one adds an entry to the map menu in the top toolbar, which opens its window.
@@ -105,8 +109,9 @@ Places benches and bins and builds guest facilities. Split out of Trash Manager 
   food stalls short of the Best Toilets or Best Food award and has £5,000, builds one every
   5 days. Each award held means 25% more new guests (#162).
 - **Queue TVs** *(on by default, can be switched off)*. Once the TV is researched, puts a TV
-  on every 2nd empty tile of queues where guests wait a long time, front first: long-waiting guests only stop
-  losing happiness on a tile with a TV. Paid from a monthly extras budget (5% of the cash
+  on every 2nd empty tile of a queue where a guest is thinking "I've been queuing for ages", from the
+  front to that guest: long-waiting guests only stop losing happiness on a tile with a TV. Quiet
+  queues get none (#141). Paid from a monthly extras budget (5% of the cash
   above £1,000, set at the start of each month) (#104, #116).
 - **Repairs** *(on by default, can be switched off)*. Vandals break benches, bins and lamps and
   nothing in the game repairs them. Each day re-places about a fifth of the broken ones
@@ -168,7 +173,7 @@ Handles ride wait settings and queue length.
 
 ### Staff Extras
 
-Handles entertainers. On by default since [#51](https://github.com/MatthewT1/matts-openrct2-plugins/issues/51); switch it off in the window if you'd rather not pay their wages.
+Handles entertainers and security guards. On by default since [#51](https://github.com/MatthewT1/matts-openrct2-plugins/issues/51); each has a switch in the window if you'd rather not pay the wages.
 
 <img src="docs/img/windows/staff-extras.png" alt="Staff Extras window" width="280">
 
@@ -181,7 +186,7 @@ Once the park has 20 or more staff and no security guard, it also hires one guar
 Staff award (+25% new guests while held) needs every staff type on the roster (#92). It also
 needs 20 staff and one per 32 guests, so when the park is 1 to 5 short of that line it hires
 a few more guards to close the gap, and lets its own extras go when they stop being needed (#163).
-The window shows where the park stands ("Best Staff: 19/20 staff, 1 short, hiring guards"),
+The window shows where the park stands ("Best Staff: 19/20, hiring guards"),
 and says so when the award is held.
 
 ![Guest happiness, guests fed up with queuing and guests upset by vandalism, over 90 days: plugins off vs defaults vs every feature on](docs/img/showcase/staff-extras.svg)

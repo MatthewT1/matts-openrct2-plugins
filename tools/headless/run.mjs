@@ -69,6 +69,8 @@ function parseArgs(argv) {
             // the map most; --capture-at X,Y (tiles) fixes the frame and adds a day-1 "start" image.
             case "--capture": a.capture = {}; break;
             case "--capture-at": { const [x, y] = v.split(",").map(Number); a.capture = { at: { x, y } }; i++; break; }
+            // Time-lapse frames: with --capture or --capture-at, also save every N days (d006, d012, ...).
+            case "--capture-every": a.captureEvery = Number(v); i++; break;
             // #44: make the park a no-money park (game cheat) on BOTH arms before day 0.
             case "--no-money": a.noMoney = true; break;
             // #63: the game is deterministic, so replicates draw the scenario RNG N times first.
@@ -240,7 +242,7 @@ async function runArm(a, arm) {
             console.log(`[${arm}] settings (${a.settings}) on: ${on.join(", ")}`);
         }
 
-        sock.write(JSON.stringify({ cmd: "start", days: a.days, speed: a.speed, perturb: a.perturb, capture: a.capture ?? null }) + "\n");
+        sock.write(JSON.stringify({ cmd: "start", days: a.days, speed: a.speed, perturb: a.perturb, capture: a.capture ? { ...a.capture, every: a.captureEvery || 0 } : null }) + "\n");
         for (;;) {
             // A day is ~530 ticks: ~13 s at speed 1, ~1.6 s at speed 4. Allow for a slow park.
             const msg = await next(60000);
