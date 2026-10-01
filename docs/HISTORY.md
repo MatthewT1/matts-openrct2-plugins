@@ -66,7 +66,7 @@ No code changes.
 Repository prep for GitHub: git history reconstructed, README, LICENSE, CI, `.gitignore`
 (excludes the ~400 MB `gamesrc/` clone and debug logs), `TODO.md` backlog.
 
-## On GitHub: v1.0.0 to v1.7.0 (2026-09-24 to 2026-09-27)
+## On GitHub: v1.0.0 to v1.8.0 (2026-09-24 to 2026-10-01)
 
 From here the work is in pull requests and issues on
 [GitHub](https://github.com/MatthewT1/matts-openrct2-plugins). Session notes are local only.
@@ -151,3 +151,20 @@ This entry covers the main points.
   - **Food courts (#83)**: dressed with benches, bins and a toilet; court stalls now actually
     get built (#123, #127).
   - **Performance (#100)**: Trash Manager scans the map every 10 days, not 2.5 (#125).
+- **v1.8.0**:
+  - **Awards (#162, #163)**: each award held means 25% more new guests. Auto-Builder tops up
+    toilets and food stalls when the park is 1-3 short of Best Toilets or Best Food (deserved
+    days 16% -> 37% and 13% -> 31% over 32 parks, #164); Staff Extras hires a few guards to
+    hold the Best Staff headcount (19% -> 51%, #165), shows the line in its window and
+    announces the award (#169, #171).
+  - **Ride price warning (#166)**: Marketing Manager names any ride priced above what guests
+    will pay; it never changes a price (#170).
+  - **Entertainers**: spread across queues and walked onto their patrol boxes (#168).
+  - **Queue TVs (#141)**: only on queues where someone has waited a long time, 30% fewer TVs
+    for the same outcomes (#154).
+  - **Staff**: Trash and Mechanic Manager only fire staff they hired (#135, #138, #139).
+  - **Diagnostics (#146)**: the checkbox is only in debug builds (#155).
+  - **Docs and harness**: README charts, before/after images and real plugin windows (#140,
+    #143); a 36-park pool for the harness (#160, #161).
+  - Measured and not built: guest-cap kiosks (#167), fountains (#85), handyman zones (#65),
+    dropping OPS lengthening (#101).
