@@ -211,7 +211,20 @@ export interface AwardCrewPlan {
     line: number;
     /** Guards this feature should own right now. */
     target: number;
+    /** Staff on the roster, our guards included. */
+    staff: number;
+    /** Staff still missing from the line with our guards counted; 0 or less = line met. */
+    shortBy: number;
+    /** Why the target is what it is: shown in the window and the telemetry. */
+    reason: AwardCrewReason;
 }
+
+/**
+ * met: the roster is at the line. short: within reach, guards close the gap.
+ * missingType: no handyman, mechanic or entertainer, so guards cannot win the award.
+ * outOfReach: too many staff short to start on (or to keep holding).
+ */
+export type AwardCrewReason = "met" | "short" | "missingType" | "outOfReach";
 
 /** How many staff the award line asks for: the game's rule plus one spare above 20. */
 export function awardStaffLine(guestEntities: number, o: AwardCrewOptions): number {
@@ -231,8 +244,24 @@ export function planAwardCrew(i: AwardCrewInput, o: AwardCrewOptions): AwardCrew
     const reach = i.ownedGuards > 0 ? o.maxExtra + o.holdExtra : o.maxExtra;
     const reachable = i.handymen > 0 && i.mechanics > 0 && i.entertainers > 0 && gap <= reach;
     const target = reachable && gap > 0 ? gap : 0;
-    if (i.ownedGuards < target) return { action: "hire", line: line, target: target };
+    const allTypes = i.handymen > 0 && i.mechanics > 0 && i.entertainers > 0 && i.security > 0;
+    const reason: AwardCrewReason = line - staff <= 0 && allTypes ? "met"
+        : !(i.handymen > 0 && i.mechanics > 0 && i.entertainers > 0) ? "missingType"
+        : gap > reach ? "outOfReach" : "short";
+    const plan = (action: "hire" | "fire" | "none"): AwardCrewPlan =>
+        ({ action: action, line: line, target: target, staff: staff, shortBy: line - staff, reason: reason });
+    if (i.ownedGuards < target) return plan("hire");
     const slack = reachable ? 2 : 1;
-    if (i.ownedGuards >= target + slack) return { action: "fire", line: line, target: target };
-    return { action: "none", line: line, target: target };
+    if (i.ownedGuards >= target + slack) return plan("fire");
+    return plan("none");
+}
+
+/** One window line for the plan, e.g. "Best Staff: 21/20 staff, line met (2 award guards)". */
+export function awardCrewStatusText(p: AwardCrewPlan, ownedGuards: number): string {
+    const head = "Best Staff: " + p.staff + "/" + p.line + " staff, ";
+    const crew = ownedGuards > 0 ? " (" + ownedGuards + " award guard" + (ownedGuards === 1 ? "" : "s") + ")" : "";
+    if (p.reason === "met") return head + "line met" + crew;
+    if (p.reason === "missingType") return head + "needs every staff type" + crew;
+    if (p.reason === "outOfReach") return head + p.shortBy + " short, too far for guards" + crew;
+    return head + p.shortBy + " short, hiring guards" + crew;
 }

@@ -1,4 +1,4 @@
-import { createStaffHirer, HIRE_BACKOFF_DAYS, wantsAwardGuard, planAwardCrew, awardStaffLine, DEFAULT_AWARD_CREW_OPTIONS as CREW } from "./build/staff-hiring.mjs";
+import { createStaffHirer, HIRE_BACKOFF_DAYS, wantsAwardGuard, planAwardCrew, awardStaffLine, awardCrewStatusText, DEFAULT_AWARD_CREW_OPTIONS as CREW } from "./build/staff-hiring.mjs";
 let pass = 0, fail = 0;
 const ok = (c, m) => { c ? pass++ : (fail++, console.log("FAIL:", m)); };
 
@@ -140,6 +140,22 @@ function rig(result, backoffDays = HIRE_BACKOFF_DAYS) {
     ok(p.action === "none", "the same 6 gap with nothing owned is not started");
     p = planAwardCrew(I(12, 4, 3, 4, 490, 2), CREW);
     ok(p.action === "fire" && p.target === 0, "21 staff without ours and two owned: one is let go");
+
+    // Reason + window line (#163 telemetry).
+    p = planAwardCrew(I(10, 4, 1, 4, 490), CREW);
+    ok(p.reason === "short" && p.staff === 19 && p.shortBy === 1, "19 of 20: short by 1");
+    ok(awardCrewStatusText(p, 0) === "Best Staff: 19/20 staff, 1 short, hiring guards", "short text");
+    p = planAwardCrew(I(10, 4, 2, 4, 490, 1), CREW);
+    ok(p.reason === "met" && p.shortBy === 0, "our guard closes the gap: met");
+    ok(awardCrewStatusText(p, 1) === "Best Staff: 20/20 staff, line met (1 award guard)", "met text names our guard");
+    p = planAwardCrew(I(25, 10, 1, 7, 3041), CREW);
+    ok(p.reason === "outOfReach" && p.shortBy === 53, "43 of 96: out of reach");
+    ok(awardCrewStatusText(p, 0) === "Best Staff: 43/96 staff, 53 short, too far for guards", "out-of-reach text");
+    p = planAwardCrew(I(0, 4, 1, 4, 300), CREW);
+    ok(p.reason === "missingType", "no handyman: missing type");
+    ok(awardCrewStatusText(p, 0) === "Best Staff: 9/20 staff, needs every staff type", "missing-type text");
+    p = planAwardCrew(I(14, 4, 4, 4, 490, 3), CREW);
+    ok(p.reason === "met" && awardCrewStatusText(p, 3).indexOf("(3 award guards)") > 0, "over the line: met, plural guards");
 }
 
 console.log(`${pass} passed, ${fail} failed`); if (fail) process.exitCode = 1;
